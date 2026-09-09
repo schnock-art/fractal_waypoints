@@ -1,0 +1,29 @@
+:root {
+  color-scheme: dark;
+  font-family: Aptos, "Trebuchet MS", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(48, 92, 170, 0.26), transparent 48%),
+    linear-gradient(160deg, #0b1220 0%, #101a2d 48%, #070b13 100%);
+  color: #eff7ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

@@ -1,0 +1,38 @@
+{
+  "name": "fractal-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "demo": "node scripts/capture-readme-demo.mjs",
+    "demo:video": "node scripts/capture-product-demo.mjs",
+    "demo:explore": "node scripts/capture-explore-demo.mjs",
+    "demo:palette": "node scripts/capture-palette-demo.mjs",
+    "demo:waypoint": "node scripts/capture-waypoint-demo.mjs",
+    "demo:compare": "node scripts/capture-compare-demo.mjs",
+    "demo:journey": "node scripts/capture-journey-demo.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@webgpu/types": "^0.1.72",
+    "gifenc": "^1.0.3",
+    "jsdom": "^29.1.1",
+    "pngjs": "^7.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}
