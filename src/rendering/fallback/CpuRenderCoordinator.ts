@@ -1,7 +1,11 @@
 import {
+  applyLens,
+  applyOrbitTrapEmission,
   blendColor,
   computeOrbitTrapExteriorMix,
   computeOrbitTrapInteriorMix,
+  getMaterialDensity,
+  getOrbitTrapAppearance,
   getOrbitTrapScale,
   sampleOrbitTrapPaletteT,
   sampleSmoothEscapePaletteT,
@@ -52,7 +56,7 @@ class CpuRenderSurface implements RenderSurface {
     const width = this.canvas.width;
     const height = this.canvas.height;
     const imageData = this.context.createImageData(width, height);
-    const density = config.colouring.parameters.density ?? 0.032;
+    const density = getMaterialDensity(config);
     const orbitTrapScale = getOrbitTrapScale(config);
     const scale = config.viewport.scale.hi + config.viewport.scale.lo;
     const centreRe = config.viewport.centre.re.hi + config.viewport.centre.re.lo;
@@ -72,7 +76,7 @@ class CpuRenderSurface implements RenderSurface {
         const normalizedX = horizontalStart + (x * horizontalStep);
         const real = centreRe + (scale * ((normalizedX * cosine) - (normalizedY * sine)));
         const imaginary = centreIm + (scale * ((normalizedX * sine) + (normalizedY * cosine)));
-        const color = sampleCpuPixelColor(config, real, imaginary, density, orbitTrapScale);
+        const color = sampleCpuPixelColor(config, real, imaginary, density, orbitTrapScale, x / Math.max(width - 1, 1), y / Math.max(height - 1, 1));
         const offset = (y * width * 4) + (x * 4);
 
         imageData.data[offset] = toByte(color.r);
@@ -100,17 +104,18 @@ export function sampleCpuPixelColor(
   config: RenderConfig,
   real: number,
   imaginary: number,
-  density = config.colouring.parameters.density ?? 0.032,
+  density = getMaterialDensity(config),
   orbitTrapScale = getOrbitTrapScale(config),
+  x = 0.5,
+  y = 0.5,
 ): RgbaColor {
-  const isOrbitTrap = config.colouring.algorithmId === 'orbitTrap';
+  const isOrbitTrap = config.material.id === 'orbitTrap';
   const sample = iterateFormulaDetailed(config, real, imaginary, isOrbitTrap);
 
-  if (!sample.escaped && !isOrbitTrap) {
-    return INTERIOR_COLOR;
-  }
-
-  return resolveExteriorColor(config, sample, density, orbitTrapScale);
+  const materialColor = !sample.escaped && !isOrbitTrap
+    ? INTERIOR_COLOR
+    : resolveMaterialColor(config, sample, density, orbitTrapScale);
+  return applyLens(materialColor, config.lens, x, y);
 }
 
 export function getCpuRenderSize(width: number, height: number): { width: number; height: number } {
@@ -124,29 +129,44 @@ export function getCpuRenderSize(width: number, height: number): { width: number
   };
 }
 
-function resolveExteriorColor(
+function resolveMaterialColor(
   config: RenderConfig,
   sample: ReturnType<typeof iterateFormulaDetailed>,
   density: number,
   orbitTrapScale: number,
 ): RgbaColor {
-  if (config.colouring.algorithmId === 'orbitTrap') {
-    const trapT = sampleOrbitTrapPaletteT(sample.minTrapDistance, density, orbitTrapScale);
+  if (config.material.id === 'orbitTrap') {
+    const appearance = getOrbitTrapAppearance(config);
+    const trapDistance = appearance.metric === 'final' ? sample.finalTrapDistance : sample.minTrapDistance;
+    const trapT = sampleOrbitTrapPaletteT(trapDistance, density, orbitTrapScale, appearance.paletteMapping);
     const orbitTrapColor = samplePalette(config.palette, trapT);
 
     if (!sample.escaped) {
-      const interiorMix = computeOrbitTrapInteriorMix(sample.minTrapDistance, orbitTrapScale);
-      return blendColor(INTERIOR_COLOR, orbitTrapColor, interiorMix);
+      const interiorMix = computeOrbitTrapInteriorMix(trapDistance, orbitTrapScale, appearance.interiorMix);
+      return applyOrbitTrapEmission(
+        blendColor(INTERIOR_COLOR, orbitTrapColor, interiorMix),
+        orbitTrapColor,
+        trapDistance,
+        orbitTrapScale,
+        appearance.emission,
+      );
     }
 
     const smoothT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);
     const smoothColor = samplePalette(config.palette, smoothT);
     const exteriorMix = computeOrbitTrapExteriorMix(
       sample.normalizedIterations,
-      sample.minTrapDistance,
+      trapDistance,
       orbitTrapScale,
+      appearance.exteriorMix,
     );
-    return blendColor(smoothColor, orbitTrapColor, exteriorMix);
+    return applyOrbitTrapEmission(
+      blendColor(smoothColor, orbitTrapColor, exteriorMix),
+      orbitTrapColor,
+      trapDistance,
+      orbitTrapScale,
+      appearance.emission,
+    );
   }
 
   const smoothT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);

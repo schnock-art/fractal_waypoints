@@ -1,11 +1,13 @@
-import { getColouringCode, getOrbitTrapScale } from '../../colouring/runtime';
+import { getMaterialCode, getMaterialDensity, getOrbitTrapAppearance, getOrbitTrapScale, getOrbitTrapSet } from '../../colouring/runtime';
+import { getOrbitTrapCompositionCode, getOrbitTrapShapeCode } from '../../colouring/orbitTraps';
+import { getOrbitTrapMetricCode, getOrbitTrapPaletteMappingCode } from '../../colouring/orbitMaterial';
 import { buildPaletteLut } from '../../palettes/sampler';
 import type { RenderConfig } from '../../types/config';
 import type { RenderCoordinator, RenderSurface } from '../types';
 import { getFormulaCode } from '../../fractals/runtime';
 import { mandelbrotShader } from './mandelbrotShader';
 
-const UNIFORM_BUFFER_SIZE = 6 * 16;
+const UNIFORM_BUFFER_SIZE = 10 * 16;
 const PALETTE_TEXTURE_SIZE = 256;
 
 export async function createWebGpuRenderCoordinator(adapter: GPUAdapter): Promise<RenderCoordinator> {
@@ -126,6 +128,10 @@ class WebGpuSurface implements RenderSurface {
   }
 
   async render(config: RenderConfig): Promise<void> {
+    const trapSet = getOrbitTrapSet(config);
+    const appearance = getOrbitTrapAppearance(config);
+    const firstTrap = trapSet.traps[0];
+    const secondTrap = trapSet.traps[1] ?? firstTrap;
     const uniformData = new Float32Array([
       config.viewport.centre.re.hi,
       config.viewport.centre.re.lo,
@@ -143,14 +149,30 @@ class WebGpuSurface implements RenderSurface {
       config.fractal.maxIterations,
       this.canvas.width,
       this.canvas.height,
-      config.colouring.parameters.density ?? 0.03,
-      getColouringCode(config.colouring.algorithmId),
+      getMaterialDensity(config),
+      getMaterialCode(config.material.id),
       config.viewport.aspectRatio,
       getFormulaCode(config.fractal.formulaId),
       getOrbitTrapScale(config),
-      0,
-      0,
-      0,
+      config.lens.exposure,
+      config.lens.vignette,
+      appearance.emission,
+      firstTrap.x,
+      firstTrap.y,
+      firstTrap.rotation,
+      firstTrap.scale,
+      secondTrap.x,
+      secondTrap.y,
+      secondTrap.rotation,
+      secondTrap.scale,
+      getOrbitTrapShapeCode(firstTrap.shape),
+      getOrbitTrapShapeCode(secondTrap.shape),
+      getOrbitTrapCompositionCode(trapSet.composition),
+      trapSet.traps.length,
+      getOrbitTrapMetricCode(appearance.metric),
+      getOrbitTrapPaletteMappingCode(appearance.paletteMapping),
+      appearance.exteriorMix,
+      appearance.interiorMix,
     ]);
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);

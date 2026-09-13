@@ -120,6 +120,7 @@ function analyzeTile(
 }
 
 function sampleTile(config: RenderConfig, samplesPerAxis: number): SampleMetrics {
+  const analysisConfig = createMaterialIndependentDiscoveryConfig(config);
   const iterationGrid: number[][] = [];
   const escapedGrid: boolean[][] = [];
   let escapedCount = 0;
@@ -131,8 +132,8 @@ function sampleTile(config: RenderConfig, samplesPerAxis: number): SampleMetrics
     for (let column = 0; column < samplesPerAxis; column += 1) {
       const x = samplesPerAxis === 1 ? 0.5 : column / (samplesPerAxis - 1);
       const y = samplesPerAxis === 1 ? 0.5 : row / (samplesPerAxis - 1);
-      const point = mapSamplePoint(config, x, y);
-      const sample = iterateFractal(config, point.real, point.imaginary);
+      const point = mapSamplePoint(analysisConfig, x, y);
+      const sample = iterateFractal(analysisConfig, point.real, point.imaginary);
       rowIterations.push(sample.normalizedIterations);
       rowEscapes.push(sample.escaped);
 
@@ -157,6 +158,15 @@ function sampleTile(config: RenderConfig, samplesPerAxis: number): SampleMetrics
     boundaryDensity,
     iterationVariance: Math.sqrt(variance),
     escapeRatio: escapedCount / flatIterations.length,
+  };
+}
+
+export function createMaterialIndependentDiscoveryConfig(config: RenderConfig): RenderConfig {
+  return {
+    ...config,
+    material: { id: 'classic', parameters: { density: 0.032 } },
+    lens: { exposure: 1, vignette: 0 },
+    palette: clonePalette(config.palette),
   };
 }
 

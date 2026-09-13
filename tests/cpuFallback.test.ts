@@ -18,8 +18,8 @@ describe('cpu fallback renderer', () => {
 
   it('returns palette-driven color for orbit-trap shading', () => {
     const config = createDefaultRenderConfig('mandelbrot');
-    config.colouring.algorithmId = 'orbitTrap';
-    config.colouring.parameters.trapScale = 1;
+    config.material.id = 'orbitTrap';
+    config.material.parameters.trapScale = 1;
 
     const color = sampleCpuPixelColor(config, -0.75, 0.1);
 
@@ -30,12 +30,12 @@ describe('cpu fallback renderer', () => {
   it('keeps far exterior orbit-trap shading anchored to the smooth escape structure', () => {
     const smoothConfig = createDefaultRenderConfig('mandelbrot');
     const orbitConfig = createDefaultRenderConfig('mandelbrot');
-    orbitConfig.colouring.algorithmId = 'orbitTrap';
-    orbitConfig.colouring.parameters.trapScale = 1;
+    orbitConfig.material.id = 'orbitTrap';
+    orbitConfig.material.parameters.trapScale = 1;
 
     const real = 1.8;
     const imaginary = 1.1;
-    const density = smoothConfig.colouring.parameters.density ?? 0.032;
+    const density = smoothConfig.material.parameters.density ?? 0.032;
     const sample = iterateFormulaDetailed(smoothConfig, real, imaginary);
     const orbitColor = sampleCpuPixelColor(orbitConfig, real, imaginary);
     const smoothColor = samplePalette(
@@ -53,8 +53,8 @@ describe('cpu fallback renderer', () => {
   it('adds a stronger trap accent near the boundary than in open exterior space', () => {
     const smoothConfig = createDefaultRenderConfig('mandelbrot');
     const orbitConfig = createDefaultRenderConfig('mandelbrot');
-    orbitConfig.colouring.algorithmId = 'orbitTrap';
-    orbitConfig.colouring.parameters.trapScale = 1;
+    orbitConfig.material.id = 'orbitTrap';
+    orbitConfig.material.parameters.trapScale = 1;
 
     const boundaryPoint = { real: -0.75, imaginary: 0.1 };
     const farExteriorPoint = { real: 1.8, imaginary: 1.1 };
@@ -69,6 +69,23 @@ describe('cpu fallback renderer', () => {
     );
 
     expect(boundaryDelta).toBeGreaterThan(farExteriorDelta);
+  });
+
+  it('honours serialised orbit-trap appearance controls in the CPU fallback', () => {
+    const smoothConfig = createDefaultRenderConfig('mandelbrot');
+    const orbitConfig = createDefaultRenderConfig('mandelbrot');
+    orbitConfig.material.id = 'orbitTrap';
+    orbitConfig.material.orbitAppearance = {
+      metric: 'final',
+      paletteMapping: 'distanceBands',
+      exteriorMix: 0,
+      interiorMix: 0,
+      emission: 0,
+    };
+
+    const point = { real: 1.8, imaginary: 1.1 };
+    expect(sampleCpuPixelColor(orbitConfig, point.real, point.imaginary))
+      .toEqual(sampleCpuPixelColor(smoothConfig, point.real, point.imaginary));
   });
 
   it('caps fallback resolution to keep high-DPI renders responsive', () => {

@@ -1,4 +1,6 @@
 import { clonePalette } from '../palettes/model';
+import { cloneOrbitTrapSet } from '../colouring/orbitTraps';
+import { cloneOrbitTrapAppearance } from '../colouring/orbitMaterial';
 import type { RenderConfig, Waypoint, WaypointSource } from '../types/config';
 import { WAYPOINT_SCHEMA_VERSION } from '../types/config';
 
@@ -17,10 +19,13 @@ export function cloneRenderConfig(config: RenderConfig): RenderConfig {
       ...config.fractal,
       parameters: { ...config.fractal.parameters },
     },
-    colouring: {
-      ...config.colouring,
-      parameters: { ...config.colouring.parameters },
+    material: {
+      ...config.material,
+      parameters: { ...config.material.parameters },
+      orbitTraps: config.material.orbitTraps ? cloneOrbitTrapSet(config.material.orbitTraps) : undefined,
+      orbitAppearance: config.material.orbitAppearance ? cloneOrbitTrapAppearance(config.material.orbitAppearance) : undefined,
     },
+    lens: { ...config.lens },
     palette: clonePalette(config.palette),
     quality: {
       ...config.quality,
@@ -31,7 +36,6 @@ export function cloneRenderConfig(config: RenderConfig): RenderConfig {
 export function scoreRenderInterestingness(config: RenderConfig): number {
   const zoomDepth = Math.max(0, -Math.log10(Math.max(config.viewport.scale.hi + config.viewport.scale.lo, 1e-12)));
   const iterationScore = config.fractal.maxIterations / 256;
-  const paletteScore = config.palette.stops.length / 8;
   const formulaBonus = config.fractal.formulaId === 'julia'
     ? 0.25
     : config.fractal.formulaId === 'burningShip'
@@ -39,9 +43,7 @@ export function scoreRenderInterestingness(config: RenderConfig): number {
       : config.fractal.formulaId === 'tricorn'
         ? 0.18
         : 0.1;
-  const densityScore = (config.colouring.parameters.density ?? 0.03) * 8;
-
-  return Number((zoomDepth + iterationScore + paletteScore + formulaBonus + densityScore).toFixed(2));
+  return Number((zoomDepth + iterationScore + formulaBonus).toFixed(2));
 }
 
 export function createWaypoint(params: {

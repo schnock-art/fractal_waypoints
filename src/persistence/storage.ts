@@ -1,10 +1,12 @@
 import type { NavigationSettings, Waypoint } from '../types/config';
+import { migrateWaypoint } from './renderConfig';
 
 const WAYPOINTS_STORAGE_KEY = 'fractal-explorer:waypoints:v1';
 const NAVIGATION_STORAGE_KEY = 'fractal-explorer:navigation:v1';
 
 export function loadWaypoints(): Waypoint[] {
-  return loadJson<Waypoint[]>(WAYPOINTS_STORAGE_KEY, []);
+  const stored = loadJson<unknown[]>(WAYPOINTS_STORAGE_KEY, []);
+  return stored.map(migrateWaypoint).filter((waypoint): waypoint is Waypoint => waypoint !== null);
 }
 
 export function saveWaypoints(waypoints: Waypoint[]): void {

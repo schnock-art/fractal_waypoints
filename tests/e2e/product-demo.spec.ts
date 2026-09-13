@@ -26,6 +26,31 @@ test.describe('product demo workflow regression', () => {
     await waitForCanvasPaint(page, 'comparison-left-canvas');
     await waitForCanvasPaint(page, 'comparison-right-canvas');
   });
+
+  test('switches materials from the focused Visual Lab without leaving Explore', async ({ page }) => {
+    await page.goto(createDemoUrl('/'));
+
+    await page.getByRole('button', { name: 'Visual Lab' }).click();
+    const material = page.getByLabel('Material');
+    await material.selectOption('orbitTrap');
+
+    await expect(material).toHaveValue('orbitTrap');
+    await expect(page.getByLabel('Trap response')).toBeVisible();
+    await expect(page.getByLabel('Trap 1 shape')).toBeVisible();
+    await expect(page.getByLabel('Orbit metric')).toBeVisible();
+    await expect(page.getByLabel('Palette mapping')).toBeVisible();
+    await expect(page.getByLabel('Exterior trap mix')).toBeVisible();
+    await expect(page.getByLabel('Interior trap mix')).toBeVisible();
+    await expect(page.getByLabel('Emissive accent')).toBeVisible();
+    await expect(page.getByLabel('Exposure')).toBeVisible();
+    await expect(page.getByText('Material → Lens')).toBeVisible();
+
+    await page.getByRole('button', { name: /^Signal Fire/ }).click();
+    await expect(page.getByLabel('Trap 1 shape')).toHaveValue('spiral');
+    await expect(page.getByLabel('Trap 2 shape')).toHaveValue('circle');
+    await expect(page.getByLabel('Orbit metric')).toHaveValue('final');
+    await expect(page.getByLabel('Palette mapping')).toHaveValue('distanceBands');
+  });
 });
 
 async function waitForCanvasPaint(page: import('@playwright/test').Page, testId: string): Promise<void> {

@@ -1,4 +1,5 @@
 export type WorkspaceModeId =
+  | 'visualLab'
   | 'palette'
   | 'waypoints'
   | 'discover'
@@ -12,6 +13,11 @@ export interface WorkspaceModeDefinition {
 }
 
 export const workspaceModeDefinitions: WorkspaceModeDefinition[] = [
+  {
+    id: 'visualLab',
+    label: 'Visual Lab',
+    description: 'Shape materials and lens treatment.',
+  },
   {
     id: 'palette',
     label: 'Palette',

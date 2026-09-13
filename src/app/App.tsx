@@ -12,7 +12,6 @@ import {
 } from '../animation/model';
 import { buildClipFromRecordedNavigation } from '../animation/recording';
 import { createDefaultComparisonConfig, setComparisonSynchronization, updateComparisonMode, updateComparisonSide } from '../comparison/model';
-import { colouringRegistry } from '../colouring/registry';
 import { AnimationPanel } from '../components/AnimationPanel';
 import { FirstFlightTutorial } from '../components/FirstFlightTutorial';
 import { ComparisonPanel } from '../components/ComparisonPanel';
@@ -23,6 +22,7 @@ import { RenderView } from '../components/RenderView';
 import { SettingsPortal } from '../components/SettingsPortal';
 import { WaypointPanel } from '../components/WaypointPanel';
 import { WorkspaceModeNav } from '../components/WorkspaceModeNav';
+import { VisualLab } from '../components/VisualLab';
 import { formulaRegistry } from '../fractals/registry';
 import { complexFromNumbers } from '../math/complex';
 import { toNumber } from '../math/doubleSingle';
@@ -39,7 +39,6 @@ import { encodeRenderConfigToUrlParam, readRenderConfigFromLocation, writeRender
 import { analyzeDeepZoom } from '../rendering/deepZoomDiagnostics';
 import type { RendererDiagnostics } from '../rendering/diagnostics';
 import type {
-  ColouringAlgorithmId,
   NavigationActionId,
   NavigationSettings,
   RecordedNavigationEvent,
@@ -110,7 +109,8 @@ export function App() {
 
     setJuliaConfig((current) => ({
       ...current,
-      colouring: mainConfig.colouring,
+      material: mainConfig.material,
+      lens: mainConfig.lens,
       palette: mainConfig.palette,
       quality: mainConfig.quality,
       fractal: {
@@ -124,7 +124,7 @@ export function App() {
         bailout: mainConfig.fractal.bailout,
       },
     }));
-  }, [juliaSeed, mainConfig.colouring, mainConfig.fractal.bailout, mainConfig.fractal.maxIterations, mainConfig.palette, mainConfig.quality]);
+  }, [juliaSeed, mainConfig.material, mainConfig.lens, mainConfig.fractal.bailout, mainConfig.fractal.maxIterations, mainConfig.palette, mainConfig.quality]);
 
   useEffect(() => {
     saveNavigationSettings(navigationSettings);
@@ -247,7 +247,8 @@ export function App() {
       const nextConfig = {
         ...next,
         palette: current.palette,
-        colouring: current.colouring,
+        material: current.material,
+        lens: current.lens,
         quality: current.quality,
       };
       writeRenderConfigToHistory(nextConfig, 'push');
@@ -334,7 +335,8 @@ export function App() {
       const nextConfig = {
         ...next,
         palette: current.palette,
-        colouring: current.colouring,
+        material: current.material,
+        lens: current.lens,
         quality: current.quality,
       };
       writeRenderConfigToHistory(nextConfig, 'push');
@@ -384,7 +386,8 @@ export function App() {
       const next = {
         ...reset,
         palette: source.palette,
-        colouring: source.colouring,
+        material: source.material,
+        lens: source.lens,
         quality: source.quality,
       };
       return updateComparisonSide(current, side, next);
@@ -652,6 +655,8 @@ export function App() {
 
   function renderActiveWorkspacePanel() {
     switch (activeWorkspaceMode) {
+      case 'visualLab':
+        return <VisualLab config={mainConfig} onChange={(updater) => setMainConfig((current) => updater(current))} />;
       case 'palette':
         return (
           <PaletteEditor
@@ -756,12 +761,11 @@ export function App() {
       />
       <section className="hero">
         <div className="hero__copy">
-          <p className="hero__eyebrow">Fractal Explorer / Phase 6.5</p>
+          <p className="hero__eyebrow">Fractal Explorer / Phase 8</p>
           <h1>Explore Mandelbrot space, then peel open Julia worlds from any point.</h1>
           <p>
-            The shell now keeps Explore lightweight: quick core controls stay visible,
-            deeper workflows live in focused workspace panels, and low-frequency tuning
-            moves into a dedicated settings portal.
+            Explore the mathematics, then shape the look in Visual Lab: materials read
+            orbit metrics while lens treatment refines the completed image.
           </p>
         </div>
         <div className="hero__status-card">
@@ -826,27 +830,6 @@ export function App() {
 
             <div className="control-panel__section control-panel__grid control-panel__grid--explore">
             <label>
-              <span>Colour style</span>
-              <select
-                value={mainConfig.colouring.algorithmId}
-                onChange={(event) =>
-                  setMainConfig((current) => ({
-                    ...current,
-                    colouring: {
-                      ...current.colouring,
-                      algorithmId: event.target.value as ColouringAlgorithmId,
-                    },
-                  }))
-                }
-              >
-                {Object.values(colouringRegistry).map((algorithm) => (
-                  <option key={algorithm.id} value={algorithm.id}>
-                    {algorithm.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
               <span>Iterations</span>
               <input
                 type="range"
@@ -866,54 +849,6 @@ export function App() {
               />
               <strong>{mainConfig.fractal.maxIterations}</strong>
             </label>
-            <label>
-              <span>Colour density</span>
-              <input
-                type="range"
-                min="0.004"
-                max="0.08"
-                step="0.002"
-                value={mainConfig.colouring.parameters.density ?? 0.032}
-                onChange={(event) =>
-                  setMainConfig((current) => ({
-                    ...current,
-                    colouring: {
-                      ...current.colouring,
-                      parameters: {
-                        ...current.colouring.parameters,
-                        density: Number(event.target.value),
-                      },
-                    },
-                  }))
-                }
-              />
-              <strong>{(mainConfig.colouring.parameters.density ?? 0.032).toFixed(3)}</strong>
-            </label>
-            {mainConfig.colouring.algorithmId === 'orbitTrap' ? (
-              <label>
-                <span>Trap scale</span>
-                <input
-                  type="range"
-                  min="0.2"
-                  max="3"
-                  step="0.05"
-                  value={mainConfig.colouring.parameters.trapScale ?? 1}
-                  onChange={(event) =>
-                    setMainConfig((current) => ({
-                      ...current,
-                      colouring: {
-                        ...current.colouring,
-                        parameters: {
-                          ...current.colouring.parameters,
-                          trapScale: Number(event.target.value),
-                        },
-                      },
-                    }))
-                  }
-                />
-                <strong>{(mainConfig.colouring.parameters.trapScale ?? 1).toFixed(2)}</strong>
-              </label>
-            ) : null}
             </div>
 
             <div className="control-panel__section control-panel__actions">

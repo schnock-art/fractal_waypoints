@@ -32,6 +32,10 @@ Preset browsing should feel visual rather than administrative. Users should be a
 
 Colouring should also expand beyond classic escape-time shading. Orbit traps should be available as a first-class colouring mode so users can explore more sculptural internal structure without switching away from the shared palette and workflow system.
 
+The next visual frontier is a composable Visual Lab. Formula evaluation should expose reusable orbit metrics—such as smooth iteration, final complex value, derivative, distance estimate, and trap distances—to a separate material layer. Materials decide how those metrics become colour, contours, or a lit height field; lens effects such as bloom, exposure, and tone mapping run afterward. This separation lets users apply a saved look such as topographic, neon, or metallic glass across compatible formulas without changing the mathematics itself.
+
+The first rich 2D material work should remain legible during exploration: use bloom as a restrained accent rather than a global blur, keep coordinate-distorting effects explicitly separate, and make all visual settings serialisable in Waypoints, comparison views, journeys, URLs, and exports. Full 3D ray-marched fractals remain a later, distinct renderer rather than an extension of the 2D escape-time shader.
+
 ### Waypoints
 
 Waypoints are saved navigable locations in fractal space, similar to portals or fast-travel destinations in a game. Each stores formula, parameters, viewport, colouring, palette, and quality settings so the view can be recreated exactly.

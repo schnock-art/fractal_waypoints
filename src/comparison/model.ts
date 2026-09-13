@@ -15,11 +15,11 @@ export function createDefaultComparisonConfig(baseConfig: RenderConfig): Compari
   const right = cloneRenderConfig(baseConfig);
 
   right.palette = clonePalette(palettePresets[1]?.palette ?? baseConfig.palette);
-  right.colouring = {
-    ...right.colouring,
+  right.material = {
+    ...right.material,
     parameters: {
-      ...right.colouring.parameters,
-      density: (right.colouring.parameters.density ?? 0.032) * 1.22,
+      ...right.material.parameters,
+      density: (right.material.parameters.density ?? 0.032) * 1.22,
     },
   };
 

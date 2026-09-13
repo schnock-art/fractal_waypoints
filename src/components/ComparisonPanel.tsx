@@ -1,8 +1,8 @@
-import { colouringRegistry } from '../colouring/registry';
+import { materialRegistry } from '../colouring/registry';
 import { clonePalette } from '../palettes/model';
 import { palettePresets } from '../palettes/presets';
 import { summarizeComparisonWorkspace } from '../comparison/workspace';
-import type { ColouringAlgorithmId, ComparisonConfig, ComparisonMode, ComparisonSide, FormulaId, RenderConfig } from '../types/config';
+import type { ComparisonConfig, ComparisonMode, ComparisonSide, FormulaId, MaterialId, RenderConfig } from '../types/config';
 import { formulaRegistry } from '../fractals/registry';
 
 interface ComparisonPanelProps {
@@ -238,22 +238,22 @@ function ComparisonSideCard({
       </label>
 
       <label>
-        <span>Colour style</span>
+        <span>Material</span>
         <select
-          value={config.colouring.algorithmId}
+          value={config.material.id}
           onChange={(event) =>
             onConfigChange((current) => ({
               ...current,
-              colouring: {
-                ...current.colouring,
-                algorithmId: event.target.value as ColouringAlgorithmId,
+              material: {
+                ...current.material,
+                id: event.target.value as MaterialId,
               },
             }))
           }
         >
-          {Object.values(colouringRegistry).map((algorithm) => (
-            <option key={algorithm.id} value={algorithm.id}>
-              {algorithm.displayName}
+          {Object.values(materialRegistry).map((material) => (
+            <option key={material.id} value={material.id}>
+              {material.displayName}
             </option>
           ))}
         </select>
@@ -287,24 +287,24 @@ function ComparisonSideCard({
           min="0.004"
           max="0.08"
           step="0.002"
-          value={config.colouring.parameters.density ?? 0.032}
+          value={config.material.parameters.density ?? 0.032}
           onChange={(event) =>
             onConfigChange((current) => ({
               ...current,
-              colouring: {
-                ...current.colouring,
+              material: {
+                ...current.material,
                 parameters: {
-                  ...current.colouring.parameters,
+                  ...current.material.parameters,
                   density: Number(event.target.value),
                 },
               },
             }))
           }
         />
-        <strong>{(config.colouring.parameters.density ?? 0.032).toFixed(3)}</strong>
+        <strong>{(config.material.parameters.density ?? 0.032).toFixed(3)}</strong>
       </label>
 
-      {config.colouring.algorithmId === 'orbitTrap' ? (
+      {config.material.id === 'orbitTrap' ? (
         <label>
           <span>Trap scale</span>
           <input
@@ -312,21 +312,21 @@ function ComparisonSideCard({
             min="0.2"
             max="3"
             step="0.05"
-            value={config.colouring.parameters.trapScale ?? 1}
+            value={config.material.parameters.trapScale ?? 1}
             onChange={(event) =>
               onConfigChange((current) => ({
                 ...current,
-                colouring: {
-                  ...current.colouring,
+                material: {
+                  ...current.material,
                   parameters: {
-                    ...current.colouring.parameters,
+                    ...current.material.parameters,
                     trapScale: Number(event.target.value),
                   },
                 },
               }))
             }
           />
-          <strong>{(config.colouring.parameters.trapScale ?? 1).toFixed(2)}</strong>
+          <strong>{(config.material.parameters.trapScale ?? 1).toFixed(2)}</strong>
         </label>
       ) : null}
     </div>

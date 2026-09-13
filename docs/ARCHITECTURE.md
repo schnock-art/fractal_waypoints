@@ -11,7 +11,9 @@ flowchart TD
   CONFIG --> COORD["Render coordinator"]
   COORD --> GPU["WebGPU renderer"]
   COORD --> CPU["CPU fallback renderer"]
-  GPU --> SHADER["WGSL formula and colouring kernels"]
+  GPU --> ORBIT["WGSL formula and orbit-metric kernels"]
+  ORBIT --> MATERIAL["Visual material kernels"]
+  MATERIAL --> LENS["Lens/post-processing kernels"]
 ```
 
 The renderer consumes configurations. It should not know whether a configuration came from an editor, Waypoint, animation frame, URL, or discovery engine.
@@ -22,7 +24,7 @@ The renderer consumes configurations. It should not know whether a configuration
 src/app/             Application composition and state
 src/math/            Double-single and complex arithmetic
 src/fractals/        Formula definitions and registry
-src/colouring/       Colouring algorithms and registry
+src/colouring/       Orbit metrics, visual materials, and lens-effect registries
 src/palettes/        Palette model, interpolation, editor logic
 src/rendering/       Render coordinator, WebGPU, CPU fallback
 src/navigation/      Viewport controls, keyboard movement, Waypoints, discovery
@@ -63,7 +65,7 @@ This keeps the main canvas visually primary while still allowing each workflow t
 
 ## Domain model
 
-`RenderConfig` contains `schemaVersion`, `viewport`, `fractal`, `colouring`, `palette`, and `quality`.
+`RenderConfig` contains `schemaVersion`, `viewport`, `fractal`, `material`, `lens`, `palette`, and `quality`. Version 2 migrated the narrow colouring selection to serialisable material and lens configurations; version 3 added structured orbit-trap sets while preserving legacy smooth-escape and orbit-trap configurations through the persistence boundary. The common render configuration remains the interchange format for URLs, Waypoints, comparisons, Journey keyframes, and exports.
 
 `NavigationSettings` contains schema versioned input bindings and movement parameters such as pan speed, zoom speed, rotation speed, and optional precision or boost modifiers. It should remain serialisable so user preferences and future presets can be stored and restored cleanly.
 
@@ -71,7 +73,7 @@ This keeps the main canvas visually primary while still allowing each workflow t
 
 `FractalConfig` contains `formulaId`, numeric `parameters`, `maxIterations`, and `bailout`.
 
-`ColouringConfig` contains `algorithmId` and numeric `parameters`.
+`MaterialConfig` contains a material `id`, numeric parameters, optional structured `OrbitTrapSetConfig`, and optional `OrbitTrapAppearanceConfig`. An orbit-trap set contains up to two transformed SDF traps (shape, position, rotation, and scale) plus a composition rule (`minimum`/union or `maximum`/intersection). Its appearance selects the closest-approach or final-orbit metric, proximity-signal or distance-band palette mapping, interior/exterior blend strength, and a capped emissive accent. `LensConfig` contains presentation-only controls such as exposure and vignette.
 
 `PaletteConfig` contains ordered colour stops, interpolation mode (`linear`, `smooth`, or `cubic`), repeat mode (`clamp`, `repeat`, or `mirror`), offset, and scale.
 
@@ -100,17 +102,21 @@ Navigation should be separated into:
 
 This separation keeps keyboard movement configurable without coupling key bindings to rendering code or UI components. `RenderView` consumes navigation actions; it should not hardcode specific keys such as `W`, `A`, `S`, or `D`.
 
-## Formula and colouring interfaces
+## Formula, orbit metrics, materials, and lens interfaces
 
-Each formula has an `id`, display name, parameter definitions, and supported colouring capabilities. The current baseline set is Mandelbrot, Julia, Burning Ship, and Tricorn. Later candidates include Multibrot, Newton, orbit traps, distance estimation, and custom formulas.
+Each formula has an `id`, display name, parameter definitions, and supported metric capabilities. The current baseline set is Mandelbrot, Julia, Burning Ship, and Tricorn. The next 2D formula candidates are Multibrot, Newton, Phoenix, Nova, Magnet, and Lyapunov; formulas with substantially different sampling models, such as IFS, should remain separate additions rather than being forced through escape-time assumptions.
 
-Colouring algorithms remain modular and serialisable. The current colouring set includes classic smooth escape-time shading plus orbit-trap colouring, with the default orbit-trap presentation blending trap accents over escape-time structure so boundary exploration stays readable. Algorithm-specific numeric parameters stay in `ColouringConfig.parameters` so Explore, Compare, Waypoints, Journey, and persistence can all reuse the same render configuration shape.
+Formula iteration should return an extensible `OrbitMetrics` record rather than directly select colours. The first record can contain escape state, iteration count, smooth iteration, final `z`, magnitude, minimum distance for each requested trap, and a derivative when the formula supports it. Distance estimates, convergence/root information, potential, and formula-specific metrics can be added as capabilities without leaking formula details into UI components.
+
+The initial material registry contains classic smooth escape time and orbit trap; the latter blends palette-driven trap accents over escape-time structure. Orbit traps currently support point, line, circle, cross, and spiral SDFs with serialisable transforms and two-trap composition. Their appearance settings expose a choice of closest-approach or final-orbit metric, two palette mappings, separate interior/exterior blend strength, and a deliberately capped emissive accent. Formula-agnostic material presets apply material and lens configurations together. Materials select compatible metrics and can later add contour bands, height-field normals, directional/rim lighting, roughness, and broader emissive response. The first lens effects are exposure and vignette; later lens effects include tone mapping, bloom, grain, sharpening, and carefully opt-in chromatic effects. Coordinate-distorting effects must be declared separately from lens effects because they alter sampling rather than only presentation.
+
+The WebGPU path owns high-quality material and lens passes. The CPU fallback must continue to render a saved configuration intelligibly: it may use a documented approximation or disable an expensive lens pass with an on-screen capability notice, but must not silently reinterpret the formula, viewport, palette, or saved material parameters.
 
 ## Palette architecture
 
 `PaletteEditorState → PaletteConfig → CPU sampler / GPU lookup representation`.
 
-The editor must not depend on a formula. A visual preset is simply a name plus colouring and palette configurations.
+The editor must not depend on a formula. A visual preset is a named palette plus compatible material and lens configurations; a preset may be applied to any formula whose advertised metric capabilities satisfy it.
 
 ## Comparison
 
@@ -125,6 +131,8 @@ Animations contain a schema version, duration, easing, and ordered keyframes. Ea
 ## Persistence
 
 Support URL state for one shareable `RenderConfig`, project JSON for palettes/Waypoints/scenes/animations, and exported images/video. Every persisted structure needs a schema version and migration boundary.
+
+Discovery scoring intentionally samples formula and viewport geometry with a neutral classic material. Palette, lens, trap shape, and material-response choices travel with discovered Waypoints as presentation state, but never influence the search ranking.
 
 ## Diagnostics
 

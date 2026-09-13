@@ -27,7 +27,8 @@ export function createFirstFlightRenderConfig(current: RenderConfig): RenderConf
 
   return {
     ...mandelbrot,
-    colouring: current.colouring,
+    material: current.material,
+    lens: current.lens,
     palette: current.palette,
     quality: current.quality,
   };

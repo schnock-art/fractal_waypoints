@@ -2,7 +2,7 @@ import { complexFromNumbers } from '../math/complex';
 import { fromNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
 import { defaultPalettePreset } from '../palettes/presets';
-import type { FormulaId, PaletteConfig, RenderConfig } from '../types/config';
+import { SCHEMA_VERSION, type FormulaId, type PaletteConfig, type RenderConfig } from '../types/config';
 
 function createDefaultPalette(): PaletteConfig {
   return clonePalette(defaultPalettePreset.palette);
@@ -27,7 +27,7 @@ export function createDefaultRenderConfig(formulaId: FormulaId = 'mandelbrot'): 
         : 2.8;
 
   return {
-    schemaVersion: 1,
+    schemaVersion: SCHEMA_VERSION,
     viewport: {
       centre: defaultCentre,
       scale: fromNumber(defaultScale),
@@ -40,11 +40,15 @@ export function createDefaultRenderConfig(formulaId: FormulaId = 'mandelbrot'): 
       maxIterations: 180,
       bailout: 32,
     },
-    colouring: {
-      algorithmId: 'smoothEscapeTime',
+    material: {
+      id: 'classic',
       parameters: {
         density: 0.032,
       },
+    },
+    lens: {
+      exposure: 1,
+      vignette: 0,
     },
     palette: createDefaultPalette(),
     quality: {

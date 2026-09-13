@@ -101,3 +101,27 @@ Orbit traps alter how escape behaviour is visualized, not how the complex iterat
 **Status:** Accepted
 
 WebGPU remains the primary renderer, but unsupported browser contexts or GPU startup failures should not collapse the experience into a static placeholder when a 2D canvas path is still available. The renderer-selection layer therefore falls back to a slower interactive CPU renderer behind the same `RenderCoordinator` interface and reports that state explicitly through diagnostics.
+
+## ADR-018: Formula evaluation, visual materials, and lens effects are separate stages
+
+**Status:** Accepted
+
+2D formulas produce an extensible orbit-metrics record rather than directly owning a visual style. Materials turn compatible metrics—such as smooth iteration, final complex value, trap distances, derivatives, and distance estimates—into colour and surface-like shading. Lens effects then adjust the completed image without altering formula evaluation. All material and lens parameters remain serialisable parts of the render configuration so a Waypoint, URL, comparison, Journey, and export reproduce the same look. Coordinate-distorting effects are explicitly distinct because they change the sampling space, not merely the presentation.
+
+This protects the mathematical renderer from a collection of formula-specific shader branches while allowing palette, orbit-trap, topographic, neon, and lighting looks to compose across formulas. The CPU fallback may declare an approximation or unavailable expensive post-process, but it must preserve the saved scene rather than silently replace its meaning.
+
+## ADR-019: Orbit-trap fields are structured transformed SDF sets
+
+**Status:** Accepted
+
+Orbit-trap shape and transform data are not represented as opaque numeric material parameters. A serialisable `OrbitTrapSetConfig` stores up to two named SDF traps with shape, position, rotation, and scale, plus an explicit composition rule. This makes trap geometry editable, shareable, and interpolable by Journey while keeping CPU and WGSL implementations aligned. The two-trap limit is intentional for the initial interactive WebGPU uniform layout; future larger/composite fields require a separately reviewed resource strategy.
+
+Version 3 migration maps legacy orbit-trap configurations to the equivalent circle-plus-cross minimum composition so existing Waypoints and URLs preserve their original appearance.
+
+## ADR-020: Orbit-trap appearance is a serialisable material layer
+
+**Status:** Accepted
+
+Trap geometry and trap appearance are separate concerns. Geometry selects the SDF field, while `OrbitTrapAppearanceConfig` selects the orbit metric (closest approach or final orbit point), palette mapping (proximity signal or distance bands), exterior and interior blend strengths, and a capped emissive accent. The default appearance exactly preserves the earlier boundary-readable orbit-trap blend; Classic Escape remains available as the immediate neutral baseline.
+
+Discovery ranks formula/viewport geometry using a neutral classic-material analysis configuration. It deliberately ignores palettes, lens treatment, trap geometry, and appearance parameters, while preserving the user-selected visual configuration in resulting Waypoints. This makes a discovery result a property of the mathematical region rather than whichever look happened to be active during the scan.

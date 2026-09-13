@@ -7,4 +7,10 @@ describe('renderer iteration parity', () => {
     expect(mandelbrotShader).toContain('let bailout_squared = bailout * bailout;');
     expect(mandelbrotShader).toContain('if (magnitude_squared > bailout_squared)');
   });
+
+  it('keeps formula iteration separate from material selection through orbit metrics', () => {
+    expect(mandelbrotShader).toContain('struct OrbitMetrics');
+    expect(mandelbrotShader).toContain('fn iterate_formula(');
+    expect(mandelbrotShader).toContain('let metrics = iterate_formula(');
+  });
 });

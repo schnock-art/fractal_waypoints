@@ -1,6 +1,8 @@
 import { complexFromNumbers } from '../math/complex';
 import { fromNumber, toNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
+import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../colouring/orbitTraps';
+import { cloneOrbitTrapAppearance, normalizeOrbitTrapAppearance } from '../colouring/orbitMaterial';
 import type { AnimationClip, AnimationEasing, AnimationKeyframe, RenderConfig } from '../types/config';
 import { cloneRenderConfig } from '../navigation/waypoints';
 
@@ -76,14 +78,67 @@ export function interpolateRenderConfigs(
       bailout: interpolateNumber(left.fractal.bailout, right.fractal.bailout, clamped),
       parameters: interpolateParameterMap(left.fractal.parameters, right.fractal.parameters, clamped),
     },
-    colouring: {
-      ...base.colouring,
-      parameters: interpolateParameterMap(left.colouring.parameters, right.colouring.parameters, clamped),
+    material: {
+      ...base.material,
+      parameters: interpolateParameterMap(left.material.parameters, right.material.parameters, clamped),
+      orbitTraps: interpolateOrbitTrapSets(left.material.orbitTraps, right.material.orbitTraps, clamped),
+      orbitAppearance: interpolateOrbitTrapAppearance(left.material.orbitAppearance, right.material.orbitAppearance, clamped),
+    },
+    lens: {
+      exposure: interpolateNumber(left.lens.exposure, right.lens.exposure, clamped),
+      vignette: interpolateNumber(left.lens.vignette, right.lens.vignette, clamped),
     },
     palette: interpolatePalette(left.palette, right.palette, clamped),
     quality: {
       pixelDensity: interpolateNumber(left.quality.pixelDensity, right.quality.pixelDensity, clamped),
     },
+  };
+}
+
+function interpolateOrbitTrapAppearance(
+  left: RenderConfig['material']['orbitAppearance'],
+  right: RenderConfig['material']['orbitAppearance'],
+  t: number,
+): RenderConfig['material']['orbitAppearance'] {
+  if (!left && !right) {
+    return undefined;
+  }
+
+  const start = normalizeOrbitTrapAppearance(left);
+  const end = normalizeOrbitTrapAppearance(right);
+  const base = t < 0.5 ? start : end;
+
+  return {
+    ...cloneOrbitTrapAppearance(base),
+    exteriorMix: interpolateNumber(start.exteriorMix, end.exteriorMix, t),
+    interiorMix: interpolateNumber(start.interiorMix, end.interiorMix, t),
+    emission: interpolateNumber(start.emission, end.emission, t),
+  };
+}
+
+function interpolateOrbitTrapSets(
+  left: RenderConfig['material']['orbitTraps'],
+  right: RenderConfig['material']['orbitTraps'],
+  t: number,
+): RenderConfig['material']['orbitTraps'] {
+  if (!left && !right) {
+    return undefined;
+  }
+
+  const start = normalizeOrbitTrapSet(left);
+  const end = normalizeOrbitTrapSet(right);
+  const base = t < 0.5 ? start : end;
+  const count = Math.min(start.traps.length, end.traps.length);
+
+  return {
+    ...cloneOrbitTrapSet(base),
+    traps: Array.from({ length: count }, (_, index) => ({
+      ...base.traps[index],
+      x: interpolateNumber(start.traps[index].x, end.traps[index].x, t),
+      y: interpolateNumber(start.traps[index].y, end.traps[index].y, t),
+      rotation: interpolateAngle(start.traps[index].rotation, end.traps[index].rotation, t),
+      scale: interpolateNumber(start.traps[index].scale, end.traps[index].scale, t),
+    })),
   };
 }
 

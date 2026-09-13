@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 3 as const;
 export const NAVIGATION_SCHEMA_VERSION = 1 as const;
 export const WAYPOINT_SCHEMA_VERSION = 1 as const;
 export const COMPARISON_SCHEMA_VERSION = 1 as const;
@@ -15,7 +15,11 @@ export interface DoubleSingleComplex {
 }
 
 export type FormulaId = 'mandelbrot' | 'julia' | 'burningShip' | 'tricorn';
-export type ColouringAlgorithmId = 'smoothEscapeTime' | 'orbitTrap';
+export type MaterialId = 'classic' | 'orbitTrap';
+export type OrbitTrapShape = 'point' | 'line' | 'circle' | 'cross' | 'spiral';
+export type OrbitTrapComposition = 'minimum' | 'maximum';
+export type OrbitTrapMetric = 'nearest' | 'final';
+export type OrbitTrapPaletteMapping = 'signal' | 'distanceBands';
 export type PaletteInterpolationMode = 'linear' | 'smooth' | 'cubic';
 export type PaletteRepeatMode = 'clamp' | 'repeat' | 'mirror';
 export type NavigationActionId =
@@ -54,9 +58,37 @@ export interface FractalConfig {
   bailout: number;
 }
 
-export interface ColouringConfig {
-  algorithmId: ColouringAlgorithmId;
+export interface MaterialConfig {
+  id: MaterialId;
   parameters: Record<string, number>;
+  orbitTraps?: OrbitTrapSetConfig;
+  orbitAppearance?: OrbitTrapAppearanceConfig;
+}
+
+export interface OrbitTrapConfig {
+  shape: OrbitTrapShape;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+}
+
+export interface OrbitTrapSetConfig {
+  composition: OrbitTrapComposition;
+  traps: OrbitTrapConfig[];
+}
+
+export interface OrbitTrapAppearanceConfig {
+  metric: OrbitTrapMetric;
+  paletteMapping: OrbitTrapPaletteMapping;
+  exteriorMix: number;
+  interiorMix: number;
+  emission: number;
+}
+
+export interface LensConfig {
+  exposure: number;
+  vignette: number;
 }
 
 export interface RgbaColor {
@@ -102,7 +134,8 @@ export interface RenderConfig {
   schemaVersion: typeof SCHEMA_VERSION;
   viewport: ViewportConfig;
   fractal: FractalConfig;
-  colouring: ColouringConfig;
+  material: MaterialConfig;
+  lens: LensConfig;
   palette: PaletteConfig;
   quality: QualityConfig;
 }

@@ -90,9 +90,10 @@ Status on August 30, 2026: complete.
 
 ## Phase 7 — Advanced rendering and portability
 
-- [ ] Add distance estimation, orbit traps, and more formulas.
+- [x] Add orbit traps and more 2D formulas.
+- [ ] Add distance estimation.
 - [ ] Improve deep-zoom diagnostics and investigate perturbation rendering.
-- [ ] Add CPU fallback.
+- [x] Add CPU fallback.
 - [ ] Add WebGL/lightweight sharing fallback.
 - [ ] Experiment with 3D fractals.
 
@@ -230,6 +231,100 @@ Status on September 8, 2026: complete.
 - [x] Add a skippable, restartable in-app "First flight" tutorial that guides users through the real Explore UI with focused highlights: navigation, Julia linking, parameter tuning, Settings and control orientation, and saving a Waypoint.
 - [ ] Persist tutorial completion locally and provide a clear restart entry point from the settings/help surface.
 - [ ] Add browser regression coverage for the tutorial’s key transitions and the demo capture setup.
+
+## Phase 8 — Visual Lab foundation
+
+Goal: evolve the existing smooth-escape and first orbit-trap modes into a composable visual system without changing the underlying 2D fractal mathematics.
+
+- [x] Define the initial extensible `OrbitMetrics` contract shared by CPU and WGSL paths: escape state, iteration count, smooth iteration, final complex value, magnitude, and requested trap distance. Derivative, distance estimate, root/convergence, and formula-specific values remain opt-in capabilities.
+- [x] Establish the first `formula → orbit metrics → material → lens` pipeline, keeping formula evaluation and WebGPU resource ownership out of React components.
+- [x] Version and migrate `RenderConfig` from the `ColouringConfig` shape to serialisable `MaterialConfig` and `LensConfig` structures. Legacy URL and persisted Waypoint configurations migrate to equivalent materials with a neutral lens.
+- [x] Add an initial material registry with metric capability declarations, defaults, and compatibility metadata rather than hardcoding material choices in the Explore UI.
+- [x] Add an initial lens-effect registry for presentation-only exposure and vignette. Coordinate-distorting sampling effects remain deferred and separately labelled.
+- [ ] Establish CPU/WebGPU parity fixtures for shared metrics and documented CPU approximations or capability notices for GPU-only lens passes.
+- [x] Add a focused **Visual Lab** workspace with live material/lens controls and only controls relevant to the active material. Material/lens preset browsing remains next.
+- [x] Add unit tests for initial metrics, legacy migration, configuration interpolation, and URL round trips; add a Playwright Visual Lab material-switching flow.
+- [ ] Add material validation and CPU/WebGPU metric parity fixtures; extend browser coverage to save and reload a visually styled Waypoint.
+
+Definition of done: a saved render configuration can reproduce a compatible named material and restrained lens treatment across Explore, Compare, Waypoints, Journey, URL sharing, and export, while legacy colouring configurations still load correctly.
+
+## Phase 8.1 — Rich orbit traps and palette fields
+
+Goal: turn the current circle/cross orbit trap into an expressive but navigable shader tool.
+
+- [x] Support point, line, circle, cross, spiral, and two-trap composited SDF fields with serialisable transforms and union/intersection composition.
+- [x] Let materials choose trap metric, palette mapping, interior/exterior mixing, and optional emissive response while retaining a readable classic-escape baseline.
+- [x] Add formula-agnostic `Classic Escape`, `Filament`, `Signal Fire`, and `Etched Orbit` material presets. User-created preset storage remains separate follow-up work.
+- [x] Support deterministic Journey interpolation of trap position, rotation, and scale. Dedicated perfectly-loopable material animation and palette-offset animation remain follow-up work.
+- [x] Update discovery scoring only where it can use a material-independent metric, so results remain meaningful when a different look is applied.
+
+Definition of done: users can apply, tune, animate, save, share, and export several trap-based looks without changing a formula or losing boundary readability.
+
+Status on September 13, 2026: complete.
+
+## Phase 8.2 — Surface and cartographic materials
+
+Goal: make existing 2D fractals feel sculptural without pretending they are a separate 3D renderer.
+
+- [ ] Add smooth-iteration and distance-estimate height sources, screen-space normal sampling, directional and rim lighting, ambient term, roughness, and specular controls.
+- [ ] Add topographic contour materials with adjustable level count, line width, contrast, and zoom-aware spacing.
+- [ ] Add domain-colouring materials using complex angle, magnitude, and orbit phase; prepare root-basin mapping as a capability for Newton fractals.
+- [ ] Add material presets that demonstrate distinct visual languages—topographic atlas, engraved obsidian, molten metal, bioluminescent coral—without overwhelming the default Explore view.
+- [ ] Verify accessibility and legibility: preserve non-colour cues for boundaries, avoid global high-intensity bloom, and provide a quick return to the classic material.
+
+Definition of done: lighting and contour effects add clear depth or structure at interactive WebGPU rates, with their performance cost and CPU-fallback behaviour communicated honestly.
+
+## Phase 8.3 — HDR lens pipeline
+
+Goal: add cinematic finish while ensuring the fractal remains the subject.
+
+- [ ] Render materials into an HDR-capable intermediate target and add exposure plus tone mapping before presentation.
+- [ ] Add thresholded, downsampled bloom with an intensity cap and sensible dark-scene defaults.
+- [ ] Add subtle optional vignette, grain, colour grading, sharpening, and chromatic aberration; keep all disabled unless a preset explicitly enables them.
+- [ ] Add post-process quality tiers, resize/resource lifecycle tests, and deterministic export coverage.
+- [ ] Treat coordinate-distorting effects as an experimental, separately labelled category with direct comparison and reset affordances.
+
+Definition of done: lens presets enhance bright local detail without washing out exploration, and recorded journeys match the on-screen material/lens look.
+
+## Phase 9 — 2D formula families
+
+Goal: broaden discovery and comparison with formulas that reuse the new metric/material architecture instead of creating unrelated visual branches.
+
+### Phase 9.1 — Multibrot
+
+- [ ] Add `z^n + c` with a validated, animatable power parameter and stable defaults.
+- [ ] Implement CPU/WGSL iteration and metric parity, formula-specific curated Waypoints, and discovery coverage.
+- [ ] Make Compare especially useful for power sweeps with synchronized viewport and animated power journeys.
+
+### Phase 9.2 — Newton and Nova
+
+- [ ] Add polynomial/root configuration, derivative-based iteration, convergence diagnostics, and root-basin metrics.
+- [ ] Add root identity and convergence speed materials, with a useful fallback when roots are numerically ambiguous.
+- [ ] Add Newton/Nova curated Waypoints, discovery heuristics, and test coverage for convergence and persistence.
+
+### Phase 9.3 — Organic and specialist formulas
+
+- [ ] Add Phoenix, then evaluate Magnet I/II and Lyapunov against a written formula-admission checklist: shared metric fit, interactive performance, discovery usefulness, visual distinction, and testability.
+- [ ] Treat IFS/Barnsley fern as a separately scoped sampling architecture, not a quick registry entry.
+
+Definition of done: each added formula advertises capabilities, has CPU/WGSL coverage, works through Explore/Discover/Compare/Journey/Waypoints, and ships with compelling curated destinations rather than just a dropdown entry.
+
+## Phase 10 — Deep zoom and 3D research tracks
+
+These are deliberate research tracks rather than prerequisites for the Visual Lab.
+
+### Phase 10.1 — Perturbation-assisted deep zoom
+
+- [ ] Prototype reference-orbit perturbation rendering behind the existing diagnostics and renderer coordinator.
+- [ ] Define precision/error thresholds, fallback behaviour, and Waypoint compatibility before exposing it as a quality mode.
+- [ ] Test known deep-zoom reference views against deterministic images or metric fixtures.
+
+### Phase 10.2 — Separate 3D ray-march renderer
+
+- [ ] Define a separate 3D scene/camera configuration and renderer capability boundary; do not overload the 2D viewport or formula contracts.
+- [ ] Prototype a Mandelbulb distance-estimator renderer with ray marching, normals, lighting, quality limits, and cancellation behaviour.
+- [ ] Add 3D Waypoints only after camera, formula, material, and export configurations can be reproduced faithfully.
+- [ ] Evaluate Mandelbox only after the Mandelbulb prototype meets interactive-performance and navigation criteria.
 
 ## First implementation slice
 

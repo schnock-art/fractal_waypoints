@@ -35,7 +35,7 @@ export function DiscoverPanel({
             <span>
               {summary.intensityLabel} · about {summary.estimatedTileCount} candidate tiles
             </span>
-            <span>Discovery samples nested subregions, scores complex boundaries, and emits reusable Waypoints.</span>
+            <span>Discovery scores formula geometry only, so a different material never changes what it finds.</span>
           </div>
 
           <div className="discover-panel__stats">

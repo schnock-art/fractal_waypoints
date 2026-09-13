@@ -10,6 +10,10 @@ export interface DetailedFormulaIterationSample extends FormulaIterationSample {
   iteration: number;
   magnitudeSquared: number;
   minTrapDistance: number;
+  finalTrapDistance: number;
+  smoothIteration: number;
+  finalReal: number;
+  finalImaginary: number;
 }
 
 export function getFormulaCode(formulaId: FormulaId): number {
@@ -75,7 +79,11 @@ export function iterateFormulaDetailed(
     zReal = nextReal;
     zImaginary = nextImaginary;
     if (trackOrbitTrap) {
-      minTrapDistance = Math.min(minTrapDistance, computeOrbitTrapDistance(zReal, zImaginary));
+      minTrapDistance = Math.min(minTrapDistance, computeOrbitTrapDistance(
+        zReal,
+        zImaginary,
+        config.material.orbitTraps,
+      ));
     }
 
     const magnitudeSquared = (zReal * zReal) + (zImaginary * zImaginary);
@@ -86,6 +94,12 @@ export function iterateFormulaDetailed(
         normalizedIterations: iteration / maxIterations,
         magnitudeSquared,
         minTrapDistance,
+        finalTrapDistance: trackOrbitTrap
+          ? computeOrbitTrapDistance(zReal, zImaginary, config.material.orbitTraps)
+          : Number.POSITIVE_INFINITY,
+        smoothIteration: iteration + 1 - Math.log2(Math.log2(Math.max(Math.sqrt(magnitudeSquared), 1.0001))),
+        finalReal: zReal,
+        finalImaginary: zImaginary,
       };
     }
   }
@@ -96,5 +110,11 @@ export function iterateFormulaDetailed(
     normalizedIterations: 1,
     magnitudeSquared: (zReal * zReal) + (zImaginary * zImaginary),
     minTrapDistance,
+    finalTrapDistance: trackOrbitTrap
+      ? computeOrbitTrapDistance(zReal, zImaginary, config.material.orbitTraps)
+      : Number.POSITIVE_INFINITY,
+    smoothIteration: maxIterations,
+    finalReal: zReal,
+    finalImaginary: zImaginary,
   };
 }

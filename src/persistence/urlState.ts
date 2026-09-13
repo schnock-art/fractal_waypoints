@@ -1,4 +1,5 @@
 import type { RenderConfig } from '../types/config';
+import { migrateRenderConfig } from './renderConfig';
 
 const PARAM_KEY = 'view';
 
@@ -10,7 +11,7 @@ export function encodeRenderConfigToUrlParam(config: RenderConfig): string {
 export function decodeRenderConfigFromUrlParam(encoded: string): RenderConfig | null {
   try {
     const json = fromBase64Url(encoded);
-    return JSON.parse(json) as RenderConfig;
+    return migrateRenderConfig(JSON.parse(json));
   } catch {
     return null;
   }
