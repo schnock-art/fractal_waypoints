@@ -1,6 +1,7 @@
 import { getMaterialCode, getMaterialDensity, getOrbitTrapAppearance, getOrbitTrapScale, getOrbitTrapSet } from '../../colouring/runtime';
 import { getOrbitTrapCompositionCode, getOrbitTrapShapeCode } from '../../colouring/orbitTraps';
 import { getOrbitTrapMetricCode, getOrbitTrapPaletteMappingCode } from '../../colouring/orbitMaterial';
+import { getLensEffectAmount } from '../../visuals/lenses/model';
 import { buildPaletteLut } from '../../palettes/sampler';
 import type { RenderConfig } from '../../types/config';
 import type { RenderCoordinator, RenderSurface } from '../types';
@@ -154,8 +155,8 @@ class WebGpuSurface implements RenderSurface {
       config.viewport.aspectRatio,
       getFormulaCode(config.fractal.formulaId),
       getOrbitTrapScale(config),
-      config.lens.exposure,
-      config.lens.vignette,
+      getLensEffectAmount(config.lens, 'exposure'),
+      getLensEffectAmount(config.lens, 'vignette'),
       appearance.emission,
       firstTrap.x,
       firstTrap.y,

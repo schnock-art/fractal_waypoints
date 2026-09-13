@@ -2,6 +2,7 @@ import { complexFromNumbers } from '../math/complex';
 import { add, fromNumber, multiplyByFloat, toNumber } from '../math/doubleSingle';
 import { iterateFormulaSample } from '../fractals/runtime';
 import { clonePalette } from '../palettes/model';
+import { createLensConfig } from '../visuals/lenses/model';
 import type { RenderConfig, Waypoint } from '../types/config';
 import { createWaypoint } from './waypoints';
 
@@ -165,7 +166,7 @@ export function createMaterialIndependentDiscoveryConfig(config: RenderConfig): 
   return {
     ...config,
     material: { id: 'classic', parameters: { density: 0.032 } },
-    lens: { exposure: 1, vignette: 0 },
+    lens: createLensConfig(),
     palette: clonePalette(config.palette),
   };
 }

@@ -125,3 +125,11 @@ Version 3 migration maps legacy orbit-trap configurations to the equivalent circ
 Trap geometry and trap appearance are separate concerns. Geometry selects the SDF field, while `OrbitTrapAppearanceConfig` selects the orbit metric (closest approach or final orbit point), palette mapping (proximity signal or distance bands), exterior and interior blend strengths, and a capped emissive accent. The default appearance exactly preserves the earlier boundary-readable orbit-trap blend; Classic Escape remains available as the immediate neutral baseline.
 
 Discovery ranks formula/viewport geometry using a neutral classic-material analysis configuration. It deliberately ignores palettes, lens treatment, trap geometry, and appearance parameters, while preserving the user-selected visual configuration in resulting Waypoints. This makes a discovery result a property of the mathematical region rather than whichever look happened to be active during the scan.
+
+## ADR-021: 2D visual pipeline hardening uses declared seams, not a render graph
+
+**Status:** Accepted
+
+Current formulas advertise only the metrics they genuinely produce. Materials declare their required metrics, local versus neighbourhood sampling requirement, defaults, validation, and editor identity; formula/material compatibility is resolved from that metadata. The generated WGSL source is composed from contract, coordinate, field/material, formula-metric, and presentation modules, while simple point-metric materials remain one optimised pass.
+
+The first neighbourhood material will trigger a reusable metric-field texture rather than re-running a fractal iteration for each normal sample. Until then, no intermediate texture or general render graph is created. Lens treatment is an ordered serialisable effect list. Journey samples base/keyframed state first and then applies a bounded set of deterministic waveform modulations, with no user-authored code or shader expressions. This keeps video export reproducible and creates a natural path to perfectly looping material animation.

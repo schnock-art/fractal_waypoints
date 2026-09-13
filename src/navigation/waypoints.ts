@@ -1,6 +1,8 @@
 import { clonePalette } from '../palettes/model';
 import { cloneOrbitTrapSet } from '../colouring/orbitTraps';
 import { cloneOrbitTrapAppearance } from '../colouring/orbitMaterial';
+import { cloneLensConfig } from '../visuals/lenses/model';
+import { cloneModulations } from '../visuals/modulation/runtime';
 import type { RenderConfig, Waypoint, WaypointSource } from '../types/config';
 import { WAYPOINT_SCHEMA_VERSION } from '../types/config';
 
@@ -25,7 +27,8 @@ export function cloneRenderConfig(config: RenderConfig): RenderConfig {
       orbitTraps: config.material.orbitTraps ? cloneOrbitTrapSet(config.material.orbitTraps) : undefined,
       orbitAppearance: config.material.orbitAppearance ? cloneOrbitTrapAppearance(config.material.orbitAppearance) : undefined,
     },
-    lens: { ...config.lens },
+    lens: cloneLensConfig(config.lens),
+    modulations: cloneModulations(config.modulations),
     palette: clonePalette(config.palette),
     quality: {
       ...config.quality,

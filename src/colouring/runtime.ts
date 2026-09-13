@@ -1,5 +1,6 @@
 import type { LensConfig, MaterialId, OrbitTrapAppearanceConfig, OrbitTrapSetConfig, RenderConfig, RgbaColor } from '../types/config';
 import { normalizeOrbitTrapAppearance } from './orbitMaterial';
+import { getLensEffectAmount } from '../visuals/lenses/model';
 import { normalizeOrbitTrapSet } from './orbitTraps';
 
 export function getMaterialCode(materialId: MaterialId): number {
@@ -106,9 +107,9 @@ export function blendColor(left: RgbaColor, right: RgbaColor, mix: number): Rgba
 }
 
 export function applyLens(color: RgbaColor, lens: LensConfig, x = 0.5, y = 0.5): RgbaColor {
-  const exposure = Math.max(0.1, lens.exposure);
+  const exposure = Math.max(0.1, getLensEffectAmount(lens, 'exposure'));
   const distanceFromCentre = Math.hypot(x - 0.5, y - 0.5) / Math.SQRT1_2;
-  const vignette = 1 - (clampUnit(lens.vignette) * Math.pow(clampUnit(distanceFromCentre), 1.8));
+  const vignette = 1 - (clampUnit(getLensEffectAmount(lens, 'vignette')) * Math.pow(clampUnit(distanceFromCentre), 1.8));
 
   return {
     r: clampUnit(color.r * exposure * vignette),

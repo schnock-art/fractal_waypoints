@@ -9,6 +9,8 @@ export interface FormulaIterationSample {
 export interface DetailedFormulaIterationSample extends FormulaIterationSample {
   iteration: number;
   magnitudeSquared: number;
+  magnitude: number;
+  complexPhase: number;
   minTrapDistance: number;
   finalTrapDistance: number;
   smoothIteration: number;
@@ -93,6 +95,8 @@ export function iterateFormulaDetailed(
         iteration,
         normalizedIterations: iteration / maxIterations,
         magnitudeSquared,
+        magnitude: Math.sqrt(magnitudeSquared),
+        complexPhase: Math.atan2(zImaginary, zReal),
         minTrapDistance,
         finalTrapDistance: trackOrbitTrap
           ? computeOrbitTrapDistance(zReal, zImaginary, config.material.orbitTraps)
@@ -109,6 +113,8 @@ export function iterateFormulaDetailed(
     iteration: maxIterations,
     normalizedIterations: 1,
     magnitudeSquared: (zReal * zReal) + (zImaginary * zImaginary),
+    magnitude: Math.hypot(zReal, zImaginary),
+    complexPhase: Math.atan2(zImaginary, zReal),
     minTrapDistance,
     finalTrapDistance: trackOrbitTrap
       ? computeOrbitTrapDistance(zReal, zImaginary, config.material.orbitTraps)

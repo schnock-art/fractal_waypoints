@@ -1,12 +1,20 @@
 import type { LensConfig, MaterialConfig, MaterialId } from '../types/config';
 import { cloneOrbitTrapSet, defaultOrbitTrapSet } from './orbitTraps';
 import { cloneOrbitTrapAppearance } from './orbitMaterial';
+import { createLensConfig } from '../visuals/lenses/model';
+import { formulaRegistry } from '../fractals/registry';
+import type { MetricCapability, MetricSamplingRequirement } from '../visuals/metrics/capabilities';
+import { validateMetricRequirements } from '../visuals/metrics/capabilities';
 
 export interface MaterialDefinition {
   id: MaterialId;
   displayName: string;
   description: string;
-  requiredMetrics: readonly ('smoothIteration' | 'trapDistance')[];
+  requiredMetrics: readonly MetricCapability[];
+  sampling: MetricSamplingRequirement;
+  editorId: 'classic' | 'orbitTrap';
+  defaults: MaterialConfig;
+  validate: (config: MaterialConfig) => string[];
 }
 
 export const materialRegistry: Record<MaterialId, MaterialDefinition> = {
@@ -14,40 +22,26 @@ export const materialRegistry: Record<MaterialId, MaterialDefinition> = {
     id: 'classic',
     displayName: 'Classic',
     description: 'Continuous escape-time colouring for classic fractal exploration.',
-    requiredMetrics: ['smoothIteration'],
+    requiredMetrics: ['escapeState', 'smoothIteration', 'magnitude'],
+    sampling: 'point',
+    editorId: 'classic',
+    defaults: { id: 'classic', parameters: { density: 0.032 } },
+    validate: validateClassicMaterial,
   },
   orbitTrap: {
     id: 'orbitTrap',
     displayName: 'Orbit Trap',
     description: 'Blends closest-orbit trap accents with classic escape-time structure for more readable sculptural detail.',
-    requiredMetrics: ['smoothIteration', 'trapDistance'],
+    requiredMetrics: ['escapeState', 'smoothIteration', 'magnitude', 'orbitTrapDistance'],
+    sampling: 'point',
+    editorId: 'orbitTrap',
+    defaults: { id: 'orbitTrap', parameters: { density: 0.032, trapScale: 1 }, orbitTraps: cloneOrbitTrapSet(defaultOrbitTrapSet), orbitAppearance: cloneOrbitTrapAppearance() },
+    validate: validateOrbitTrapMaterial,
   },
 };
 
-export interface LensEffectDefinition {
-  id: 'exposure' | 'vignette';
-  displayName: string;
-  description: string;
-  cpuSupported: boolean;
-}
-
-export const lensEffectRegistry: LensEffectDefinition[] = [
-  {
-    id: 'exposure',
-    displayName: 'Exposure',
-    description: 'Adjusts the final scene brightness without changing fractal sampling.',
-    cpuSupported: true,
-  },
-  {
-    id: 'vignette',
-    displayName: 'Vignette',
-    description: 'Gently darkens the outer frame to keep visual focus inside the view.',
-    cpuSupported: true,
-  },
-];
-
 export interface MaterialPreset {
-  id: 'classic' | 'filament' | 'signalFire' | 'etchedOrbit';
+  id: 'classic' | 'filament' | 'signalFire' | 'etchedOrbit' | 'questionableRadioactiveGlass';
   name: string;
   description: string;
   material: MaterialConfig;
@@ -60,7 +54,7 @@ export const materialPresets: MaterialPreset[] = [
     name: 'Classic Escape',
     description: 'A clean smooth-iteration baseline for ordinary exploration.',
     material: { id: 'classic', parameters: { density: 0.032 } },
-    lens: { exposure: 1, vignette: 0 },
+    lens: createLensConfig(),
   },
   {
     id: 'filament',
@@ -72,7 +66,7 @@ export const materialPresets: MaterialPreset[] = [
       orbitTraps: cloneOrbitTrapSet(defaultOrbitTrapSet),
       orbitAppearance: cloneOrbitTrapAppearance(),
     },
-    lens: { exposure: 1.08, vignette: 0.18 },
+    lens: createLensConfig(1.08, 0.18),
   },
   {
     id: 'signalFire',
@@ -96,7 +90,7 @@ export const materialPresets: MaterialPreset[] = [
         emission: 0.24,
       },
     },
-    lens: { exposure: 1.16, vignette: 0.28 },
+    lens: createLensConfig(1.16, 0.28),
   },
   {
     id: 'etchedOrbit',
@@ -120,7 +114,25 @@ export const materialPresets: MaterialPreset[] = [
         emission: 0.06,
       },
     },
-    lens: { exposure: 0.92, vignette: 0.35 },
+    lens: createLensConfig(0.92, 0.35),
+  },
+  {
+    id: 'questionableRadioactiveGlass',
+    name: 'Questionable Radioactive Glass',
+    description: 'A suspiciously luminous green signal, kept below hazardous bloom levels.',
+    material: {
+      id: 'orbitTrap',
+      parameters: { density: 0.038, trapScale: 1.35 },
+      orbitTraps: {
+        composition: 'minimum',
+        traps: [
+          { shape: 'circle', x: 0.1, y: 0, rotation: 0, scale: 0.75 },
+          { shape: 'spiral', x: -0.16, y: 0.08, rotation: -0.3, scale: 0.55 },
+        ],
+      },
+      orbitAppearance: { metric: 'nearest', paletteMapping: 'signal', exteriorMix: 0.7, interiorMix: 0.6, emission: 0.35 },
+    },
+    lens: createLensConfig(1.12, 0.16),
   },
 ];
 
@@ -134,4 +146,39 @@ export function cloneMaterialPreset(preset: MaterialPreset): Pick<MaterialPreset
     },
     lens: { ...preset.lens },
   };
+}
+
+export function createMaterialConfig(materialId: MaterialId): MaterialConfig {
+  const defaults = materialRegistry[materialId].defaults;
+  return {
+    ...defaults,
+    parameters: { ...defaults.parameters },
+    orbitTraps: defaults.orbitTraps ? cloneOrbitTrapSet(defaults.orbitTraps) : undefined,
+    orbitAppearance: defaults.orbitAppearance ? cloneOrbitTrapAppearance(defaults.orbitAppearance) : undefined,
+  };
+}
+
+export function validateMaterialConfig(config: MaterialConfig): string[] {
+  return materialRegistry[config.id].validate(config);
+}
+
+export function getMaterialCompatibility(formulaId: import('../types/config').FormulaId, materialId: MaterialId) {
+  return validateMetricRequirements(formulaRegistry[formulaId].supportedMetrics, materialRegistry[materialId].requiredMetrics);
+}
+
+function validateClassicMaterial(config: MaterialConfig): string[] {
+  const density = config.parameters.density ?? 0.032;
+  return Number.isFinite(density) && density > 0 ? [] : ['Classic material density must be positive.'];
+}
+
+function validateOrbitTrapMaterial(config: MaterialConfig): string[] {
+  const issues = validateClassicMaterial(config);
+  const trapScale = config.parameters.trapScale ?? 1;
+  if (!Number.isFinite(trapScale) || trapScale < 0.05) {
+    issues.push('Orbit Trap response must be at least 0.05.');
+  }
+  if (!config.orbitTraps?.traps.length) {
+    issues.push('Orbit Trap needs at least one trap.');
+  }
+  return issues;
 }

@@ -262,14 +262,31 @@ Definition of done: users can apply, tune, animate, save, share, and export seve
 
 Status on September 13, 2026: complete.
 
+## Phase 8.15 — Rendering pipeline hardening
+
+Goal: make the existing `coordinates → formula → metrics → material → lens → display` boundaries durable before adding neighbourhood-sampled surface materials.
+
+- [x] Formalize formula metric capabilities and material requirements, compatibility, validation, defaults, editor identities, and sampling requirements.
+- [x] Organize Visual Lab around material-specific editors, keeping the host focused on presets, active-material selection, and lenses.
+- [x] Split the generated WGSL source into explicit contract, coordinate, field/material, formula-metric, and presentation modules while retaining the direct one-pass optimisation.
+- [x] Establish point versus neighbourhood sampling metadata and document the deferred intermediate-metric-texture strategy for surface normals.
+- [x] Migrate exposure and vignette to an ordered, serialisable `LensConfig.effects[]` model while preserving version-1 through version-3 render configurations.
+- [x] Add deterministic serialisable modulation primitives applied after a Journey keyframe/base configuration, with fixed targets and waveform-only sources.
+- [x] Add metric/material/lens/modulation validation and parity-contract fixtures; preserve CPU rendering for all current point materials and effects.
+- [x] Introduce the formula-agnostic **Questionable Radioactive Glass** preset, with restrained emission and a conventional Classic Escape reset.
+
+Definition of done: new metrics, materials, lens effects, and animations can be added through declared seams without adding formula-specific visual branches or a monolithic Visual Lab.
+
+Status on September 13, 2026: complete.
+
 ## Phase 8.2 — Surface and cartographic materials
 
 Goal: make existing 2D fractals feel sculptural without pretending they are a separate 3D renderer.
 
-- [ ] Add smooth-iteration and distance-estimate height sources, screen-space normal sampling, directional and rim lighting, ambient term, roughness, and specular controls.
-- [ ] Add topographic contour materials with adjustable level count, line width, contrast, and zoom-aware spacing.
-- [ ] Add domain-colouring materials using complex angle, magnitude, and orbit phase; prepare root-basin mapping as a capability for Newton fractals.
-- [ ] Add material presets that demonstrate distinct visual languages—topographic atlas, engraved obsidian, molten metal, bioluminescent coral—without overwhelming the default Explore view.
+- [ ] Add topographic contour materials with adjustable level count, line width, contrast, and zoom-aware spacing as the first neighbourhood-material architecture test.
+- [ ] Add domain-colouring materials using final complex value/phase/magnitude; prepare root-basin mapping as a capability for Newton fractals.
+- [ ] Add smooth-iteration and distance-estimate height sources, then screen-space normal sampling, directional/rim/ambient lighting, roughness, and specular controls.
+- [ ] Add material presets that demonstrate distinct visual languages—Topographic Atlas, Engraved Obsidian, Molten Metal, Bioluminescent Coral, and Questionable Radioactive Glass—without overwhelming the default Explore view.
 - [ ] Verify accessibility and legibility: preserve non-colour cues for boundaries, avoid global high-intensity bloom, and provide a quick return to the classic material.
 
 Definition of done: lighting and contour effects add clear depth or structure at interactive WebGPU rates, with their performance cost and CPU-fallback behaviour communicated honestly.

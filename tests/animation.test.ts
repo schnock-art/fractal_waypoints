@@ -8,6 +8,7 @@ import { complexFromNumbers } from '../src/math/complex';
 import { fromNumber, toNumber } from '../src/math/doubleSingle';
 import { createDefaultNavigationSettings } from '../src/navigation/settings';
 import { createWaypoint } from '../src/navigation/waypoints';
+import { getLensEffectAmount, updateLensEffect } from '../src/visuals/lenses/model';
 
 describe('animation interpolation', () => {
   it('interpolates viewport centers and zoom logarithmically', () => {
@@ -51,17 +52,15 @@ describe('animation interpolation', () => {
     const start = createDefaultRenderConfig('mandelbrot');
     const end = createDefaultRenderConfig('mandelbrot');
     start.material.parameters.density = 0.02;
-    start.lens.exposure = 0.8;
-    start.lens.vignette = 0.1;
+    start.lens = updateLensEffect(updateLensEffect(start.lens, 'exposure', { amount: 0.8 }), 'vignette', { amount: 0.1 }, true);
     end.material.parameters.density = 0.06;
-    end.lens.exposure = 1.4;
-    end.lens.vignette = 0.5;
+    end.lens = updateLensEffect(updateLensEffect(end.lens, 'exposure', { amount: 1.4 }), 'vignette', { amount: 0.5 }, true);
 
     const mid = interpolateRenderConfigs(start, end, 0.5);
 
     expect(mid.material.parameters.density).toBeCloseTo(0.04, 8);
-    expect(mid.lens.exposure).toBeCloseTo(1.1, 8);
-    expect(mid.lens.vignette).toBeCloseTo(0.3, 8);
+    expect(getLensEffectAmount(mid.lens, 'exposure')).toBeCloseTo(1.1, 8);
+    expect(getLensEffectAmount(mid.lens, 'vignette')).toBeCloseTo(0.3, 8);
   });
 
   it('interpolates orbit-trap transforms while keeping discrete shapes stable per half', () => {

@@ -2,6 +2,7 @@ import { complexFromNumbers } from '../math/complex';
 import { fromNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
 import { defaultPalettePreset } from '../palettes/presets';
+import { createLensConfig } from '../visuals/lenses/model';
 import { SCHEMA_VERSION, type FormulaId, type PaletteConfig, type RenderConfig } from '../types/config';
 
 function createDefaultPalette(): PaletteConfig {
@@ -46,10 +47,8 @@ export function createDefaultRenderConfig(formulaId: FormulaId = 'mandelbrot'): 
         density: 0.032,
       },
     },
-    lens: {
-      exposure: 1,
-      vignette: 0,
-    },
+    lens: createLensConfig(),
+    modulations: [],
     palette: createDefaultPalette(),
     quality: {
       pixelDensity: 1,

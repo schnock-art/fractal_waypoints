@@ -3,6 +3,8 @@ import { fromNumber, toNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
 import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../colouring/orbitTraps';
 import { cloneOrbitTrapAppearance, normalizeOrbitTrapAppearance } from '../colouring/orbitMaterial';
+import { cloneLensConfig, normalizeLensConfig } from '../visuals/lenses/model';
+import { applyModulations } from '../visuals/modulation/runtime';
 import type { AnimationClip, AnimationEasing, AnimationKeyframe, RenderConfig } from '../types/config';
 import { cloneRenderConfig } from '../navigation/waypoints';
 
@@ -13,17 +15,17 @@ export function sampleAnimationClip(clip: AnimationClip, timeMs: number): Render
   }
 
   if (keyframes.length === 1 || clip.durationMs <= 0) {
-    return cloneRenderConfig(keyframes[0].renderConfig);
+    return applyModulations(cloneRenderConfig(keyframes[0].renderConfig), timeMs / 1000);
   }
 
   const normalizedTime = Math.min(1, Math.max(0, timeMs / clip.durationMs));
   const rightIndex = keyframes.findIndex((keyframe) => keyframe.time >= normalizedTime);
   if (rightIndex <= 0) {
-    return cloneRenderConfig(keyframes[0].renderConfig);
+    return applyModulations(cloneRenderConfig(keyframes[0].renderConfig), timeMs / 1000);
   }
 
   if (rightIndex === -1) {
-    return cloneRenderConfig(keyframes[keyframes.length - 1].renderConfig);
+    return applyModulations(cloneRenderConfig(keyframes[keyframes.length - 1].renderConfig), timeMs / 1000);
   }
 
   const left = keyframes[rightIndex - 1];
@@ -31,7 +33,7 @@ export function sampleAnimationClip(clip: AnimationClip, timeMs: number): Render
   const span = Math.max(right.time - left.time, Number.EPSILON);
   const localT = (normalizedTime - left.time) / span;
 
-  return interpolateRenderConfigs(left.renderConfig, right.renderConfig, applyEasing(clip.easing, localT));
+  return applyModulations(interpolateRenderConfigs(left.renderConfig, right.renderConfig, applyEasing(clip.easing, localT)), timeMs / 1000);
 }
 
 export function generateAnimationFrames(clip: AnimationClip): RenderConfig[] {
@@ -84,14 +86,32 @@ export function interpolateRenderConfigs(
       orbitTraps: interpolateOrbitTrapSets(left.material.orbitTraps, right.material.orbitTraps, clamped),
       orbitAppearance: interpolateOrbitTrapAppearance(left.material.orbitAppearance, right.material.orbitAppearance, clamped),
     },
-    lens: {
-      exposure: interpolateNumber(left.lens.exposure, right.lens.exposure, clamped),
-      vignette: interpolateNumber(left.lens.vignette, right.lens.vignette, clamped),
-    },
+    lens: interpolateLensConfigs(left.lens, right.lens, clamped),
     palette: interpolatePalette(left.palette, right.palette, clamped),
     quality: {
       pixelDensity: interpolateNumber(left.quality.pixelDensity, right.quality.pixelDensity, clamped),
     },
+  };
+}
+
+function interpolateLensConfigs(left: RenderConfig['lens'], right: RenderConfig['lens'], t: number): RenderConfig['lens'] {
+  const start = normalizeLensConfig(left);
+  const end = normalizeLensConfig(right);
+  const base = t < 0.5 ? start : end;
+  return {
+    ...cloneLensConfig(base),
+    effects: base.effects.map((effect) => {
+      const startEffect = start.effects.find((candidate) => candidate.id === effect.id)!;
+      const endEffect = end.effects.find((candidate) => candidate.id === effect.id)!;
+      const keys = new Set([...Object.keys(startEffect.parameters), ...Object.keys(endEffect.parameters)]);
+      return {
+        ...effect,
+        parameters: Object.fromEntries([...keys].map((key) => [
+          key,
+          interpolateNumber(startEffect.parameters[key] ?? 0, endEffect.parameters[key] ?? 0, t),
+        ])),
+      };
+    }),
   };
 }
 

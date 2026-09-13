@@ -1,4 +1,4 @@
-export const mandelbrotShader = /* wgsl */ `
+const shaderContracts = /* wgsl */ `
 struct RenderUniforms {
   centre: vec4f,
   viewport: vec4f,
@@ -25,6 +25,7 @@ struct OrbitMetrics {
   escaped: bool,
   iteration: u32,
   magnitude_squared: f32,
+  complex_phase: f32,
   trap_min: f32,
   final_trap_distance: f32,
   final_z: DsComplex,
@@ -33,6 +34,9 @@ struct OrbitMetrics {
 @group(0) @binding(0) var<uniform> render: RenderUniforms;
 @group(0) @binding(1) var paletteSampler: sampler;
 @group(0) @binding(2) var paletteTexture: texture_2d<f32>;
+`;
+
+const doubleSingleCoordinateKernel = /* wgsl */ `
 
 fn quick_two_sum(a: f32, b: f32) -> vec2f {
   let s = a + b;
@@ -115,6 +119,9 @@ fn ds_complex_tricorn_square(value: DsComplex) -> DsComplex {
 fn ds_complex_abs_square(value: DsComplex) -> vec2f {
   return ds_add(ds_mul(value.re, value.re), ds_mul(value.im, value.im));
 }
+`;
+
+const fieldAndMaterialKernel = /* wgsl */ `
 
 fn trap_sdf(value: DsComplex, trap: vec4f, shape_code: f32) -> f32 {
   let translated = vec2f(ds_to_f32(value.re) - trap.x, ds_to_f32(value.im) - trap.y);
@@ -200,6 +207,9 @@ fn apply_lens(color: vec3f, frag_coord: vec4f) -> vec4f {
   let vignette = 1.0 - clamp(render.extras.z, 0.0, 1.0) * pow(clamp(distance_from_centre, 0.0, 1.0), 1.8);
   return vec4f(clamp(color * max(render.extras.y, 0.1) * vignette, vec3f(0.0), vec3f(1.0)), 1.0);
 }
+`;
+
+const formulaMetricKernel = /* wgsl */ `
 
 fn rotate_point(point: vec2f) -> vec2f {
   let cosine = render.viewport.z;
@@ -264,15 +274,18 @@ fn iterate_formula(
 
     if (magnitude_squared > bailout_squared) {
       let final_trap_distance = select(1e9, trap_distance(z), track_trap);
-      return OrbitMetrics(true, iteration, magnitude_squared, trap_min, final_trap_distance, z);
+      return OrbitMetrics(true, iteration, magnitude_squared, atan2(ds_to_f32(z.im), ds_to_f32(z.re)), trap_min, final_trap_distance, z);
     }
 
     iteration = iteration + 1u;
   }
 
   let final_trap_distance = select(1e9, trap_distance(z), track_trap);
-  return OrbitMetrics(false, max_iterations, magnitude_squared, trap_min, final_trap_distance, z);
+  return OrbitMetrics(false, max_iterations, magnitude_squared, atan2(ds_to_f32(z.im), ds_to_f32(z.re)), trap_min, final_trap_distance, z);
 }
+`;
+
+const presentationEntryPoint = /* wgsl */ `
 
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
@@ -328,3 +341,13 @@ fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
   return apply_lens(color.rgb, frag_coord);
 }
 `;
+
+export const webGpuShaderModules = {
+  contracts: shaderContracts,
+  coordinates: doubleSingleCoordinateKernel,
+  fieldsAndMaterials: fieldAndMaterialKernel,
+  formulaMetrics: formulaMetricKernel,
+  presentation: presentationEntryPoint,
+};
+
+export const mandelbrotShader = Object.values(webGpuShaderModules).join('\n');

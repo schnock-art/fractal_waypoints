@@ -65,7 +65,7 @@ This keeps the main canvas visually primary while still allowing each workflow t
 
 ## Domain model
 
-`RenderConfig` contains `schemaVersion`, `viewport`, `fractal`, `material`, `lens`, `palette`, and `quality`. Version 2 migrated the narrow colouring selection to serialisable material and lens configurations; version 3 added structured orbit-trap sets while preserving legacy smooth-escape and orbit-trap configurations through the persistence boundary. The common render configuration remains the interchange format for URLs, Waypoints, comparisons, Journey keyframes, and exports.
+`RenderConfig` contains `schemaVersion`, `viewport`, `fractal`, `material`, `lens`, `palette`, `modulations`, and `quality`. Version 2 migrated the narrow colouring selection to serialisable material and lens configurations; version 3 added structured orbit-trap sets; version 4 migrated exposure/vignette to ordered lens effects and added deterministic parameter modulations. The common render configuration remains the interchange format for URLs, Waypoints, comparisons, Journey keyframes, and exports.
 
 `NavigationSettings` contains schema versioned input bindings and movement parameters such as pan speed, zoom speed, rotation speed, and optional precision or boost modifiers. It should remain serialisable so user preferences and future presets can be stored and restored cleanly.
 
@@ -73,7 +73,7 @@ This keeps the main canvas visually primary while still allowing each workflow t
 
 `FractalConfig` contains `formulaId`, numeric `parameters`, `maxIterations`, and `bailout`.
 
-`MaterialConfig` contains a material `id`, numeric parameters, optional structured `OrbitTrapSetConfig`, and optional `OrbitTrapAppearanceConfig`. An orbit-trap set contains up to two transformed SDF traps (shape, position, rotation, and scale) plus a composition rule (`minimum`/union or `maximum`/intersection). Its appearance selects the closest-approach or final-orbit metric, proximity-signal or distance-band palette mapping, interior/exterior blend strength, and a capped emissive accent. `LensConfig` contains presentation-only controls such as exposure and vignette.
+`MaterialConfig` contains a material `id`, numeric parameters, optional structured `OrbitTrapSetConfig`, and optional `OrbitTrapAppearanceConfig`. Each material definition declares required metric capabilities, local or neighbourhood sampling, defaults, validation, and an editor identity. An orbit-trap set contains up to two transformed SDF traps (shape, position, rotation, and scale) plus a composition rule (`minimum`/union or `maximum`/intersection). Its appearance selects the closest-approach or final-orbit metric, proximity-signal or distance-band palette mapping, interior/exterior blend strength, and a capped emissive accent. `LensConfig` is ordered `effects[]`, where each effect has an id, enable state, and validated parameters.
 
 `PaletteConfig` contains ordered colour stops, interpolation mode (`linear`, `smooth`, or `cubic`), repeat mode (`clamp`, `repeat`, or `mirror`), offset, and scale.
 
@@ -108,7 +108,7 @@ Each formula has an `id`, display name, parameter definitions, and supported met
 
 Formula iteration should return an extensible `OrbitMetrics` record rather than directly select colours. The first record can contain escape state, iteration count, smooth iteration, final `z`, magnitude, minimum distance for each requested trap, and a derivative when the formula supports it. Distance estimates, convergence/root information, potential, and formula-specific metrics can be added as capabilities without leaking formula details into UI components.
 
-The initial material registry contains classic smooth escape time and orbit trap; the latter blends palette-driven trap accents over escape-time structure. Orbit traps currently support point, line, circle, cross, and spiral SDFs with serialisable transforms and two-trap composition. Their appearance settings expose a choice of closest-approach or final-orbit metric, two palette mappings, separate interior/exterior blend strength, and a deliberately capped emissive accent. Formula-agnostic material presets apply material and lens configurations together. Materials select compatible metrics and can later add contour bands, height-field normals, directional/rim lighting, roughness, and broader emissive response. The first lens effects are exposure and vignette; later lens effects include tone mapping, bloom, grain, sharpening, and carefully opt-in chromatic effects. Coordinate-distorting effects must be declared separately from lens effects because they alter sampling rather than only presentation.
+The current formulas advertise escape state, iteration, smooth iteration, final complex value, magnitude, complex phase, and orbit-trap distance. Future derivative, distance-estimate, potential, root identity, and convergence-rate metrics are declared capability names, not assumptions about every formula. The initial material registry contains classic smooth escape time and orbit trap; the latter blends palette-driven trap accents over escape-time structure. Orbit traps currently support point, line, circle, cross, and spiral SDFs with serialisable transforms and two-trap composition. Their appearance settings expose a choice of closest-approach or final-orbit metric, two palette mappings, separate interior/exterior blend strength, and a deliberately capped emissive accent. Formula-agnostic material presets apply material and lens configurations together. Materials select compatible metrics and can later add contour bands, height-field normals, directional/rim lighting, roughness, and broader emissive response. The first lens effects are exposure and vignette; later lens effects include tone mapping, bloom, grain, sharpening, and carefully opt-in chromatic effects. Coordinate-distorting effects must be declared separately from lens effects because they alter sampling rather than only presentation.
 
 The WebGPU path owns high-quality material and lens passes. The CPU fallback must continue to render a saved configuration intelligibly: it may use a documented approximation or disable an expensive lens pass with an on-screen capability notice, but must not silently reinterpret the formula, viewport, palette, or saved material parameters.
 
@@ -130,9 +130,13 @@ Animations contain a schema version, duration, easing, and ordered keyframes. Ea
 
 ## Persistence
 
-Support URL state for one shareable `RenderConfig`, project JSON for palettes/Waypoints/scenes/animations, and exported images/video. Every persisted structure needs a schema version and migration boundary.
+Support URL state for one shareable `RenderConfig`, project JSON for palettes/Waypoints/scenes/animations, and exported images/video. Every persisted structure needs a schema version and migration boundary. Journey interpolation resolves base/keyframed configuration first, then applies deterministic waveform modulations from explicit animation time; this makes playback and export independent of refresh rate and permits exact loops when frequency and duration align.
 
 Discovery scoring intentionally samples formula and viewport geometry with a neutral classic material. Palette, lens, trap shape, and material-response choices travel with discovered Waypoints as presentation state, but never influence the search ranking.
+
+## Metric-field strategy
+
+Current Classic Escape and Orbit Trap materials request only point/local metrics, so WebGPU composes coordinate mapping, formula evaluation, metrics, material, and lens presentation in one direct pass. This avoids introducing an intermediate texture and avoids re-evaluating the fractal solely for a framework that current materials do not need. When the first material declares `neighbourhood` sampling, Phase 8.2 will introduce a metric-field texture: pass one writes the requested scalar fields, pass two samples them for normals/material colour, and later lens passes can operate on linear colour. This explicit threshold keeps an intermediate field reusable without prematurely building a general render graph.
 
 ## Diagnostics
 

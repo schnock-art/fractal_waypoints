@@ -15,6 +15,7 @@ import {
 import { createDefaultRenderConfig } from '../src/app/defaultConfig';
 import { createOrbitTrap, defaultOrbitTrapSet } from '../src/colouring/orbitTraps';
 import { iterateFormulaDetailed } from '../src/fractals/runtime';
+import { createLensConfig } from '../src/visuals/lenses/model';
 
 describe('orbit trap material runtime', () => {
   it('exposes stable material codes', () => {
@@ -138,8 +139,8 @@ describe('orbit trap material runtime', () => {
 
   it('applies exposure and a centred vignette as a presentation-only lens treatment', () => {
     const color = { r: 0.4, g: 0.2, b: 0.1, a: 1 };
-    const centre = applyLens(color, { exposure: 1.5, vignette: 0.6 }, 0.5, 0.5);
-    const corner = applyLens(color, { exposure: 1.5, vignette: 0.6 }, 1, 1);
+    const centre = applyLens(color, createLensConfig(1.5, 0.6), 0.5, 0.5);
+    const corner = applyLens(color, createLensConfig(1.5, 0.6), 1, 1);
 
     expect(centre.r).toBeCloseTo(0.6, 6);
     expect(corner.r).toBeLessThan(centre.r);

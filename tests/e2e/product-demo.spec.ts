@@ -50,6 +50,10 @@ test.describe('product demo workflow regression', () => {
     await expect(page.getByLabel('Trap 2 shape')).toHaveValue('circle');
     await expect(page.getByLabel('Orbit metric')).toHaveValue('final');
     await expect(page.getByLabel('Palette mapping')).toHaveValue('distanceBands');
+
+    await page.getByRole('button', { name: /^Questionable Radioactive Glass/ }).click();
+    await expect(page.getByLabel('Material')).toHaveValue('orbitTrap');
+    await expect(page.getByLabel('Emissive accent')).toHaveValue('0.35');
   });
 });
 

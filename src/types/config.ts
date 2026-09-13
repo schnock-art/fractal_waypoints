@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 3 as const;
+export const SCHEMA_VERSION = 4 as const;
 export const NAVIGATION_SCHEMA_VERSION = 1 as const;
 export const WAYPOINT_SCHEMA_VERSION = 1 as const;
 export const COMPARISON_SCHEMA_VERSION = 1 as const;
@@ -20,6 +20,15 @@ export type OrbitTrapShape = 'point' | 'line' | 'circle' | 'cross' | 'spiral';
 export type OrbitTrapComposition = 'minimum' | 'maximum';
 export type OrbitTrapMetric = 'nearest' | 'final';
 export type OrbitTrapPaletteMapping = 'signal' | 'distanceBands';
+export type LensEffectId = 'exposure' | 'vignette';
+export type ModulationWaveform = 'constant' | 'sine' | 'triangle' | 'saw';
+export type ModulationTarget =
+  | 'palette.offset'
+  | 'material.orbitAppearance.emission'
+  | 'material.orbitTraps[0].rotation'
+  | 'material.orbitTraps[1].rotation'
+  | 'lens.effects.exposure.amount'
+  | 'lens.effects.vignette.amount';
 export type PaletteInterpolationMode = 'linear' | 'smooth' | 'cubic';
 export type PaletteRepeatMode = 'clamp' | 'repeat' | 'mirror';
 export type NavigationActionId =
@@ -86,9 +95,25 @@ export interface OrbitTrapAppearanceConfig {
   emission: number;
 }
 
+export interface LensEffectConfig {
+  id: LensEffectId;
+  enabled: boolean;
+  parameters: Record<string, number>;
+}
+
 export interface LensConfig {
-  exposure: number;
-  vignette: number;
+  effects: LensEffectConfig[];
+}
+
+export interface ParameterModulation {
+  id: string;
+  target: ModulationTarget;
+  waveform: ModulationWaveform;
+  amplitude: number;
+  frequencyHz: number;
+  phase: number;
+  offset: number;
+  enabled: boolean;
 }
 
 export interface RgbaColor {
@@ -136,6 +161,7 @@ export interface RenderConfig {
   fractal: FractalConfig;
   material: MaterialConfig;
   lens: LensConfig;
+  modulations: ParameterModulation[];
   palette: PaletteConfig;
   quality: QualityConfig;
 }

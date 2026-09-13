@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { mandelbrotShader } from '../src/rendering/webgpu/mandelbrotShader';
+import { mandelbrotShader, webGpuShaderModules } from '../src/rendering/webgpu/mandelbrotShader';
 
 describe('renderer iteration parity', () => {
   it('uses a squared bailout threshold in the WebGPU path, matching CPU iteration', () => {
@@ -12,5 +12,13 @@ describe('renderer iteration parity', () => {
     expect(mandelbrotShader).toContain('struct OrbitMetrics');
     expect(mandelbrotShader).toContain('fn iterate_formula(');
     expect(mandelbrotShader).toContain('let metrics = iterate_formula(');
+  });
+
+  it('keeps shader responsibilities composable while retaining one direct render pass', () => {
+    expect(webGpuShaderModules.contracts).toContain('struct OrbitMetrics');
+    expect(webGpuShaderModules.coordinates).toContain('fn ds_add');
+    expect(webGpuShaderModules.fieldsAndMaterials).toContain('fn trap_sdf');
+    expect(webGpuShaderModules.formulaMetrics).toContain('fn iterate_formula');
+    expect(webGpuShaderModules.presentation).toContain('fn fs_main');
   });
 });
