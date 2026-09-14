@@ -65,7 +65,7 @@ function migrateLegacyColouring(value: unknown): MaterialConfig {
 }
 
 function isMaterialConfig(value: unknown): value is MaterialConfig {
-  return isRecord(value) && (value.id === 'classic' || value.id === 'orbitTrap') && isRecord(value.parameters);
+  return isRecord(value) && ['classic', 'orbitTrap', 'topographic', 'domainColouring', 'surface'].includes(String(value.id)) && isRecord(value.parameters);
 }
 
 function cloneMaterial(value: MaterialConfig): MaterialConfig {

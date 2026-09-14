@@ -112,7 +112,7 @@ export function sampleCpuPixelColor(
   const isOrbitTrap = config.material.id === 'orbitTrap';
   const sample = iterateFormulaDetailed(config, real, imaginary, isOrbitTrap);
 
-  const materialColor = !sample.escaped && !isOrbitTrap
+  const materialColor = !sample.escaped && (config.material.id === 'classic')
     ? INTERIOR_COLOR
     : resolveMaterialColor(config, sample, density, orbitTrapScale);
   return applyLens(materialColor, config.lens, x, y);
@@ -169,12 +169,66 @@ function resolveMaterialColor(
     );
   }
 
+  if (config.material.id === 'domainColouring') {
+    const phaseScale = config.material.parameters.phaseScale ?? 1;
+    const magnitudeScale = config.material.parameters.magnitudeScale ?? 0.38;
+    const phaseT = fract(((sample.complexPhase / (Math.PI * 2)) + 0.5) * phaseScale);
+    const magnitudeT = fract(Math.log2(Math.max(sample.magnitude, 1.0001)) * magnitudeScale);
+    const colour = samplePalette(config.palette, fract(phaseT + magnitudeT));
+    return sample.escaped ? colour : blendColor(INTERIOR_COLOR, colour, 0.3);
+  }
+
+  if (config.material.id === 'topographic') {
+    const levels = Math.max(2, config.material.parameters.contourLevels ?? 18);
+    const width = clampUnit(config.material.parameters.contourWidth ?? 0.13);
+    const relief = clampUnit(config.material.parameters.relief ?? 0.72);
+    const height = fract(sample.smoothIteration / Math.max(config.fractal.maxIterations, 1));
+    const band = fract(height * levels);
+    const contour = 1 - smoothstep(0.5 - width, 0.5 + width, Math.abs(band - 0.5));
+    const terrain = samplePalette(config.palette, fract(height * (1 + (density * 18))));
+    const base = sample.escaped ? terrain : blendColor(INTERIOR_COLOR, terrain, 0.22);
+    return blendColor(base, { r: 0.01, g: 0.012, b: 0.02, a: 1 }, contour * relief);
+  }
+
+  if (config.material.id === 'surface') {
+    const height = Math.max(0.1, config.material.parameters.height ?? 3.4);
+    const lightAngle = config.material.parameters.lightAngle ?? 0.7;
+    const specular = clampUnit(config.material.parameters.specular ?? 0.32);
+    const roughness = clampUnit(config.material.parameters.roughness ?? 0.55);
+    const ambient = clampUnit(config.material.parameters.ambient ?? 0.28);
+    const paletteT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);
+    const base = samplePalette(config.palette, paletteT);
+    const directional = Math.max(0, Math.cos(sample.complexPhase - lightAngle));
+    const lit = ambient + ((1 - ambient) * directional * Math.min(height / 3.4, 1.35));
+    const highlight = Math.pow(directional, 6 + ((1 - roughness) * 44)) * specular;
+    const shaded = {
+      r: clampUnit((base.r * lit) + highlight),
+      g: clampUnit((base.g * lit) + highlight),
+      b: clampUnit((base.b * lit) + highlight),
+      a: 1,
+    };
+    return sample.escaped ? shaded : blendColor(INTERIOR_COLOR, shaded, 0.2);
+  }
+
   const smoothT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);
   return samplePalette(config.palette, smoothT);
 }
 
 function toByte(value: number): number {
   return Math.round(Math.min(1, Math.max(0, value)) * 255);
+}
+
+function clampUnit(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function fract(value: number): number {
+  return value - Math.floor(value);
+}
+
+function smoothstep(edge0: number, edge1: number, value: number): number {
+  const t = clampUnit((value - edge0) / Math.max(edge1 - edge0, 0.0001));
+  return t * t * (3 - (2 * t));
 }
 
 function yieldToBrowser(): Promise<void> {

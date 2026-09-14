@@ -21,6 +21,7 @@ export function VisualLab({ config, onChange }: VisualLabProps) {
           <strong>{material.displayName}</strong>
           <span>{material.description}</span>
           <span>{material.sampling === 'point' ? 'Uses local orbit metrics in the direct render path.' : 'Requires neighbouring metric samples.'}</span>
+          {material.cpuSupport === 'approximate' ? <span>CPU fallback preserves this look with a lighter approximation; WebGPU enables full field detail.</span> : null}
           {!compatibility.compatible ? <span>Unavailable for this formula: {compatibility.missing.join(', ')}</span> : null}
         </div>
         <div className="control-panel__section-heading"><div><p className="control-panel__label">Material presets</p><strong>Reusable looks, independent of the formula</strong></div></div>

@@ -54,6 +54,22 @@ test.describe('product demo workflow regression', () => {
     await page.getByRole('button', { name: /^Questionable Radioactive Glass/ }).click();
     await expect(page.getByLabel('Material')).toHaveValue('orbitTrap');
     await expect(page.getByLabel('Emissive accent')).toHaveValue('0.35');
+
+    await material.selectOption('topographic');
+    await expect(page.getByLabel('Contour levels')).toBeVisible();
+    await expect(page.getByLabel('Contour width')).toBeVisible();
+    await page.getByRole('button', { name: /^Topographic Atlas/ }).click();
+    await expect(material).toHaveValue('topographic');
+
+    await material.selectOption('domainColouring');
+    await expect(page.getByLabel('Phase rotation')).toBeVisible();
+    await expect(page.getByLabel('Magnitude ripples')).toBeVisible();
+
+    await material.selectOption('surface');
+    await expect(page.getByLabel('Height relief')).toBeVisible();
+    await expect(page.getByLabel('Light direction')).toBeVisible();
+    await page.getByRole('button', { name: /^Molten Metal/ }).click();
+    await expect(material).toHaveValue('surface');
   });
 });
 

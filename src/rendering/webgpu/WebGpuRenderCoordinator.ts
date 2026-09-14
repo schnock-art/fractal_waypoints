@@ -8,7 +8,7 @@ import type { RenderCoordinator, RenderSurface } from '../types';
 import { getFormulaCode } from '../../fractals/runtime';
 import { mandelbrotShader } from './mandelbrotShader';
 
-const UNIFORM_BUFFER_SIZE = 10 * 16;
+const UNIFORM_BUFFER_SIZE = 12 * 16;
 const PALETTE_TEXTURE_SIZE = 256;
 
 export async function createWebGpuRenderCoordinator(adapter: GPUAdapter): Promise<RenderCoordinator> {
@@ -35,25 +35,34 @@ class WebGpuSurface implements RenderSurface {
   private readonly format: GPUTextureFormat;
   private readonly canvas: HTMLCanvasElement;
   private readonly context: GPUCanvasContext;
-  private readonly pipeline: GPURenderPipeline;
+  private readonly directPipeline: GPURenderPipeline;
+  private readonly metricPipeline: GPURenderPipeline;
+  private readonly fieldMaterialPipeline: GPURenderPipeline;
   private readonly uniformBuffer: GPUBuffer;
   private readonly paletteTexture: GPUTexture;
   private readonly paletteSampler: GPUSampler;
-  private readonly bindGroup: GPUBindGroup;
+  private readonly directBindGroup: GPUBindGroup;
+  private readonly metricBindGroup: GPUBindGroup;
+  private fieldMaterialBindGroup: GPUBindGroup;
+  private fieldTexture: GPUTexture;
 
   private constructor(
     device: GPUDevice,
     format: GPUTextureFormat,
     canvas: HTMLCanvasElement,
     context: GPUCanvasContext,
-    pipeline: GPURenderPipeline,
+    directPipeline: GPURenderPipeline,
+    metricPipeline: GPURenderPipeline,
+    fieldMaterialPipeline: GPURenderPipeline,
   ) {
     this.device = device;
     this.format = format;
     this.canvas = canvas;
     this.context = context;
 
-    this.pipeline = pipeline;
+    this.directPipeline = directPipeline;
+    this.metricPipeline = metricPipeline;
+    this.fieldMaterialPipeline = fieldMaterialPipeline;
 
     this.uniformBuffer = device.createBuffer({
       size: UNIFORM_BUFFER_SIZE,
@@ -73,14 +82,26 @@ class WebGpuSurface implements RenderSurface {
       addressModeV: 'clamp-to-edge',
     });
 
-    this.bindGroup = device.createBindGroup({
-      layout: this.pipeline.getBindGroupLayout(0),
+    this.directBindGroup = device.createBindGroup({
+      layout: this.directPipeline.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: this.uniformBuffer } },
         { binding: 1, resource: this.paletteSampler },
         { binding: 2, resource: this.paletteTexture.createView() },
       ],
     });
+
+    this.metricBindGroup = device.createBindGroup({
+      layout: this.metricPipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuffer } },
+        { binding: 1, resource: this.paletteSampler },
+        { binding: 2, resource: this.paletteTexture.createView() },
+      ],
+    });
+
+    this.fieldTexture = this.createFieldTexture(1, 1);
+    this.fieldMaterialBindGroup = this.createFieldMaterialBindGroup();
 
     this.configureContext();
   }
@@ -96,7 +117,7 @@ class WebGpuSurface implements RenderSurface {
     });
     await assertShaderCompiles(shaderModule);
 
-    const pipeline = await device.createRenderPipelineAsync({
+    const directPipeline = await device.createRenderPipelineAsync({
       layout: 'auto',
       vertex: {
         module: shaderModule,
@@ -112,7 +133,18 @@ class WebGpuSurface implements RenderSurface {
       },
     });
 
-    return new WebGpuSurface(device, format, canvas, context, pipeline);
+    const metricPipeline = await device.createRenderPipelineAsync({
+      layout: 'auto', vertex: { module: shaderModule, entryPoint: 'vs_main' },
+      fragment: { module: shaderModule, entryPoint: 'metric_field_fs', targets: [{ format: 'rgba8unorm' }] },
+      primitive: { topology: 'triangle-list' },
+    });
+    const fieldMaterialPipeline = await device.createRenderPipelineAsync({
+      layout: 'auto', vertex: { module: shaderModule, entryPoint: 'vs_main' },
+      fragment: { module: shaderModule, entryPoint: 'field_material_fs', targets: [{ format }] },
+      primitive: { topology: 'triangle-list' },
+    });
+
+    return new WebGpuSurface(device, format, canvas, context, directPipeline, metricPipeline, fieldMaterialPipeline);
   }
 
   resize(width: number, height: number): void {
@@ -125,6 +157,9 @@ class WebGpuSurface implements RenderSurface {
 
     this.canvas.width = nextWidth;
     this.canvas.height = nextHeight;
+    this.fieldTexture.destroy();
+    this.fieldTexture = this.createFieldTexture(nextWidth, nextHeight);
+    this.fieldMaterialBindGroup = this.createFieldMaterialBindGroup();
     this.configureContext();
   }
 
@@ -174,6 +209,14 @@ class WebGpuSurface implements RenderSurface {
       getOrbitTrapPaletteMappingCode(appearance.paletteMapping),
       appearance.exteriorMix,
       appearance.interiorMix,
+      config.material.parameters.contourLevels ?? config.material.parameters.phaseScale ?? 18,
+      config.material.parameters.contourWidth ?? config.material.parameters.magnitudeScale ?? 0.13,
+      config.material.parameters.relief ?? 0.72,
+      config.material.parameters.height ?? 3.4,
+      config.material.parameters.lightAngle ?? 0.7,
+      config.material.parameters.specular ?? 0.32,
+      config.material.parameters.ambient ?? 0.28,
+      config.material.parameters.roughness ?? 0.55,
     ]);
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
@@ -187,6 +230,17 @@ class WebGpuSurface implements RenderSurface {
     );
 
     const encoder = this.device.createCommandEncoder();
+    const needsMetricField = config.material.id === 'topographic' || config.material.id === 'surface';
+
+    if (needsMetricField) {
+      const metricPass = encoder.beginRenderPass({
+        colorAttachments: [{ view: this.fieldTexture.createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } }],
+      });
+      metricPass.setPipeline(this.metricPipeline);
+      metricPass.setBindGroup(0, this.metricBindGroup);
+      metricPass.draw(3);
+      metricPass.end();
+    }
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
@@ -198,15 +252,35 @@ class WebGpuSurface implements RenderSurface {
       ],
     });
 
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
+    pass.setPipeline(needsMetricField ? this.fieldMaterialPipeline : this.directPipeline);
+    pass.setBindGroup(0, needsMetricField ? this.fieldMaterialBindGroup : this.directBindGroup);
     pass.draw(3);
     pass.end();
 
     this.device.queue.submit([encoder.finish()]);
   }
 
-  destroy(): void {}
+  destroy(): void { this.fieldTexture.destroy(); }
+
+  private createFieldTexture(width: number, height: number): GPUTexture {
+    return this.device.createTexture({
+      size: [width, height, 1],
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+  }
+
+  private createFieldMaterialBindGroup(): GPUBindGroup {
+    return this.device.createBindGroup({
+      layout: this.fieldMaterialPipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuffer } },
+        { binding: 1, resource: this.paletteSampler },
+        { binding: 2, resource: this.paletteTexture.createView() },
+        { binding: 3, resource: this.fieldTexture.createView() },
+      ],
+    });
+  }
 
   private configureContext(): void {
     this.context.configure({

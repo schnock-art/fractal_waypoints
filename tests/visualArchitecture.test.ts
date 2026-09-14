@@ -15,11 +15,17 @@ describe('visual architecture contracts', () => {
     }
     expect(getMaterialCompatibility('mandelbrot', 'orbitTrap')).toEqual({ compatible: true, missing: [] });
     expect(materialRegistry.orbitTrap.sampling).toBe('point');
+    expect(materialRegistry.topographic.sampling).toBe('neighbourhood');
+    expect(materialRegistry.surface.sampling).toBe('neighbourhood');
+    expect(materialRegistry.domainColouring.requiredMetrics).toContain('complexPhase');
+    expect(materialRegistry.surface.cpuSupport).toBe('approximate');
   });
 
   it('validates material parameter boundaries instead of relying on UI conditionals', () => {
     const invalid = { id: 'orbitTrap', parameters: { density: -1, trapScale: 0 } } as const;
     expect(validateMaterialConfig(invalid)).toHaveLength(3);
+    expect(validateMaterialConfig({ id: 'topographic', parameters: { contourLevels: 1, contourWidth: 0 } })).not.toEqual([]);
+    expect(validateMaterialConfig({ id: 'surface', parameters: { height: 0, specular: 1.5 } })).not.toEqual([]);
   });
 
   it('migrates and orders composable lens effects', () => {

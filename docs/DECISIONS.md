@@ -132,4 +132,12 @@ Discovery ranks formula/viewport geometry using a neutral classic-material analy
 
 Current formulas advertise only the metrics they genuinely produce. Materials declare their required metrics, local versus neighbourhood sampling requirement, defaults, validation, and editor identity; formula/material compatibility is resolved from that metadata. The generated WGSL source is composed from contract, coordinate, field/material, formula-metric, and presentation modules, while simple point-metric materials remain one optimised pass.
 
-The first neighbourhood material will trigger a reusable metric-field texture rather than re-running a fractal iteration for each normal sample. Until then, no intermediate texture or general render graph is created. Lens treatment is an ordered serialisable effect list. Journey samples base/keyframed state first and then applies a bounded set of deterministic waveform modulations, with no user-authored code or shader expressions. This keeps video export reproducible and creates a natural path to perfectly looping material animation.
+Lens treatment is an ordered serialisable effect list. Journey samples base/keyframed state first and then applies a bounded set of deterministic waveform modulations, with no user-authored code or shader expressions. This keeps video export reproducible and creates a natural path to perfectly looping material animation.
+
+## ADR-022: Neighbourhood materials use a compact metric-field texture
+
+**Status:** Accepted
+
+Topographic and Lit Surface are the first materials to require neighbouring values. WebGPU therefore renders a compact `rgba8unorm` metric field in one pass (smooth height, phase, logarithmic magnitude, escape state), then samples it in a material pass for contour responsiveness and screen-space normals. Local materials retain the direct one-pass path. The field is resized with the canvas and lives wholly in the renderer coordinator; React only selects a serialisable material configuration.
+
+The field stores no invented distance estimate. Distance-estimate height remains gated on a formula truthfully advertising derivative/distance-estimate capability. The CPU fallback preserves the material configuration with documented approximations, while Visual Lab communicates that full field detail requires WebGPU.

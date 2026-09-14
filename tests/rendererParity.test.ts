@@ -14,11 +14,14 @@ describe('renderer iteration parity', () => {
     expect(mandelbrotShader).toContain('let metrics = iterate_formula(');
   });
 
-  it('keeps shader responsibilities composable while retaining one direct render pass', () => {
+  it('keeps shader responsibilities composable and exposes a metric field pass for neighbourhood materials', () => {
     expect(webGpuShaderModules.contracts).toContain('struct OrbitMetrics');
     expect(webGpuShaderModules.coordinates).toContain('fn ds_add');
     expect(webGpuShaderModules.fieldsAndMaterials).toContain('fn trap_sdf');
     expect(webGpuShaderModules.formulaMetrics).toContain('fn iterate_formula');
     expect(webGpuShaderModules.presentation).toContain('fn fs_main');
+    expect(webGpuShaderModules.presentation).toContain('fn metric_field_fs');
+    expect(webGpuShaderModules.presentation).toContain('fn field_material_fs');
+    expect(webGpuShaderModules.fieldsAndMaterials).toContain('fn field_sample');
   });
 });

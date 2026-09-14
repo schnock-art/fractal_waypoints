@@ -9,6 +9,12 @@ export function getMaterialCode(materialId: MaterialId): number {
       return 0;
     case 'orbitTrap':
       return 1;
+    case 'topographic':
+      return 2;
+    case 'domainColouring':
+      return 3;
+    case 'surface':
+      return 4;
     default:
       return 0;
   }

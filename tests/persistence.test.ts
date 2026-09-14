@@ -61,6 +61,13 @@ describe('render config url state', () => {
     expect(decodeRenderConfigFromUrlParam(encodeRenderConfigToUrlParam(config))?.material.orbitAppearance)
       .toEqual(config.material.orbitAppearance);
   });
+
+  it('round-trips newer material identifiers and their material-local parameters', () => {
+    const config = createDefaultRenderConfig('mandelbrot');
+    config.material = { id: 'surface', parameters: { density: 0.03, height: 4.5, lightAngle: 0.55, specular: 0.55, ambient: 0.2 } };
+
+    expect(decodeRenderConfigFromUrlParam(encodeRenderConfigToUrlParam(config))?.material).toEqual(config.material);
+  });
 });
 
 function encodeLegacy(value: unknown): string {

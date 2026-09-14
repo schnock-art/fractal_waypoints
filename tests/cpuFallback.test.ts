@@ -94,6 +94,22 @@ describe('cpu fallback renderer', () => {
     expect(size.width * size.height).toBeLessThanOrEqual(240_000);
     expect(size.width / size.height).toBeCloseTo(2560 / 1440, 2);
   });
+
+  it('keeps the new materials serializable and paintable in the CPU fallback', () => {
+    const config = createDefaultRenderConfig('mandelbrot');
+    const point = { real: 1.8, imaginary: 1.1 };
+
+    for (const [id, parameters] of [
+      ['topographic', { density: 0.032, contourLevels: 20, contourWidth: 0.12, relief: 0.8 }],
+      ['domainColouring', { phaseScale: 1, magnitudeScale: 0.4 }],
+      ['surface', { density: 0.032, height: 3.4, lightAngle: 0.7, specular: 0.3, ambient: 0.3 }],
+    ] as const) {
+      config.material = { id, parameters };
+      const colour = sampleCpuPixelColor(config, point.real, point.imaginary);
+      expect(colour.a).toBe(1);
+      expect(colour.r + colour.g + colour.b).toBeGreaterThan(0);
+    }
+  });
 });
 
 function colorDistance(

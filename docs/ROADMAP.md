@@ -283,13 +283,16 @@ Status on September 13, 2026: complete.
 
 Goal: make existing 2D fractals feel sculptural without pretending they are a separate 3D renderer.
 
-- [ ] Add topographic contour materials with adjustable level count, line width, contrast, and zoom-aware spacing as the first neighbourhood-material architecture test.
-- [ ] Add domain-colouring materials using final complex value/phase/magnitude; prepare root-basin mapping as a capability for Newton fractals.
-- [ ] Add smooth-iteration and distance-estimate height sources, then screen-space normal sampling, directional/rim/ambient lighting, roughness, and specular controls.
-- [ ] Add material presets that demonstrate distinct visual languages—Topographic Atlas, Engraved Obsidian, Molten Metal, Bioluminescent Coral, and Questionable Radioactive Glass—without overwhelming the default Explore view.
-- [ ] Verify accessibility and legibility: preserve non-colour cues for boundaries, avoid global high-intensity bloom, and provide a quick return to the classic material.
+- [x] Add topographic contour materials with adjustable level count, line width, contrast, and zoom-aware spacing as the first neighbourhood-material architecture test.
+- [x] Add domain-colouring materials using final complex value/phase/magnitude; prepare root-basin mapping as a capability for Newton fractals.
+- [x] Add a smooth-iteration height source, screen-space normal sampling, directional/rim/ambient lighting, roughness, and specular controls.
+- [ ] Add distance-estimate height sources when a formula genuinely advertises derivative/distance-estimate capability; do not fabricate it from escape-time data.
+- [x] Add material presets that demonstrate distinct visual languages—Topographic Atlas, Engraved Obsidian, Molten Metal, Bioluminescent Coral, and Questionable Radioactive Glass—without overwhelming the default Explore view.
+- [x] Verify accessibility and legibility: contours and relief retain structural non-colour cues, no bloom is introduced, CPU approximation is labelled, and Classic Escape remains an immediate reset.
 
 Definition of done: lighting and contour effects add clear depth or structure at interactive WebGPU rates, with their performance cost and CPU-fallback behaviour communicated honestly.
+
+Status on September 13, 2026: core material pass complete. Distance-estimate height is deliberately deferred until Phase 9 introduces a formula with a real derivative capability.
 
 ## Phase 8.3 — HDR lens pipeline
 
