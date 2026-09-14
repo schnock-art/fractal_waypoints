@@ -60,13 +60,25 @@ Create journeys between Waypoints or animate zoom, Julia parameters, formula par
 
 The Journey workspace should balance authoring power with legibility. Users should get a quick read on clip duration, frame count, and recording state, then choose whether they are building from Waypoints, shaping keyframes manually, or converting live navigation into a draft path.
 
+## Second era — From Explorer to Instrument
+
+Phase 9 closes the first era: a core explorer, a composable visual instrument, and a mathematical architecture tested by Multibrot, Newton/Nova, and Phoenix. The next direction is to make this world **playable before externally connected**, while preserving an excellent standalone explorer.
+
+**One world, different benches.** Explore investigates and configures; Perform plays selected, pinned controls and explicit macro/modulation relationships; future Patch edits those relationships. They are workspaces over the same mathematical world, not separate applications or renderers. Users should be able to discover a Phoenix region, save it as a Waypoint, play and record it in Perform, and return to Explore without losing their world. Graph editing and external-control vocabulary must not become prerequisites for ordinary exploration.
+
+Phase 10 starts with workspace information architecture and state responsibilities, not an aesthetic redesign. It then develops semantic controls, internal modulation, Perform, and observable mathematical metrics. Macro names such as Energy or Chaos are hypotheses to test, not universal meanings imposed on formulas. Users need clear effective values, pause/freeze/override behaviour, recording, restoration, and mapping reset—not simply more sliders.
+
+Presets demonstrate the system; UI exposes the system; connections compose the system. Artistic play and technical measurement are equally valuable, so the instrument should expose meaningful mechanisms and statistics as well as beautiful pixels. Prefer useful expressive mechanisms over arbitrary scripting or speculative abstraction. Workspace navigation, existing workflow placement, and URL/project/session persistence responsibilities are explicitly decisions for Phase 10.0; see [the roadmap](ROADMAP.md) and [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches).
+
+Deep Space (deep zoom), Third Dimension (separate 3D rendering), and Alternative Mathematics remain optional parallel research tracks, not cancelled features or prerequisites for Perform.
+
 ## Non-goals for the first release
 
 ### Future generative interoperability (guidance, not current scope)
 
 Fractal Waypoints may eventually be one standalone peer in a larger Schnock Generative Instrument. Keep music generation separate from synthesis, and both separate from fractal rendering. Future connections may carry continuous signals, discrete events, persistent state, and mathematical statistics in either direction. Music-specific interpretation of fractal metrics belongs outside this application.
 
-When external control is deliberately scheduled, prefer a physical MIDI synth/control surface as the first integration; real hardware should inform a shared model that a later software-synth adapter can also use. A future node graph should expose that model, not define it. No MIDI, audio, synth, OSC, node editor, or feedback implementation is part of current Phase 9 work; see ADR-026.
+Connections (Phase 11) and Patch Bay (Phase 12) remain **unscheduled until deliberately started**. Prefer a concrete physical synth/control surface for the first integration, evaluating Web MIDI if appropriate; real hardware should inform a model that a later software adapter can also use. Later guitar/audio analysis can supply independent signals without making fractal code instrument-aware. A future node graph exposes the proven model, rather than defining it; feedback requires deliberate scheduling and replay semantics. No MIDI, audio, synth, OSC, node editor, or feedback implementation belongs in Phase 10; see ADR-026. The Schnock Generative Instrument is a long-term conceptual umbrella, not a rename, monorepo, or framework commitment.
 
 ### Current exclusions
 

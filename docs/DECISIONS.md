@@ -1,5 +1,15 @@
 # Architecture Decision Records
 
+## ADR-028: Workspaces share one mathematical world
+
+**Status:** Accepted — ownership boundary; workspace implementation and persistence design remain Phase 10.0 work.
+
+Explore, Perform, and future Patch are different benches over the same mathematical world. They share semantic domain parameters, rendering and analysis contracts, and reusable Waypoint/Journey/modulation/persistence mechanisms. Workspace switching must preserve the current world; it must not implicitly clone configurations, create separate application models, or introduce per-workspace renderer backends. Explicit user-directed multi-view configurations such as Compare remain valid.
+
+This prevents performance controls and future graph editing from becoming parallel applications with incompatible saved state. Workspaces orchestrate domain operations; their UI identities do not become parameter addresses. ADR-026 continues to govern semantic controls, evaluation order, external adapters, and feedback safeguards.
+
+This decision does not select navigation, assign every state field, prescribe a new schema, or implement Perform/Patch. Phase 10.0 must decide global/local UI state, base/effective state ownership, performance-setup persistence, workflow placement, and active-view semantics; see [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches). Phase numbering and feature sequencing remain roadmap matters, not new architectural abstractions.
+
 ## ADR-027: Admit Phoenix through existing escape metrics; gate specialist families
 
 **Status:** Accepted
@@ -24,7 +34,7 @@ Mathematical metrics may later be outputs with no knowledge of consumers. Iterat
 
 Do not assume flow is permanently one-way. Feedback requires explicit event ordering, clocks/update rates, state ownership, deterministic replay/export rules, and delayed/bounded scheduling that prevents unstable synchronous recursion. These semantics must be designed before feedback is enabled, not inferred from React renders or GPU frame completion.
 
-No MIDI, audio, OSC, synth, DAW, node-editor, graph-runtime, or feedback-scheduler dependencies are authorised by this decision. Phase 9.3 continues through the existing formula → metrics → material architecture. Revisit concrete integration contracts after Phase 9.3 and before the first hardware integration; do not build a framework in anticipation.
+No MIDI, audio, OSC, synth, DAW, node-editor, graph-runtime, or feedback-scheduler dependencies are authorised by this decision. Phase 9.3 continued through the existing formula → metrics → material architecture. The post-Phase-9 roadmap now develops internal instrument capabilities in Phase 10; Connections (11) and Patch Bay (12) remain unscheduled until deliberately started. Revisit concrete integration contracts before the first hardware integration; do not build a framework in anticipation.
 
 ## ADR-025: Convergence formulas use explicit status and verified root identity
 

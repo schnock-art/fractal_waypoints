@@ -1,6 +1,6 @@
-# Interoperability seams — post-Phase 9.2 audit
+# Interoperability seams — Phase 9 audit and second-era direction
 
-This is architecture guidance, not an implemented external-control API. ADR-026 records the decision. Phase 9.3 remains the next formula task; nothing here adds integration dependencies or changes rendering behaviour.
+This is architecture guidance, not an implemented external-control API. The original post-9.2 audit remains applicable after Phase 9.3 completion. ADR-026 records the semantic boundaries; ADR-028 adds shared-world workspace ownership. Phase 10.0 is now the next planned slice. Nothing here adds integration dependencies or changes rendering behaviour.
 
 ## Current configuration and modulation flow
 
@@ -44,13 +44,13 @@ Discovery already samples formula geometry independently of palette/lens styling
 
 Fractal analysis may expose a histogram and its normalised probabilities. An external music generator decides whether that distribution controls scale degrees, intervals, rhythm, or Markov transitions. Synths consume musical events; neither musical rules nor synth/device dependencies belong in fractal code.
 
-## Revisit after Phase 9.3, before external integration
+## Sequencing after Phase 9.3
 
-1. Choose a concrete physical synth/controller and its first useful mappings. Keep adapters replaceable; a later software synth uses the same proven domain interaction model.
-2. Separate source evaluation from target application when a second source type actually exists. Define composition (add/replace/priority), units, bounds, inactive-target behaviour, and final validation. Do not model events or persistent state as waveform samples.
-3. Specify clocks, timestamps, ordering, source lifetime, and base/effective state ownership. Deterministic Journey export must use recorded or otherwise reproducible inputs, not live hardware sampled opportunistically.
-4. Design the metric snapshot contract and aggregation budget separately from material textures and consumer interpretations.
-5. Model any signal graph independently of its node editor. Scale, offset, clamp, invert, smoothing, curves, quantisation, and sample/hold are possible future transforms, not a runtime being promised now.
-6. Before permitting feedback, define delayed edges, update rates, event ordering, bounded processing, state transitions, replay behaviour, and cycle safeguards. Do not recursively render or dispatch events synchronously through consumers.
+1. **Phase 10.0:** specify workspace responsibilities and base/effective state ownership before choosing navigation or persistence schemas. Current Journey playback writes evaluated values into `mainConfig` and its URL mirror; there is no separate saved performance setup. Decide active Compare-side/preview semantics rather than cloning configurations per workspace. See [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches).
+2. **Phase 10.1:** expose semantic metadata incrementally and address bounds, units, inactive-target behaviour, distributed normalisation, and final validation. Preserve existing IDs and resolve trap instance identities only if reordering requires them.
+3. **Phase 10.2:** separate internal source evaluation from target application through a small serialisable source/transform/mapping/target model. Define composition (add/replace/priority), clocks, timestamps, ordering, source lifetime, and deterministic stateful evaluation. Do not model events or persistent state as waveform samples. Start with justified scale/offset/invert/clamp/curve/smoothing transforms; more elaborate transforms are deferred. Phase 10.3 exposes the proven mechanisms through Perform.
+4. **Phase 10.4:** implement the metric snapshot contract and aggregation budget separately from material textures and consumer interpretations. Validate internal Discover/diagnostic/Perform-meter/region-comparison uses before external consumers.
+5. **Phase 11 — unscheduled until deliberately started:** choose a concrete physical synth/controller and its first useful mappings. Keep adapters replaceable; later software adapters use the proven interaction model. Deterministic Journey export must use recorded or otherwise reproducible inputs, not live hardware sampled opportunistically. Audio/guitar experiments are later sources, never dependencies of fractal mathematics.
+6. **Phase 12 — unscheduled until deliberately started:** edit a validated domain model through Patch, not a model defined by its node editor. Before permitting feedback, define delayed edges, update rates, event ordering, bounded processing, state transitions, replay behaviour, latency, and cycle safeguards. Do not recursively render or dispatch events synchronously through consumers.
 
 Audit outcome: no concrete UI/GPU addressing dependency requires a code change for this task. The gaps above are real integration prerequisites, not reasons to build speculative infrastructure now. Documentation only; existing runtime behaviour, persisted data, and dependencies remain unchanged.

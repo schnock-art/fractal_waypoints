@@ -28,6 +28,28 @@ Preserve the conceptual order: persisted/base configuration → Journey/keyframe
 
 Formula metrics can later feed independent statistical analysis and export without colour or musical interpretation. The GPU metric-field texture is a lossy material intermediate, not a public metric contract. See [ADR-026](DECISIONS.md#adr-026-external-control-and-generative-interoperability) and [the interoperability audit](INTEROPERABILITY.md) for semantic addressing conventions, output boundaries, current limitations, and post-9.3 decisions. No external integration dependencies are introduced.
 
+## Workspace direction — One world, different benches
+
+**Accepted boundary, not implemented workspace architecture:** Explore, Perform, and future Patch are different workspaces over the same mathematical world (ADR-028). They share domain parameters and `RenderConfig`, formula/metric/material/lens evaluation, Waypoints, Journey, modulation, rendering, persistence, and analysis contracts. A workspace changes the tools presented, not the underlying model or backend. Explicit Compare views and Julia previews are still legitimate independent views; switching workspaces must not implicitly create another copy of the world.
+
+Explore investigates and configures with the existing product language. Perform presents pinned immediate controls, inspectable macros, active modulation values, triggers, recording, and safe restoration. Patch later edits relationships over an independently validated serialisable model; it must not be required to play. These roles describe the committed direction, not current UI capabilities.
+
+### Current implementation and Phase 10.0 decisions
+
+`src/app/workspaceModes.ts` currently defines focused sidebar workflows (`visualLab`, `palette`, `waypoints`, `discover`, `compare`, `journey`), not the proposed top-level benches. `App.tsx` owns `mainConfig`, explicit comparison configurations, Journey state, and local active-workspace state. Journey playback writes sampled/evaluated configurations into `mainConfig`, whose changes also update the URL. There is not yet a separate persistent performance setup or general live base/effective evaluator. Existing rendering/configuration seams support the direction, but these state responsibilities need design rather than a cosmetic shell rename.
+
+| Responsibility | Constraint | Decision deferred to Phase 10.0 |
+| --- | --- | --- |
+| Mathematical world | Shared domain model, not one clone per workspace | Ownership/lifecycle of base and evaluated values; explicit Compare-side/preview selection |
+| Performance setup | Semantic controls and mappings, separate from mathematical meaning | Which pins, macros, mappings, transport/recording state are saved and where |
+| Ephemeral UI | Layout and selection must not define domain identity | Global versus workspace-local navigation, panels, selection, and reset behaviour |
+| Persistence | Versioned, reproducible data; preserve existing saved views | URL/project/session/Waypoint responsibilities and any necessary migrations |
+| Workflow placement | Preserve Visual Lab, palette editing, Waypoints, Discover, Compare, Journey | Navigation hierarchy and transitions into/out of Perform and future Patch |
+
+Acceptance walkthrough: discover Phoenix, save a Waypoint, enter Perform on the same world, pin Orbit memory and palette controls, modulate and record. A future Patch change can replace the internal source with hardware without reconstructing the fractal. Hardware and graph portions are future design checks, not Phase 10 runtime scope.
+
+Phase 10.1 incrementally supplies semantic metadata; 10.2 evolves internal modulation and final domain validation; 10.3 delivers Perform; 10.4 establishes capability-aware analysis snapshots. Existing metadata, validation, trap-slot addressing, and metric-output limitations are detailed in [INTEROPERABILITY.md](INTEROPERABILITY.md), not solved by this document. Connections (11) and Patch Bay (12) remain unscheduled until deliberately started. Deep zoom, 3D, and specialist mathematical models are independent research tracks in [ROADMAP.md](ROADMAP.md#optional-parallel-research-tracks), not hidden workspace backends.
+
 ## Suggested source layout
 
 ```text

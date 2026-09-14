@@ -1,5 +1,19 @@
 # Fractal Explorer — Roadmap
 
+## Direction after Phase 9 — From Explorer to Instrument
+
+Current milestone: Phase 9.3 is complete. The next planned slice is **Phase 10.0**, not yet started. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+
+| Era | Role | Status |
+| --- | --- | --- |
+| Phases 1–7 | Core explorer: navigation, Waypoints, Discover, Compare, Journey | Delivered foundation; historical follow-ups remain |
+| Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
+| Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
+| Phase 10 | The Instrument: make the existing world playable | Committed next direction; start with 10.0 design |
+| Phases 11–12 | Connections, then Patch Bay | Unscheduled until deliberately started |
+
+Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
+
 ## Phase 1 — Rendering foundation
 
 - [x] Scaffold TypeScript application and test runner.
@@ -292,7 +306,7 @@ Goal: make existing 2D fractals feel sculptural without pretending they are a se
 
 Definition of done: lighting and contour effects add clear depth or structure at interactive WebGPU rates, with their performance cost and CPU-fallback behaviour communicated honestly.
 
-Status on September 13, 2026: core material pass complete. Distance-estimate height is deliberately deferred until Phase 9 introduces a formula with a real derivative capability.
+Status on September 13, 2026: core material pass complete. Distance-estimate height remains capability-gated research: it requires a formula that genuinely supplies a distance estimate, not merely a derivative used for convergence. Phase 9 completion does not imply that capability.
 
 ## Phase 8.25 — Rendering Cleanup Before HDR
 
@@ -317,7 +331,7 @@ Goal: add cinematic finish while ensuring the fractal remains the subject.
 - [x] Add thresholded, downsampled bloom with an intensity cap and sensible dark-scene defaults.
 - [x] Add subtle optional vignette, grain, colour grading, sharpening, and chromatic aberration; keep all disabled unless a preset explicitly enables them.
 - [x] Add resize/resource lifecycle, renderer contract, migration, and browser coverage for deterministic serialised lens settings.
-- [ ] Add selectable post-process quality tiers; the first HDR slice intentionally uses a stable half-resolution bloom target.
+Follow-up moved to the [polish backlog](#polish-backlog--not-instrument-prerequisites): selectable post-process quality tiers; the first HDR slice intentionally uses a stable half-resolution bloom target.
 - [x] Keep coordinate-distorting effects out of the HDR lens pipeline; they remain an experimental future sampling category requiring direct comparison and reset affordances.
 
 Definition of done: lens presets enhance bright local detail without washing out exploration, and recorded journeys match the on-screen material/lens look.
@@ -326,7 +340,7 @@ Status on September 14, 2026: core HDR pipeline complete. Selectable post-proces
 
 Rendering regression follow-up (September 14, 2026): fixed an invalid metric-pass bind group that caused black WebGPU frames for Topographic and Lit Surface presets. GPU browser regressions now require a WebGPU context and check validation errors and visible output after selection, resize, and reload; CPU fallback success does not satisfy these checks.
 
-- [ ] Surface asynchronous GPU validation/device errors in renderer diagnostics so a failed frame cannot leave a misleading healthy WebGPU status.
+Follow-up moved to the [polish backlog](#polish-backlog--not-instrument-prerequisites): asynchronous GPU validation/device-error diagnostics.
 
 ## Phase 9 — 2D formula families
 
@@ -340,7 +354,7 @@ Goal: broaden discovery and comparison with formulas that reuse the new metric/m
 
 Phase 9.1 ships powers 2–8 (default 3), Explore and per-side Compare controls, and Cubic Butterfly, Quartic Crown, and Sixth-power Star curated Waypoints. Existing shared viewports and Journey keyframe interpolation support power comparisons and sweeps. Fractional powers have a branch seam and reduced precision, explained beside the control. Saved-view startup now respects the URL instead of resetting its formula to Mandelbrot. GPU readback tests compare orbit metrics against CPU results, including the zero-origin phase convention.
 
-- [ ] Add one-click paired power-sweep Compare and Journey templates so newcomers need not assemble keyframes manually.
+Follow-up moved to the [polish backlog](#polish-backlog--not-instrument-prerequisites): one-click paired power-sweep Compare and Journey templates.
 
 ### Phase 9.2 — Newton and Nova
 
@@ -350,8 +364,7 @@ Phase 9.1 ships powers 2–8 (default 3), Explore and per-side Compare controls,
 
 Phase 9.2 implements regular-root polynomials (2–6 roots, configurable radius/rotation/relaxation/tolerance), Newton starting-point basins, and parameter-plane Nova. Root Atlas and Nova Silk provide compatible starting looks. Newton Triskelion, Newton Four Winds, Nova Silk Delta, and Nova Clover are curated Waypoints. CPU/WGSL readback fixtures cover convergence, roots, singularities and non-default polynomials; browser tests exercise tuning, reload, visible GPU output and Compare. Journey normalises discrete root-count transitions. Advanced controls are expandable; the sidebar reserves workspace space so expanded controls cannot hide Visual Lab.
 
-- [ ] Explore free root placement/arbitrary polynomial coefficients and a separate Nova Julia view, with root-tracking rules before enabling continuous root-identity animation.
-- [ ] Add an on-canvas convergence inspector/legend so diagnostics are available away from the viewport centre without opening advanced controls.
+Follow-ups moved to [Alternative Mathematics](#alternative-mathematics--specialist-admission) (free roots, arbitrary polynomials, Nova Julia) and the [polish backlog](#polish-backlog--not-instrument-prerequisites) (on-canvas convergence inspector/legend).
 
 ### Phase 9.3 — Organic and specialist formulas
 
@@ -360,36 +373,143 @@ Phase 9.2 implements regular-root polynomials (2–6 roots, configurable radius/
 
 Phase 9.3 ships Julia-plane Phoenix with bounded complex c and real Orbit memory, double-single GPU orbit history, existing escape materials, Explore/Compare controls, Journey interpolation, persistence, and material-independent Discover. Curated Waypoints: Phoenix Feather, Phoenix Ember Lace, and Phoenix Tidal Wings. [Formula admission review](FORMULA_ADMISSION.md) records the checklist and defers Magnet I/II pending dual-stop metric contracts, Lyapunov pending stability-field semantics, and IFS pending a separate seeded sampling renderer. These candidates have been assessed, not implemented or locally benchmarked.
 
-- [ ] Add a one-click Phoenix versus matching zero-memory Julia comparison, so the recurrence relationship can be explored without manually copying the constant.
+Follow-up moved to the [polish backlog](#polish-backlog--not-instrument-prerequisites): one-click Phoenix versus matching zero-memory Julia comparison.
 
 Definition of done: each added formula advertises capabilities, has CPU/WGSL coverage, works through Explore/Discover/Compare/Journey/Waypoints, and ships with compelling curated destinations rather than just a dropdown entry.
 
-## Phase 10 — Deep zoom and 3D research tracks
+### Phase 9 milestone — The first era closes
 
-Interoperability guardrail: ADR-026 and [INTEROPERABILITY.md](INTEROPERABILITY.md) preserve future external-control and metric-output seams without changing Phase 9.3 scope or priority. After Phase 9.3, revisit final domain validation, source/target composition, stable parameter metadata, and metric snapshot contracts before scheduling a first physical-hardware integration. MIDI/audio/synth/node-graph/feedback work remains explicitly unscheduled; these are not prerequisites for the formula work or research tracks below.
+Multibrot tested variable powers and branch/precision limits; Newton/Nova tested convergence, singularities, and the distinction between polynomial-root identity and fixed-point convergence; Phoenix tested per-pixel previous-orbit state. Together they exercised the shared formula → metrics → material architecture through the explorer workflows.
 
-These are deliberate research tracks rather than prerequisites for the Visual Lab.
+The architecture concept survived; it is not finished or universally generic. Magnet exposed missing dual convergence/escape/singularity semantics, Lyapunov needs signed stability-field semantics, and IFS needs a separate sampling renderer. Extend existing contracts when the mathematics fits; introduce a new abstraction when it genuinely does not. Do not flatten unlike mathematical concepts to admit another dropdown option. [Formula admission review](FORMULA_ADMISSION.md) remains authoritative for these gates.
 
-### Phase 10.1 — Perturbation-assisted deep zoom
+## Phase 10 — The Instrument
+
+Goal: make Fractal Waypoints playable before making it externally connected. Preserve reusable mathematical and visual mechanisms, not just a catalogue of looks. Presets demonstrate the system; UI exposes the system; connections eventually compose the system. Artistic exploration and technical measurement are peers. Prefer expressive variable mechanisms over unnecessary coupling or arbitrary scripting; do not abstract everything in anticipation.
+
+**One world, different benches.** Explore investigates and configures; Perform plays selected controls; future Patch configures relationships. They share the mathematical world, domain parameters, formula/metric/material/lens model, Waypoints, Journey, modulation, rendering, persistence, and analysis outputs. Switching benches must preserve that world, not clone configurations or create workspace-specific backends. Explicit user-created Compare views remain valid independent views.
+
+The existing sidebar modes are focused workflows, not an already implemented Explore/Perform/Patch shell. Keep ordinary exploration usable without performance or external-control jargon. See [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches), ADR-028, and [the interoperability audit](INTEROPERABILITY.md) for current limitations; ADR-026 governs semantic boundaries.
+
+### Phase 10.0 — UX and workspace architecture
+
+Goal: decide information architecture and state responsibilities before implementing the performance surface. This is not an aesthetic redesign.
+
+- [ ] Define Explore/Perform/future Patch boundaries, navigation, and where Visual Lab, palette editing, Waypoints, Discover, Compare, and Journey live without losing existing workflows.
+- [ ] Separate shared mathematical/domain state, performance setup, and ephemeral UI state; identify global versus workspace-local ownership and lifecycle.
+- [ ] Decide what belongs in URLs, project files, session persistence, and Waypoints, including versioning/migration needs. Do not choose a new schema merely from this roadmap.
+- [ ] Specify base versus evaluated configuration ownership, Journey playback/recording, restoration, and what a workspace switch retains. Address current playback writing evaluated values into `mainConfig` and therefore URL state.
+- [ ] Define how an explicitly selected Compare side or Julia preview relates to Perform; do not silently collapse independent views or duplicate the world per bench.
+- [ ] Validate navigation and state flows with a small UX/state design, leaving room for future Patch without implementing a graph or general framework.
+
+Acceptance flow: discover Phoenix → save a Waypoint → enter Perform on the same world → pin Orbit memory and palette controls → modulate and record → later replace the LFO with hardware through Patch without rebuilding the fractal configuration. The hardware/Patch portion is a design walkthrough only, not Phase 10 implementation.
+
+Definition of done: documented workspace/navigation and ownership decisions, persistence responsibilities, and acceptance scenarios are specific enough for incremental runnable slices. No guessed schema or navigation redesign is required by this revision.
+
+### Phase 10.1 — Semantic parameter surface
+
+- [ ] Expose stable semantic parameter identities incrementally, with domain owner, type (numeric/discrete/event/state), bounds, defaults, units, interpolation rules, modulation eligibility, and useful display metadata.
+- [ ] Preserve existing persisted target IDs. Never address controls through slider order, DOM identifiers, React state paths, or shader uniform offsets; do not build a giant universal registry.
+- [ ] Consolidate incomplete metadata and distributed validation where the first real consumers require it. Define inactive/incompatible-target behaviour and a final domain validation boundary.
+- [ ] Resolve bounded positional trap-slot addressing before any reorderable target model; use stable instance identities and a migration only if reordering is introduced.
+- [ ] Test semantic addressing, bounds/non-finite inputs, discrete behaviour, serialization compatibility, and shared use by editing, Journey, and modulation.
+
+Definition of done: selected controls can be addressed independently of their UI or renderer, with domain-owned behaviour. Metric outputs remain the separate Phase 10.4 contract, not parameter metadata inferred from material textures.
+
+### Phase 10.2 — First-class internal modulation
+
+- [ ] Evolve existing deterministic modulation into a serialisable source → transform → mapping → semantic target model, separating source evaluation from target application without breaking saved targets.
+- [ ] Support useful internal sine, triangle, saw, and deterministic noise sources, with explicit period/frequency, phase, amplitude, and offset semantics. Add cosine only if it improves the UX.
+- [ ] Start with a small justified transform set: scale, offset, invert, clamp, curve, and smoothing. Defer quantisation, dead zones, sample/hold, combination, gates, and other transforms until concrete use cases justify them.
+- [ ] Specify composition/order (including add/replace/priority), target units, inactive mappings, clocks, and smoothing/noise state. Keep continuous signals, discrete events, and persistent state distinct in evaluation, persistence, and replay; they are not all floats sampled at 60 Hz.
+- [ ] Preserve base settings separately from effective values: base configuration → Journey interpolation → modulation/future external application → domain normalisation/validation → effective configuration → renderer. Never accumulate evaluated values into the base.
+- [ ] Share explicit-time evaluation between live playback and deterministic Journey/export; test ordering, repeated evaluation, seeking, reset, bounds, and replay of stateful transforms.
+
+Definition of done: internal modulation is independently playable and reproducible. No MIDI, audio, synth, graph-editor, or feedback runtime is introduced.
+
+### Phase 10.3 — Perform workspace
+
+- [ ] Build a focused playing surface over the shared world: selected/pinned large immediate controls, clear active/effective values, modulation visibility, and purposeful triggers.
+- [ ] Support macros with explicit inspectable mappings. Form, Energy, Glow, Surface, Colour, Chaos, and Motion are design hypotheses to test, not hardcoded universal mathematical meanings.
+- [ ] Define and expose freeze, pause/resume, manual override, record, restore, and mapping reset behaviour, including what each action affects and how users recover their base settings.
+- [ ] Verify workspace switching, keyboard/accessibility behaviour, incompatible formula targets, recording/replay, and the Phoenix acceptance flow from 10.0.
+
+Definition of done: Perform feels like playing selected relationships, not Visual Lab with more sliders. Users need neither a graph nor knowledge of external protocols to play or return to Explore safely.
+
+### Phase 10.4 — Observable fractal metrics
+
+- [ ] Define a capability-aware analysis snapshot contract independent of the GPU material texture, colour output, and future consumers. Use the identity, sampling, precision, status, and scheduling requirements in [INTEROPERABILITY.md](INTEROPERABILITY.md#mathematical-outputs-not-material-outputs).
+- [ ] Expose meaningful native measurements where supported: iteration histograms, escape ratios, iteration mean/variance, convergence distributions, verified root populations, and phase statistics. Distinguish unavailable, unresolved, singular, divergent, and converged results; never pretend Nova has Newton root identity.
+- [ ] Prove usefulness internally first through Discover, diagnostics, Perform meters, or region comparison. Start with bounded, cancellable analysis and explicit cost/rate limits; do not require synchronous GPU readback every frame.
+- [ ] Test deterministic fixtures, sampling/weighting and bin semantics, capability absence, cancellation/backpressure, and independence from visual styling.
+
+Definition of done: users and internal systems can inspect mathematical behaviour, not only pixels. External publication and musical interpretation are not part of this slice.
+
+## Phase 11 — Connections
+
+**UNSCHEDULED until deliberately started.** Phase 10 must stand alone. Goal: validate semantic boundaries with a concrete physical device, not a speculative protocol framework.
+
+- [ ] Select a physical synth/controller and a small useful interaction; evaluate Web MIDI if appropriate to that device and browser environment. Keep device/protocol knowledge outside formulas, materials, and rendering.
+- [ ] Adapt external continuous signals, events, and state through the validated domain model; define permissions, connection loss, ordering, timestamps, recording, and reproducible replay/export.
+- [ ] Let hardware and later software adapters be interchangeable consumers where practical, informed by the real first integration rather than hypothetical universality.
+- [ ] Keep music generation separate from synthesis. An external generator may interpret fractal statistics as notes or rhythm; a synth consumes musical events. Neither interpretation belongs in fractal metrics.
+- [ ] Consider guitar/audio experiments later: envelope, onset, pitch, spectral brightness, and possibly note/chord analysis as independent sources. Fractal code must not become guitar-aware; no audio implementation belongs in Phase 10.
+
+Definition of done for the first slice: one intentionally selected hardware connection is useful, recoverable, and replayable through semantic boundaries. Additional protocols, synthesis, and audio analysis are not automatic scope.
+
+## Phase 12 — Patch Bay
+
+**UNSCHEDULED until deliberately started, after the interaction model is validated.** Goal: expose existing relationships visually, not invent the domain architecture inside a node editor.
+
+- [ ] Build a Patch workspace over a validated serialisable source/transform/mapping/target/event/state model, sharing the same world and performance setup with Explore and Perform.
+- [ ] Make mappings inspectable, editable, persistable, and safely replaceable, including replacing an internal source with a hardware source without rebuilding the fractal configuration.
+- [ ] Keep graph editing optional during performance; maintain a useful standalone explorer and instrument without Patch.
+- [ ] Gate any feedback behind explicit clocks, ordering, latency/delays, state ownership, deterministic replay, bounded scheduling, cycle safeguards, and recursion safety. Do not enable feedback as an accidental callback or render loop.
+
+Definition of done: the editor composes already proven mechanisms; graph layout is not domain state, and feedback remains disabled until its scheduling semantics are deliberately designed and verified.
+
+## Optional parallel research tracks
+
+These preserve the former Phase 10 requirements; they are not cancelled and are not the next mandatory sequence. Schedule bounded experiments independently of Phases 10–12. Older Phase 7 deep-zoom/3D follow-ups route here; capability-gated distance estimation remains research rather than a promise made by Phase 9.
+
+### Deep Space — Perturbation-assisted deep zoom
 
 - [ ] Prototype reference-orbit perturbation rendering behind the existing diagnostics and renderer coordinator.
 - [ ] Define precision/error thresholds, fallback behaviour, and Waypoint compatibility before exposing it as a quality mode.
 - [ ] Test known deep-zoom reference views against deterministic images or metric fixtures.
 
-### Phase 10.2 — Separate 3D ray-march renderer
+### Third Dimension — Separate 3D ray-march renderer
 
 - [ ] Define a separate 3D scene/camera configuration and renderer capability boundary; do not overload the 2D viewport or formula contracts.
 - [ ] Prototype a Mandelbulb distance-estimator renderer with ray marching, normals, lighting, quality limits, and cancellation behaviour.
 - [ ] Add 3D Waypoints only after camera, formula, material, and export configurations can be reproduced faithfully.
 - [ ] Evaluate Mandelbox only after the Mandelbulb prototype meets interactive-performance and navigation criteria.
 
-## First implementation slice
+### Alternative Mathematics — Specialist admission
+
+- [ ] Revisit Magnet I/II only after dual convergence/escape/singularity metric contracts and representative CPU/GPU performance tests are designed.
+- [ ] Revisit Lyapunov only with signed stability-field semantics, sequence/burn-in configuration, sampling, materials, and deterministic test fixtures.
+- [ ] Scope IFS/Barnsley fern as a separate seeded sampling/density-accumulation renderer with its own reproducibility and performance criteria.
+- [ ] Explore free root placement/arbitrary polynomial coefficients and a separate Nova Julia view, with root-tracking rules before enabling continuous root-identity animation. (From Phase 9.2.)
+- [ ] Apply the [formula admission checklist](FORMULA_ADMISSION.md) to future specialists: metric fit, interactive performance, Discover value, visual distinction, and testability. A new abstraction is appropriate when the mathematical contract requires it.
+
+### Polish backlog — Not instrument prerequisites
+
+- [ ] Add one-click paired power-sweep Compare and Journey templates so newcomers need not assemble keyframes manually. (From Phase 9.1.)
+- [ ] Add an on-canvas convergence inspector/legend so diagnostics are available away from the viewport centre without opening advanced controls. (From Phase 9.2.)
+- [ ] Add a one-click Phoenix versus matching zero-memory Julia comparison, so the recurrence relationship can be explored without manually copying the constant. (From Phase 9.3.)
+- [ ] Add selectable post-process quality tiers; the first HDR slice intentionally uses a stable half-resolution bloom target. (From Phase 8.3.)
+- [ ] Surface asynchronous GPU validation/device errors in renderer diagnostics so a failed frame cannot leave a misleading healthy WebGPU status. (From Phase 8.3 regression follow-up.)
+
+These remain worthwhile independent improvements, not gates to starting 10.0. Other unchecked historical items remain visible at their original phases: tutorial persistence/coverage, CPU/GPU visual parity and styled-Waypoint verification, sharing fallback, and capability-gated distance-estimate materials. Audit their remaining scope before claiming completion; this revision does not retroactively check them off. Phase 10.0 should also address the UX risk of recording, override, and reset acting on an unclear active Compare side or silently changing the saved base view.
+
+## Historical implementation slice — Rendering foundation
 
 The first coding session should produce a vertical slice: minimal app shell, WebGPU canvas, `RenderConfig`, reusable `RenderView`, double-single CPU/WGSL helpers, Mandelbrot shader, viewport pan/zoom, one palette, and tests for arithmetic and coordinate mapping.
 
 Status on August 29, 2026: complete.
 
-## Next implementation slice
+## Historical implementation slice — Navigation
 
 The next navigation-focused slice should add:
 
