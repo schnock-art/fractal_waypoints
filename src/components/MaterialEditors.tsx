@@ -1,6 +1,6 @@
-import { cloneOrbitTrapAppearance } from '../colouring/orbitMaterial';
-import { cloneOrbitTrapSet, createOrbitTrap, MAX_ORBIT_TRAPS } from '../colouring/orbitTraps';
-import { getOrbitTrapAppearance, getOrbitTrapSet } from '../colouring/runtime';
+import { cloneOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
+import { cloneOrbitTrapSet, createOrbitTrap, MAX_ORBIT_TRAPS } from '../visuals/traps/orbitTraps';
+import { getOrbitTrapAppearance, getOrbitTrapSet } from '../visuals/materials/runtime';
 import type { MaterialDefinition } from '../visuals/materials/registry';
 import type { OrbitTrapPaletteMapping, OrbitTrapShape, RenderConfig } from '../types/config';
 

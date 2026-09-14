@@ -31,11 +31,10 @@ describe('visual architecture contracts', () => {
   it('migrates and orders composable lens effects', () => {
     const lens = updateLensEffect(createLensConfig(), 'vignette', { amount: 0.4 }, true);
     expect(getLensEffectAmount(lens, 'vignette')).toBe(0.4);
-    expect(normalizeLensConfig({ effects: [{ id: 'exposure', enabled: true, parameters: { amount: 8 } }] }).effects)
-      .toEqual([
-        { id: 'exposure', enabled: true, parameters: { amount: 1.8 } },
-        { id: 'vignette', enabled: false, parameters: { amount: 0 } },
-      ]);
+    const normalized = normalizeLensConfig({ effects: [{ id: 'exposure', enabled: true, parameters: { amount: 8 } }] });
+    expect(normalized.effects.find((effect) => effect.id === 'exposure')).toEqual({ id: 'exposure', enabled: true, parameters: { amount: 1.8 } });
+    expect(normalized.effects.find((effect) => effect.id === 'toneMapping')).toEqual({ id: 'toneMapping', enabled: true, parameters: { amount: 1 } });
+    expect(normalized.effects.find((effect) => effect.id === 'bloom')).toEqual({ id: 'bloom', enabled: false, parameters: { amount: 0, threshold: 1.1 } });
     expect(validateLensConfig(lens)).toEqual([]);
   });
 

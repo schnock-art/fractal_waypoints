@@ -138,6 +138,16 @@ Lens treatment is an ordered serialisable effect list. Journey samples base/keyf
 
 **Status:** Accepted
 
-Topographic and Lit Surface are the first materials to require neighbouring values. WebGPU therefore renders a compact `rgba8unorm` metric field in one pass (smooth height, phase, logarithmic magnitude, escape state), then samples it in a material pass for contour responsiveness and screen-space normals. Local materials retain the direct one-pass path. The field is resized with the canvas and lives wholly in the renderer coordinator; React only selects a serialisable material configuration.
+Topographic and Lit Surface are the first materials to require neighbouring values. WebGPU therefore renders a compact `rgba16float` metric field in one pass (smooth height, phase, logarithmic magnitude, escape state), then samples it in a material pass for contour responsiveness and screen-space normals. Local materials retain the direct one-pass path. Field-pass selection is derived from each material definition’s `sampling` metadata, not a renderer-side list of material IDs. The field is allocated only on first use, resized with the canvas once it exists, and lives wholly in the renderer coordinator; React only selects a serialisable material configuration.
+
+`rgba8unorm` used 4 bytes per pixel but quantised the height differences that drive normals, creating visible stair-stepping and unstable tight specular highlights. `rgba16float` costs 8 bytes per pixel—roughly 15.8 MiB at 1920×1080 versus 7.9 MiB—but provides a meaningful improvement in contour continuity and normal stability. It is the selected format; `rgba32float` has no demonstrated need. The uniform packer now defines explicit topography, surface, domain, and material-detail vectors so HDR work cannot accidentally reuse a parameter slot.
 
 The field stores no invented distance estimate. Distance-estimate height remains gated on a formula truthfully advertising derivative/distance-estimate capability. The CPU fallback preserves the material configuration with documented approximations, while Visual Lab communicates that full field detail requires WebGPU.
+
+## ADR-023: HDR presentation is a bounded post-material pipeline
+
+**Status:** Accepted
+
+WebGPU materials now render to a linear `rgba16float` scene texture before display. A half-resolution threshold pass extracts bloom candidates, and the final pass applies exposure, ACES tone mapping, capped bloom, vignette, and optional grain, colour grade, sharpen, or chromatic aberration. Only tone mapping is enabled by default; bloom and stylisation remain off. This keeps fractal and material kernels free from display transforms while avoiding a general render graph.
+
+The CPU fallback retains the existing exposure/vignette subset and preserves all saved HDR effect settings without claiming a pixel-identical post-process result. Coordinate-distorting effects remain outside this lens pipeline because they change fractal sampling, not presentation.

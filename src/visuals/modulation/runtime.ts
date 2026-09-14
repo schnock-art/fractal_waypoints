@@ -1,5 +1,5 @@
-import { cloneOrbitTrapAppearance } from '../../colouring/orbitMaterial';
-import { cloneOrbitTrapSet } from '../../colouring/orbitTraps';
+import { cloneOrbitTrapAppearance } from '../traps/orbitMaterial';
+import { cloneOrbitTrapSet } from '../traps/orbitTraps';
 import { cloneLensConfig, getLensEffect, updateLensEffect } from '../lenses/model';
 import type { ParameterModulation, RenderConfig } from '../../types/config';
 

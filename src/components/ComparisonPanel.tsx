@@ -1,4 +1,4 @@
-import { materialRegistry } from '../colouring/registry';
+import { materialRegistry } from '../visuals/materials/registry';
 import { clonePalette } from '../palettes/model';
 import { palettePresets } from '../palettes/presets';
 import { summarizeComparisonWorkspace } from '../comparison/workspace';

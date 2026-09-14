@@ -1,15 +1,12 @@
-import { getMaterialCode, getMaterialDensity, getOrbitTrapAppearance, getOrbitTrapScale, getOrbitTrapSet } from '../../colouring/runtime';
-import { getOrbitTrapCompositionCode, getOrbitTrapShapeCode } from '../../colouring/orbitTraps';
-import { getOrbitTrapMetricCode, getOrbitTrapPaletteMappingCode } from '../../colouring/orbitMaterial';
-import { getLensEffectAmount } from '../../visuals/lenses/model';
 import { buildPaletteLut } from '../../palettes/sampler';
 import type { RenderConfig } from '../../types/config';
 import type { RenderCoordinator, RenderSurface } from '../types';
-import { getFormulaCode } from '../../fractals/runtime';
 import { mandelbrotShader } from './mandelbrotShader';
+import { METRIC_FIELD_FORMAT, requiresMetricField, shouldAllocateMetricField, shouldResizeMetricField } from './metricField';
+import { buildRenderUniformData, RENDER_UNIFORM_BUFFER_SIZE } from './uniforms';
 
-const UNIFORM_BUFFER_SIZE = 12 * 16;
 const PALETTE_TEXTURE_SIZE = 256;
+const HDR_TEXTURE_FORMAT: GPUTextureFormat = 'rgba16float';
 
 export async function createWebGpuRenderCoordinator(adapter: GPUAdapter): Promise<RenderCoordinator> {
   const device = await adapter.requestDevice();
@@ -38,13 +35,20 @@ class WebGpuSurface implements RenderSurface {
   private readonly directPipeline: GPURenderPipeline;
   private readonly metricPipeline: GPURenderPipeline;
   private readonly fieldMaterialPipeline: GPURenderPipeline;
+  private readonly bloomPipeline: GPURenderPipeline;
+  private readonly postPipeline: GPURenderPipeline;
   private readonly uniformBuffer: GPUBuffer;
   private readonly paletteTexture: GPUTexture;
   private readonly paletteSampler: GPUSampler;
+  private readonly sceneSampler: GPUSampler;
   private readonly directBindGroup: GPUBindGroup;
   private readonly metricBindGroup: GPUBindGroup;
-  private fieldMaterialBindGroup: GPUBindGroup;
-  private fieldTexture: GPUTexture;
+  private fieldMaterialBindGroup?: GPUBindGroup;
+  private fieldTexture?: GPUTexture;
+  private sceneTexture: GPUTexture;
+  private bloomTexture: GPUTexture;
+  private bloomBindGroup: GPUBindGroup;
+  private postBindGroup: GPUBindGroup;
 
   private constructor(
     device: GPUDevice,
@@ -54,6 +58,8 @@ class WebGpuSurface implements RenderSurface {
     directPipeline: GPURenderPipeline,
     metricPipeline: GPURenderPipeline,
     fieldMaterialPipeline: GPURenderPipeline,
+    bloomPipeline: GPURenderPipeline,
+    postPipeline: GPURenderPipeline,
   ) {
     this.device = device;
     this.format = format;
@@ -63,9 +69,11 @@ class WebGpuSurface implements RenderSurface {
     this.directPipeline = directPipeline;
     this.metricPipeline = metricPipeline;
     this.fieldMaterialPipeline = fieldMaterialPipeline;
+    this.bloomPipeline = bloomPipeline;
+    this.postPipeline = postPipeline;
 
     this.uniformBuffer = device.createBuffer({
-      size: UNIFORM_BUFFER_SIZE,
+      size: RENDER_UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -81,6 +89,7 @@ class WebGpuSurface implements RenderSurface {
       addressModeU: 'repeat',
       addressModeV: 'clamp-to-edge',
     });
+    this.sceneSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge' });
 
     this.directBindGroup = device.createBindGroup({
       layout: this.directPipeline.getBindGroupLayout(0),
@@ -100,8 +109,10 @@ class WebGpuSurface implements RenderSurface {
       ],
     });
 
-    this.fieldTexture = this.createFieldTexture(1, 1);
-    this.fieldMaterialBindGroup = this.createFieldMaterialBindGroup();
+    this.sceneTexture = this.createPostTexture(1, 1);
+    this.bloomTexture = this.createPostTexture(1, 1);
+    this.bloomBindGroup = this.createBloomBindGroup();
+    this.postBindGroup = this.createPostBindGroup();
 
     this.configureContext();
   }
@@ -126,7 +137,7 @@ class WebGpuSurface implements RenderSurface {
       fragment: {
         module: shaderModule,
         entryPoint: 'fs_main',
-        targets: [{ format }],
+        targets: [{ format: HDR_TEXTURE_FORMAT }],
       },
       primitive: {
         topology: 'triangle-list',
@@ -135,16 +146,19 @@ class WebGpuSurface implements RenderSurface {
 
     const metricPipeline = await device.createRenderPipelineAsync({
       layout: 'auto', vertex: { module: shaderModule, entryPoint: 'vs_main' },
-      fragment: { module: shaderModule, entryPoint: 'metric_field_fs', targets: [{ format: 'rgba8unorm' }] },
+      fragment: { module: shaderModule, entryPoint: 'metric_field_fs', targets: [{ format: METRIC_FIELD_FORMAT }] },
       primitive: { topology: 'triangle-list' },
     });
     const fieldMaterialPipeline = await device.createRenderPipelineAsync({
       layout: 'auto', vertex: { module: shaderModule, entryPoint: 'vs_main' },
-      fragment: { module: shaderModule, entryPoint: 'field_material_fs', targets: [{ format }] },
+      fragment: { module: shaderModule, entryPoint: 'field_material_fs', targets: [{ format: HDR_TEXTURE_FORMAT }] },
       primitive: { topology: 'triangle-list' },
     });
 
-    return new WebGpuSurface(device, format, canvas, context, directPipeline, metricPipeline, fieldMaterialPipeline);
+    const bloomPipeline = await device.createRenderPipelineAsync({ layout: 'auto', vertex: { module: shaderModule, entryPoint: 'vs_main' }, fragment: { module: shaderModule, entryPoint: 'bloom_downsample_fs', targets: [{ format: HDR_TEXTURE_FORMAT }] }, primitive: { topology: 'triangle-list' } });
+    const postPipeline = await device.createRenderPipelineAsync({ layout: 'auto', vertex: { module: shaderModule, entryPoint: 'vs_main' }, fragment: { module: shaderModule, entryPoint: 'post_process_fs', targets: [{ format }] }, primitive: { topology: 'triangle-list' } });
+
+    return new WebGpuSurface(device, format, canvas, context, directPipeline, metricPipeline, fieldMaterialPipeline, bloomPipeline, postPipeline);
   }
 
   resize(width: number, height: number): void {
@@ -157,67 +171,15 @@ class WebGpuSurface implements RenderSurface {
 
     this.canvas.width = nextWidth;
     this.canvas.height = nextHeight;
-    this.fieldTexture.destroy();
-    this.fieldTexture = this.createFieldTexture(nextWidth, nextHeight);
-    this.fieldMaterialBindGroup = this.createFieldMaterialBindGroup();
+    this.replacePostTextures(nextWidth, nextHeight);
+    if (shouldResizeMetricField(this.fieldTexture !== undefined, true)) {
+      this.replaceFieldTexture(nextWidth, nextHeight);
+    }
     this.configureContext();
   }
 
   async render(config: RenderConfig): Promise<void> {
-    const trapSet = getOrbitTrapSet(config);
-    const appearance = getOrbitTrapAppearance(config);
-    const firstTrap = trapSet.traps[0];
-    const secondTrap = trapSet.traps[1] ?? firstTrap;
-    const uniformData = new Float32Array([
-      config.viewport.centre.re.hi,
-      config.viewport.centre.re.lo,
-      config.viewport.centre.im.hi,
-      config.viewport.centre.im.lo,
-      config.viewport.scale.hi,
-      config.viewport.scale.lo,
-      Math.cos(config.viewport.rotation),
-      Math.sin(config.viewport.rotation),
-      config.fractal.parameters.cReal ?? 0,
-      0,
-      config.fractal.parameters.cImag ?? 0,
-      0,
-      config.fractal.bailout,
-      config.fractal.maxIterations,
-      this.canvas.width,
-      this.canvas.height,
-      getMaterialDensity(config),
-      getMaterialCode(config.material.id),
-      config.viewport.aspectRatio,
-      getFormulaCode(config.fractal.formulaId),
-      getOrbitTrapScale(config),
-      getLensEffectAmount(config.lens, 'exposure'),
-      getLensEffectAmount(config.lens, 'vignette'),
-      appearance.emission,
-      firstTrap.x,
-      firstTrap.y,
-      firstTrap.rotation,
-      firstTrap.scale,
-      secondTrap.x,
-      secondTrap.y,
-      secondTrap.rotation,
-      secondTrap.scale,
-      getOrbitTrapShapeCode(firstTrap.shape),
-      getOrbitTrapShapeCode(secondTrap.shape),
-      getOrbitTrapCompositionCode(trapSet.composition),
-      trapSet.traps.length,
-      getOrbitTrapMetricCode(appearance.metric),
-      getOrbitTrapPaletteMappingCode(appearance.paletteMapping),
-      appearance.exteriorMix,
-      appearance.interiorMix,
-      config.material.parameters.contourLevels ?? config.material.parameters.phaseScale ?? 18,
-      config.material.parameters.contourWidth ?? config.material.parameters.magnitudeScale ?? 0.13,
-      config.material.parameters.relief ?? 0.72,
-      config.material.parameters.height ?? 3.4,
-      config.material.parameters.lightAngle ?? 0.7,
-      config.material.parameters.specular ?? 0.32,
-      config.material.parameters.ambient ?? 0.28,
-      config.material.parameters.roughness ?? 0.55,
-    ]);
+    const uniformData = buildRenderUniformData(config, this.canvas.width, this.canvas.height);
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
@@ -230,21 +192,25 @@ class WebGpuSurface implements RenderSurface {
     );
 
     const encoder = this.device.createCommandEncoder();
-    const needsMetricField = config.material.id === 'topographic' || config.material.id === 'surface';
+    const needsMetricField = requiresMetricField(config);
+
+    if (shouldAllocateMetricField(this.fieldTexture !== undefined, config)) {
+      this.replaceFieldTexture(this.canvas.width, this.canvas.height);
+    }
 
     if (needsMetricField) {
       const metricPass = encoder.beginRenderPass({
-        colorAttachments: [{ view: this.fieldTexture.createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } }],
+        colorAttachments: [{ view: this.fieldTexture!.createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } }],
       });
       metricPass.setPipeline(this.metricPipeline);
       metricPass.setBindGroup(0, this.metricBindGroup);
       metricPass.draw(3);
       metricPass.end();
     }
-    const pass = encoder.beginRenderPass({
+    const materialPass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          view: this.context.getCurrentTexture().createView(),
+          view: this.sceneTexture.createView(),
           loadOp: 'clear',
           storeOp: 'store',
           clearValue: { r: 0.02, g: 0.03, b: 0.05, a: 1 },
@@ -252,22 +218,54 @@ class WebGpuSurface implements RenderSurface {
       ],
     });
 
-    pass.setPipeline(needsMetricField ? this.fieldMaterialPipeline : this.directPipeline);
-    pass.setBindGroup(0, needsMetricField ? this.fieldMaterialBindGroup : this.directBindGroup);
+    materialPass.setPipeline(needsMetricField ? this.fieldMaterialPipeline : this.directPipeline);
+    materialPass.setBindGroup(0, needsMetricField ? this.fieldMaterialBindGroup! : this.directBindGroup);
+    materialPass.draw(3);
+    materialPass.end();
+
+    const bloomPass = encoder.beginRenderPass({ colorAttachments: [{ view: this.bloomTexture.createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 1 } }] });
+    bloomPass.setPipeline(this.bloomPipeline);
+    bloomPass.setBindGroup(0, this.bloomBindGroup);
+    bloomPass.draw(3);
+    bloomPass.end();
+
+    const pass = encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0.02, g: 0.03, b: 0.05, a: 1 } }] });
+    pass.setPipeline(this.postPipeline);
+    pass.setBindGroup(0, this.postBindGroup);
     pass.draw(3);
     pass.end();
 
     this.device.queue.submit([encoder.finish()]);
   }
 
-  destroy(): void { this.fieldTexture.destroy(); }
+  destroy(): void { this.fieldTexture?.destroy(); this.sceneTexture.destroy(); this.bloomTexture.destroy(); }
 
   private createFieldTexture(width: number, height: number): GPUTexture {
     return this.device.createTexture({
       size: [width, height, 1],
-      format: 'rgba8unorm',
+      format: METRIC_FIELD_FORMAT,
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
+  }
+
+  private createPostTexture(width: number, height: number): GPUTexture {
+    return this.device.createTexture({ size: [width, height, 1], format: HDR_TEXTURE_FORMAT, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+  }
+
+  private createPostBindGroup(): GPUBindGroup {
+    return this.device.createBindGroup({ layout: this.postPipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }, { binding: 4, resource: this.sceneSampler }, { binding: 5, resource: this.sceneTexture.createView() }, { binding: 6, resource: this.bloomTexture.createView() }] });
+  }
+
+  private createBloomBindGroup(): GPUBindGroup {
+    return this.device.createBindGroup({ layout: this.bloomPipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }, { binding: 4, resource: this.sceneSampler }, { binding: 5, resource: this.sceneTexture.createView() }] });
+  }
+
+  private replacePostTextures(width: number, height: number): void {
+    this.sceneTexture.destroy(); this.bloomTexture.destroy();
+    this.sceneTexture = this.createPostTexture(width, height);
+    this.bloomTexture = this.createPostTexture(Math.max(1, Math.floor(width / 2)), Math.max(1, Math.floor(height / 2)));
+    this.bloomBindGroup = this.createBloomBindGroup();
+    this.postBindGroup = this.createPostBindGroup();
   }
 
   private createFieldMaterialBindGroup(): GPUBindGroup {
@@ -277,9 +275,15 @@ class WebGpuSurface implements RenderSurface {
         { binding: 0, resource: { buffer: this.uniformBuffer } },
         { binding: 1, resource: this.paletteSampler },
         { binding: 2, resource: this.paletteTexture.createView() },
-        { binding: 3, resource: this.fieldTexture.createView() },
+        { binding: 3, resource: this.fieldTexture!.createView() },
       ],
     });
+  }
+
+  private replaceFieldTexture(width: number, height: number): void {
+    this.fieldTexture?.destroy();
+    this.fieldTexture = this.createFieldTexture(width, height);
+    this.fieldMaterialBindGroup = this.createFieldMaterialBindGroup();
   }
 
   private configureContext(): void {

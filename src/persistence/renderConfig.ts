@@ -1,7 +1,7 @@
 import type { LensConfig, MaterialConfig, RenderConfig, Waypoint } from '../types/config';
 import { SCHEMA_VERSION } from '../types/config';
-import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../colouring/orbitTraps';
-import { normalizeOrbitTrapAppearance } from '../colouring/orbitMaterial';
+import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
+import { normalizeOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
 import { cloneLensConfig, createLensConfig, normalizeLensConfig } from '../visuals/lenses/model';
 
 type JsonRecord = Record<string, unknown>;

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 4 as const;
+export const SCHEMA_VERSION = 5 as const;
 export const NAVIGATION_SCHEMA_VERSION = 1 as const;
 export const WAYPOINT_SCHEMA_VERSION = 1 as const;
 export const COMPARISON_SCHEMA_VERSION = 1 as const;
@@ -20,7 +20,7 @@ export type OrbitTrapShape = 'point' | 'line' | 'circle' | 'cross' | 'spiral';
 export type OrbitTrapComposition = 'minimum' | 'maximum';
 export type OrbitTrapMetric = 'nearest' | 'final';
 export type OrbitTrapPaletteMapping = 'signal' | 'distanceBands';
-export type LensEffectId = 'exposure' | 'vignette';
+export type LensEffectId = 'exposure' | 'toneMapping' | 'bloom' | 'vignette' | 'grain' | 'colourGrade' | 'sharpen' | 'chromaticAberration';
 export type ModulationWaveform = 'constant' | 'sine' | 'triangle' | 'saw';
 export type ModulationTarget =
   | 'palette.offset'

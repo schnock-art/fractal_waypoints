@@ -294,17 +294,35 @@ Definition of done: lighting and contour effects add clear depth or structure at
 
 Status on September 13, 2026: core material pass complete. Distance-estimate height is deliberately deferred until Phase 9 introduces a formula with a real derivative capability.
 
+## Phase 8.25 — Rendering Cleanup Before HDR
+
+Goal: make Phase 8.3 safer without changing the Phase 8.2 visual model, persisted configurations, presets, exports, or CPU fallback.
+
+- [x] Derive metric-field pass selection from the material registry’s `sampling` metadata rather than named material IDs.
+- [x] Promote the temporary neighbourhood metric field from `rgba8unorm` to `rgba16float` after evaluating contour continuity, normal smoothness, and specular stability against its 2× temporary-memory cost.
+- [x] Allocate the metric-field texture lazily only after a neighbourhood material is selected; retain it after allocation to avoid switching churn and resize it only when it exists.
+- [x] Move canonical material, runtime, and orbit-trap implementation ownership under `src/visuals`, retaining narrow `colouring` compatibility bridges.
+- [x] Extract the explicit 14-`vec4` WebGPU uniform layout and packing helper from the renderer coordinator, eliminating material-parameter slot collisions before HDR parameters arrive.
+- [x] Add field-path metadata, lazy-allocation, half-float-format, uniform-layout, material compatibility, persistence, build, and browser regression coverage.
+
+Definition of done: the Phase 8.2 material system produces the same saved visual configurations while field allocation, material capabilities, precision, and uniform packing are explicit and independently testable.
+
+Status on September 14, 2026: complete.
+
 ## Phase 8.3 — HDR lens pipeline
 
 Goal: add cinematic finish while ensuring the fractal remains the subject.
 
-- [ ] Render materials into an HDR-capable intermediate target and add exposure plus tone mapping before presentation.
-- [ ] Add thresholded, downsampled bloom with an intensity cap and sensible dark-scene defaults.
-- [ ] Add subtle optional vignette, grain, colour grading, sharpening, and chromatic aberration; keep all disabled unless a preset explicitly enables them.
-- [ ] Add post-process quality tiers, resize/resource lifecycle tests, and deterministic export coverage.
-- [ ] Treat coordinate-distorting effects as an experimental, separately labelled category with direct comparison and reset affordances.
+- [x] Render materials into an HDR-capable intermediate target and add exposure plus tone mapping before presentation.
+- [x] Add thresholded, downsampled bloom with an intensity cap and sensible dark-scene defaults.
+- [x] Add subtle optional vignette, grain, colour grading, sharpening, and chromatic aberration; keep all disabled unless a preset explicitly enables them.
+- [x] Add resize/resource lifecycle, renderer contract, migration, and browser coverage for deterministic serialised lens settings.
+- [ ] Add selectable post-process quality tiers; the first HDR slice intentionally uses a stable half-resolution bloom target.
+- [x] Keep coordinate-distorting effects out of the HDR lens pipeline; they remain an experimental future sampling category requiring direct comparison and reset affordances.
 
 Definition of done: lens presets enhance bright local detail without washing out exploration, and recorded journeys match the on-screen material/lens look.
+
+Status on September 14, 2026: core HDR pipeline complete. Selectable post-process quality tiers remain a focused follow-up; the CPU fallback preserves the pre-HDR lens subset and treats the new GPU post effects as presentation enhancements.
 
 ## Phase 9 — 2D formula families
 

@@ -38,11 +38,11 @@ export function VisualLab({ config, onChange }: VisualLabProps) {
         <ActiveMaterialControls definition={material} config={config} onChange={onChange} />
         <div className="control-panel__section-heading"><div><p className="control-panel__label">Lens</p><strong>Ordered presentation effects</strong></div></div>
         <div className="control-panel__grid">
-          {Object.values(lensEffectRegistry).map((effect) => {
-            const parameter = effect.parameters[0];
+          {Object.values(lensEffectRegistry).flatMap((effect) => effect.parameters.map((parameter) => {
             const amount = getLensEffectAmount(config.lens, effect.id);
-            return <RangeControl key={effect.id} label={parameter.label} value={amount} min={parameter.min} max={parameter.max} step={parameter.step} suffix={effect.id === 'exposure' ? 'x' : '%'} display={effect.id === 'vignette' ? (value) => String(Math.round(value * 100)) : undefined} onChange={(nextAmount) => onChange((current) => ({ ...current, lens: updateLensEffect(current.lens, effect.id, { amount: nextAmount }, effect.id === 'exposure' || nextAmount > 0) }))} />;
-          })}
+            const value = config.lens.effects.find((candidate) => candidate.id === effect.id)?.parameters[parameter.id] ?? parameter.defaultValue;
+            return <RangeControl key={`${effect.id}-${parameter.id}`} label={parameter.label} value={value} min={parameter.min} max={parameter.max} step={parameter.step} suffix={effect.id === 'exposure' ? 'x' : ''} onChange={(nextValue) => onChange((current) => ({ ...current, lens: updateLensEffect(current.lens, effect.id, { [parameter.id]: nextValue }, effect.id === 'exposure' || effect.id === 'toneMapping' || nextValue > 0) }))} />;
+          }))}
         </div>
         <div className="control-panel__note">{Object.values(lensEffectRegistry).map((effect) => <span key={effect.id}>{effect.displayName}: {effect.description}</span>)}</div>
       </div>

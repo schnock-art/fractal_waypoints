@@ -1,5 +1,5 @@
 import type { FormulaId, RenderConfig } from '../types/config';
-import { computeOrbitTrapDistance } from '../colouring/runtime';
+import { computeOrbitTrapDistance } from '../visuals/materials/runtime';
 
 export interface FormulaIterationSample {
   escaped: boolean;

@@ -1,8 +1,8 @@
 import { complexFromNumbers } from '../math/complex';
 import { fromNumber, toNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
-import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../colouring/orbitTraps';
-import { cloneOrbitTrapAppearance, normalizeOrbitTrapAppearance } from '../colouring/orbitMaterial';
+import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
+import { cloneOrbitTrapAppearance, normalizeOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
 import { cloneLensConfig, normalizeLensConfig } from '../visuals/lenses/model';
 import { applyModulations } from '../visuals/modulation/runtime';
 import type { AnimationClip, AnimationEasing, AnimationKeyframe, RenderConfig } from '../types/config';

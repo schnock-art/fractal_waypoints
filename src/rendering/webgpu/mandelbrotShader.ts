@@ -10,8 +10,13 @@ struct RenderUniforms {
   trap_second: vec4f,
   trap_controls: vec4f,
   trap_style: vec4f,
-  visual_a: vec4f,
-  visual_b: vec4f,
+  topography: vec4f,
+  surface: vec4f,
+  domain: vec4f,
+  detail: vec4f,
+  post_a: vec4f,
+  post_b: vec4f,
+  post_c: vec4f,
 }
 
 struct VertexOutput {
@@ -37,6 +42,9 @@ struct OrbitMetrics {
 @group(0) @binding(1) var paletteSampler: sampler;
 @group(0) @binding(2) var paletteTexture: texture_2d<f32>;
 @group(0) @binding(3) var metricTexture: texture_2d<f32>;
+@group(0) @binding(4) var sceneSampler: sampler;
+@group(0) @binding(5) var sceneTexture: texture_2d<f32>;
+@group(0) @binding(6) var bloomTexture: texture_2d<f32>;
 `;
 
 const doubleSingleCoordinateKernel = /* wgsl */ `
@@ -220,9 +228,9 @@ fn field_sample(frag_coord: vec4f, offset: vec2i) -> vec4f {
 
 fn topographic_colour(field: vec4f, frag_coord: vec4f) -> vec3f {
   let zoom = max(-log2(max(abs(render.viewport.x + render.viewport.y), 0.00000001)), 0.0);
-  let levels = max(render.visual_a.x * (1.0 + min(zoom * 0.04, 1.2)), 2.0);
-  let contour_width = clamp(render.visual_a.y, 0.01, 0.5);
-  let relief = clamp_unit(render.visual_a.z);
+  let levels = max(render.topography.x * (1.0 + min(zoom * 0.04, 1.2)), 2.0);
+  let contour_width = clamp(render.topography.y, 0.01, 0.5);
+  let relief = clamp_unit(render.topography.z);
   let nearby = abs(field_sample(frag_coord, vec2i(1, 0)).x - field_sample(frag_coord, vec2i(-1, 0)).x)
     + abs(field_sample(frag_coord, vec2i(0, 1)).x - field_sample(frag_coord, vec2i(0, -1)).x);
   let band_distance = abs(fract(field.x * levels) - 0.5) * 2.0;
@@ -234,18 +242,18 @@ fn topographic_colour(field: vec4f, frag_coord: vec4f) -> vec3f {
 }
 
 fn surface_colour(field: vec4f, frag_coord: vec4f) -> vec3f {
-  let height_scale = max(render.visual_a.w, 0.1);
+  let height_scale = max(render.surface.x, 0.1);
   let east = field_sample(frag_coord, vec2i(1, 0)).x;
   let west = field_sample(frag_coord, vec2i(-1, 0)).x;
   let south = field_sample(frag_coord, vec2i(0, 1)).x;
   let north = field_sample(frag_coord, vec2i(0, -1)).x;
   let normal = normalize(vec3f(-(east - west) * height_scale, -(south - north) * height_scale, 0.22));
-  let light = normalize(vec3f(cos(render.visual_b.x), sin(render.visual_b.x), 0.82));
+  let light = normalize(vec3f(cos(render.surface.y), sin(render.surface.y), 0.82));
   let diffuse = max(dot(normal, light), 0.0);
   let reflected = reflect(-light, normal);
-  let roughness = clamp(render.visual_b.w, 0.05, 1.0);
-  let specular = pow(max(reflected.z, 0.0), 6.0 + ((1.0 - roughness) * 44.0)) * clamp_unit(render.visual_b.y);
-  let ambient = clamp_unit(render.visual_b.z);
+  let roughness = clamp(render.detail.x, 0.05, 1.0);
+  let specular = pow(max(reflected.z, 0.0), 6.0 + ((1.0 - roughness) * 44.0)) * clamp_unit(render.surface.z);
+  let ambient = clamp_unit(render.surface.w);
   let base = textureSampleLevel(paletteTexture, paletteSampler, vec2f(fract(field.x * max(render.material.x * 30.0, 0.1)), 0.5), 0.0).rgb;
   let rim = pow(1.0 - max(normal.z, 0.0), 2.0) * 0.18;
   let lit = base * (ambient + ((1.0 - ambient) * diffuse) + rim) + vec3f(specular);
@@ -358,11 +366,11 @@ fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
   let metrics = iterate_formula(point, bailout_squared, max_iterations, formula_code, material_code > 0.5 && material_code < 1.5);
 
   if (material_code > 2.5 && material_code < 3.5) {
-    let phase_t = fract(((metrics.complex_phase / 6.2831853) + 0.5) * max(render.visual_a.x, 0.01));
-    let magnitude_t = fract(log2(max(sqrt(metrics.magnitude_squared), 1.0001)) * max(render.visual_a.y, 0.0));
+    let phase_t = fract(((metrics.complex_phase / 6.2831853) + 0.5) * max(render.domain.x, 0.01));
+    let magnitude_t = fract(log2(max(sqrt(metrics.magnitude_squared), 1.0001)) * max(render.domain.y, 0.0));
     let domain = textureSampleLevel(paletteTexture, paletteSampler, vec2f(fract(phase_t + magnitude_t), 0.5), 0.0).rgb;
     let interior = mix(vec3f(0.02, 0.03, 0.06), domain, 0.3);
-    return apply_lens(select(interior, domain, metrics.escaped), frag_coord);
+    return vec4f(select(interior, domain, metrics.escaped), 1.0);
   }
 
   if (!metrics.escaped) {
@@ -372,10 +380,10 @@ fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
       let trapped = textureSampleLevel(paletteTexture, paletteSampler, vec2f(trap_t, 0.5), 0.0);
       let interior = vec3f(0.02, 0.03, 0.06);
       let mixed = blend_rgb(interior, trapped.rgb, orbit_trap_interior_mix(trap_distance_value, orbit_trap_scale, render.trap_style.w));
-      return apply_lens(apply_orbit_trap_emission(mixed, trapped.rgb, trap_distance_value, orbit_trap_scale), frag_coord);
+      return vec4f(apply_orbit_trap_emission(mixed, trapped.rgb, trap_distance_value, orbit_trap_scale), 1.0);
     }
 
-    return apply_lens(vec3f(0.02, 0.03, 0.06), frag_coord);
+    return vec4f(vec3f(0.02, 0.03, 0.06), 1.0);
   }
 
   let smooth_iteration = f32(metrics.iteration) + 1.0 - log2(log2(max(sqrt(metrics.magnitude_squared), 1.0001)));
@@ -388,10 +396,10 @@ fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
     let trapped = textureSampleLevel(paletteTexture, paletteSampler, vec2f(trap_t, 0.5), 0.0);
     let trap_mix = orbit_trap_exterior_mix(f32(metrics.iteration) / f32(max_iterations), trap_distance_value, orbit_trap_scale, render.trap_style.z);
     let mixed = blend_rgb(color.rgb, trapped.rgb, trap_mix);
-    return apply_lens(apply_orbit_trap_emission(mixed, trapped.rgb, trap_distance_value, orbit_trap_scale), frag_coord);
+    return vec4f(apply_orbit_trap_emission(mixed, trapped.rgb, trap_distance_value, orbit_trap_scale), 1.0);
   }
 
-  return apply_lens(color.rgb, frag_coord);
+  return vec4f(color.rgb, 1.0);
 }
 
 @fragment
@@ -411,7 +419,45 @@ fn metric_field_fs(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
 fn field_material_fs(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
   let field = field_sample(frag_coord, vec2i(0, 0));
   let colour = select(topographic_colour(field, frag_coord), surface_colour(field, frag_coord), render.material.y > 3.5);
-  return apply_lens(colour, frag_coord);
+  return vec4f(colour, 1.0);
+}
+
+fn aces_tonemap(value: vec3f) -> vec3f {
+  return clamp((value * (2.51 * value + vec3f(0.03))) / (value * (2.43 * value + vec3f(0.59)) + vec3f(0.14)), vec3f(0.0), vec3f(1.0));
+}
+
+@fragment
+fn bloom_downsample_fs(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
+  let output_size = vec2f(render.post_c.y, render.post_c.z);
+  let uv = frag_coord.xy / output_size;
+  let source_size = vec2f(textureDimensions(sceneTexture));
+  let offset = 1.5 / source_size;
+  let centre = textureSampleLevel(sceneTexture, sceneSampler, uv, 0.0).rgb;
+  let nearby = textureSampleLevel(sceneTexture, sceneSampler, uv + vec2f(offset.x, 0.0), 0.0).rgb
+    + textureSampleLevel(sceneTexture, sceneSampler, uv - vec2f(offset.x, 0.0), 0.0).rgb
+    + textureSampleLevel(sceneTexture, sceneSampler, uv + vec2f(0.0, offset.y), 0.0).rgb
+    + textureSampleLevel(sceneTexture, sceneSampler, uv - vec2f(0.0, offset.y), 0.0).rgb;
+  return vec4f(max((centre + nearby * 0.25) - vec3f(render.post_b.x), vec3f(0.0)), 1.0);
+}
+
+@fragment
+fn post_process_fs(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
+  let size = vec2f(textureDimensions(sceneTexture));
+  let uv = frag_coord.xy / size;
+  let aberration = render.post_c.x;
+  let scene = textureSampleLevel(sceneTexture, sceneSampler, uv, 0.0).rgb;
+  let chromatic = vec3f(textureSampleLevel(sceneTexture, sceneSampler, uv + vec2f(aberration, 0.0), 0.0).r, scene.g, textureSampleLevel(sceneTexture, sceneSampler, uv - vec2f(aberration, 0.0), 0.0).b);
+  let bloom = textureSampleLevel(bloomTexture, sceneSampler, uv, 0.0).rgb * render.post_a.w;
+  let offset = 1.0 / size;
+  let neighbouring = textureSampleLevel(sceneTexture, sceneSampler, uv + vec2f(offset.x, 0.0), 0.0).rgb + textureSampleLevel(sceneTexture, sceneSampler, uv - vec2f(offset.x, 0.0), 0.0).rgb + textureSampleLevel(sceneTexture, sceneSampler, uv + vec2f(0.0, offset.y), 0.0).rgb + textureSampleLevel(sceneTexture, sceneSampler, uv - vec2f(0.0, offset.y), 0.0).rgb;
+  let sharpened = chromatic + (chromatic - neighbouring * 0.25) * render.post_b.w;
+  let exposed = max(sharpened + bloom, vec3f(0.0)) * max(render.post_a.x, 0.1);
+  let mapped = mix(exposed, aces_tonemap(exposed), clamp(render.post_a.z, 0.0, 1.0));
+  let luminance = dot(mapped, vec3f(0.2126, 0.7152, 0.0722));
+  let graded = mix(mapped, mix(vec3f(0.04, 0.12, 0.25), vec3f(1.0, 0.72, 0.48), luminance) * luminance, render.post_b.z);
+  let grain = fract(sin(dot(frag_coord.xy, vec2f(12.9898, 78.233))) * 43758.5453) - 0.5;
+  let vignette = 1.0 - clamp(render.post_a.y, 0.0, 1.0) * pow(clamp(length(uv - vec2f(0.5)) / 0.70710678, 0.0, 1.0), 1.8);
+  return vec4f(clamp((graded + vec3f(grain * render.post_b.y)) * vignette, vec3f(0.0), vec3f(1.0)), 1.0);
 }
 `;
 

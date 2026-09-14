@@ -23,5 +23,10 @@ describe('renderer iteration parity', () => {
     expect(webGpuShaderModules.presentation).toContain('fn metric_field_fs');
     expect(webGpuShaderModules.presentation).toContain('fn field_material_fs');
     expect(webGpuShaderModules.fieldsAndMaterials).toContain('fn field_sample');
+    expect(webGpuShaderModules.contracts).toContain('topography: vec4f');
+    expect(webGpuShaderModules.contracts).toContain('surface: vec4f');
+    expect(webGpuShaderModules.contracts).toContain('domain: vec4f');
+    expect(webGpuShaderModules.presentation).toContain('fn bloom_downsample_fs');
+    expect(webGpuShaderModules.presentation).toContain('fn post_process_fs');
   });
 });

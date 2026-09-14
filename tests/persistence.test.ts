@@ -24,14 +24,12 @@ describe('render config url state', () => {
 
     const decoded = decodeRenderConfigFromUrlParam(encodeLegacy(legacy));
 
-    expect(decoded?.schemaVersion).toBe(4);
+    expect(decoded?.schemaVersion).toBe(5);
     expect(decoded?.material.id).toBe('orbitTrap');
     expect(decoded?.material.parameters).toEqual({ density: 0.04, trapScale: 1.6 });
     expect(decoded?.material.orbitTraps?.traps.map((trap) => trap.shape)).toEqual(['circle', 'cross']);
-    expect(decoded?.lens.effects).toEqual([
-      { id: 'exposure', enabled: true, parameters: { amount: 1 } },
-      { id: 'vignette', enabled: false, parameters: { amount: 0 } },
-    ]);
+    expect(decoded?.lens.effects.find((effect) => effect.id === 'toneMapping')).toEqual({ id: 'toneMapping', enabled: true, parameters: { amount: 1 } });
+    expect(decoded?.lens.effects.find((effect) => effect.id === 'bloom')).toEqual({ id: 'bloom', enabled: false, parameters: { amount: 0, threshold: 1.1 } });
     expect(decoded?.modulations).toEqual([]);
   });
 
@@ -42,7 +40,7 @@ describe('render config url state', () => {
 
     const decoded = decodeRenderConfigFromUrlParam(encodeLegacy(versionTwo));
 
-    expect(decoded?.schemaVersion).toBe(4);
+    expect(decoded?.schemaVersion).toBe(5);
     expect(decoded?.material.orbitTraps?.composition).toBe('minimum');
     expect(decoded?.material.orbitTraps?.traps.map((trap) => trap.shape)).toEqual(['circle', 'cross']);
   });
@@ -153,7 +151,7 @@ describe('local storage helpers', () => {
 
     const [migrated] = loadWaypoints();
 
-    expect(migrated.renderConfig.schemaVersion).toBe(4);
+    expect(migrated.renderConfig.schemaVersion).toBe(5);
     expect(migrated.renderConfig.material.id).toBe('orbitTrap');
   });
 });

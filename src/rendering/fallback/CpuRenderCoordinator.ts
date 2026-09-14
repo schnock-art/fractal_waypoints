@@ -9,7 +9,7 @@ import {
   getOrbitTrapScale,
   sampleOrbitTrapPaletteT,
   sampleSmoothEscapePaletteT,
-} from '../../colouring/runtime';
+} from '../../visuals/materials/runtime';
 import { iterateFormulaDetailed } from '../../fractals/runtime';
 import { samplePalette } from '../../palettes/sampler';
 import type { RenderConfig, RgbaColor } from '../../types/config';

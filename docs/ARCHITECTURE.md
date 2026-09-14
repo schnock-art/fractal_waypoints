@@ -24,7 +24,8 @@ The renderer consumes configurations. It should not know whether a configuration
 src/app/             Application composition and state
 src/math/            Double-single and complex arithmetic
 src/fractals/        Formula definitions and registry
-src/colouring/       Orbit metrics, visual materials, and lens-effect registries
+src/visuals/         Material, trap, lens, modulation, and metric implementations
+src/colouring/       Narrow compatibility exports for earlier visual-module imports
 src/palettes/        Palette model, interpolation, editor logic
 src/rendering/       Render coordinator, WebGPU, CPU fallback
 src/navigation/      Viewport controls, keyboard movement, Waypoints, discovery
@@ -110,7 +111,7 @@ Formula iteration should return an extensible `OrbitMetrics` record rather than 
 
 The current formulas advertise escape state, iteration, smooth iteration, final complex value, magnitude, complex phase, and orbit-trap distance. Future derivative, distance-estimate, potential, root identity, and convergence-rate metrics are declared capability names, not assumptions about every formula. The material registry contains Classic Escape, Orbit Trap, Topographic, Domain Colouring, and Lit Surface. Topographic and Lit Surface request neighbourhood metrics; Topographic uses zoom-aware contour spacing while Lit Surface uses a smooth-iteration height field, screen-space normal samples, directional/rim/ambient light, roughness, and specular response. Domain Colouring maps final-orbit phase and magnitude directly. Orbit traps currently support point, line, circle, cross, and spiral SDFs with serialisable transforms and two-trap composition. Formula-agnostic material presets apply material and lens configurations together. The first lens effects are exposure and vignette; later lens effects include tone mapping, bloom, grain, sharpening, and carefully opt-in chromatic effects. Coordinate-distorting effects must be declared separately from lens effects because they alter sampling rather than only presentation.
 
-The WebGPU path owns high-quality material and lens passes. The CPU fallback must continue to render a saved configuration intelligibly: it may use a documented approximation or disable an expensive lens pass with an on-screen capability notice, but must not silently reinterpret the formula, viewport, palette, or saved material parameters.
+The WebGPU path owns high-quality material and lens passes. Phase 8.3 renders material output into a linear `rgba16float` scene target, extracts thresholded highlights into a half-resolution bloom target, then presents through exposure, ACES tone mapping, and optional finishing effects. The CPU fallback preserves the compatible exposure/vignette subset; GPU-only lens effects remain serialised but are treated as presentation enhancements rather than a different fractal scene.
 
 ## Palette architecture
 
@@ -136,7 +137,7 @@ Discovery scoring intentionally samples formula and viewport geometry with a neu
 
 ## Metric-field strategy
 
-Classic Escape, Orbit Trap, and Domain Colouring request only point/local metrics, so WebGPU keeps them in one direct pass. Topographic and Lit Surface request `neighbourhood` sampling and activate a reusable `rgba8unorm` metric-field texture: pass one writes smooth height, final phase, logarithmic magnitude, and escape state; pass two samples nearby heights for contour shaping or surface normals before presentation. This prevents repeated fractal iteration per normal sample without introducing a general render graph. CPU fallback retains every serialised material, but labels Topographic and Lit Surface as lightweight approximations because it does not allocate that field texture.
+Classic Escape, Orbit Trap, and Domain Colouring request only point/local metrics, so WebGPU keeps them in one direct pass. Topographic and Lit Surface request `neighbourhood` sampling and activate a lazily allocated reusable `rgba16float` metric-field texture: pass one writes smooth height, final phase, logarithmic magnitude, and escape state; pass two samples nearby heights for contour shaping or surface normals before presentation. Field-pass selection derives only from the material registry’s sampling metadata. The half-float field doubles temporary memory from 4 to 8 bytes per pixel (about 7.9 to 15.8 MiB at 1920×1080) but removes visible height quantisation and stabilises specular response without the cost of 32-bit floats. This prevents repeated fractal iteration per normal sample without introducing a general render graph. CPU fallback retains every serialised material, but labels Topographic and Lit Surface as lightweight approximations because it does not allocate that field texture.
 
 ## Diagnostics
 

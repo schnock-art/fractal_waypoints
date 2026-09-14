@@ -1,6 +1,6 @@
 import { clonePalette } from '../palettes/model';
-import { cloneOrbitTrapSet } from '../colouring/orbitTraps';
-import { cloneOrbitTrapAppearance } from '../colouring/orbitMaterial';
+import { cloneOrbitTrapSet } from '../visuals/traps/orbitTraps';
+import { cloneOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
 import { cloneLensConfig } from '../visuals/lenses/model';
 import { cloneModulations } from '../visuals/modulation/runtime';
 import type { RenderConfig, Waypoint, WaypointSource } from '../types/config';
