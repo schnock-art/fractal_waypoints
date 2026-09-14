@@ -31,6 +31,16 @@ export function getCuratedWaypoints(): Waypoint[] {
   juliaBloom.palette = ember;
 
   return [
+    ...[
+      { name: 'Phoenix Feather', cReal: 0.56667, cImag: 0, memory: -0.5 },
+      { name: 'Phoenix Ember Lace', cReal: 0.544992, cImag: 0, memory: -0.47 },
+      { name: 'Phoenix Tidal Wings', cReal: 0.1, cImag: 0.6, memory: -0.35 },
+    ].map(({ name, ...parameters }, index) => {
+      const config = createDefaultRenderConfig('phoenix');
+      config.fractal.parameters = parameters;
+      config.palette = clonePalette(index === 1 ? ember : glacier);
+      return createWaypoint({ name, description: 'A memory-driven Phoenix landscape. Adjust Orbit memory, compare zero memory with Julia, or animate the shape in Journey.', renderConfig: config, source: 'curated', tags: ['phoenix', 'memory', 'organic'] });
+    }),
     ...(['newton', 'nova'] as const).flatMap((formula) => [3, 4].map((degree) => {
       const config = createDefaultRenderConfig(formula);
       config.fractal.parameters.degree = degree;

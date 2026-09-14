@@ -1,5 +1,6 @@
 import type { FormulaId, RenderConfig } from '../types/config';
 import { multibrotPower, normalizeMultibrotPower } from './multibrot';
+import { normalizePhoenixParameters } from './phoenix';
 import { isConvergentFormula, iterateNewton, type ConvergenceStatus } from './newton';
 import { computeOrbitTrapDistance } from '../visuals/materials/runtime';
 
@@ -24,6 +25,7 @@ export interface DetailedFormulaIterationSample extends FormulaIterationSample {
 
 export function getFormulaCode(formulaId: FormulaId): number {
   switch (formulaId) {
+    case 'phoenix': return 7;
     case 'newton': return 5;
     case 'nova': return 6;
     case 'multibrot': return 4;
@@ -65,17 +67,23 @@ export function iterateFormulaDetailed(
   const formulaId = config.fractal.formulaId;
   const power = formulaId === 'multibrot' ? normalizeMultibrotPower(config.fractal.parameters.power) : 2;
 
-  let zReal = formulaId === 'julia' ? real : 0;
-  let zImaginary = formulaId === 'julia' ? imaginary : 0;
-  const cReal = formulaId === 'julia' ? (config.fractal.parameters.cReal ?? -0.8) : real;
-  const cImaginary = formulaId === 'julia' ? (config.fractal.parameters.cImag ?? 0.156) : imaginary;
+  const phoenix = formulaId === 'phoenix' ? normalizePhoenixParameters(config.fractal.parameters) : null;
+  let zReal = formulaId === 'julia' || phoenix ? real : 0;
+  let zImaginary = formulaId === 'julia' || phoenix ? imaginary : 0;
+  const cReal = phoenix ? phoenix.cReal : formulaId === 'julia' ? (config.fractal.parameters.cReal ?? -0.8) : real;
+  const cImaginary = phoenix ? phoenix.cImag : formulaId === 'julia' ? (config.fractal.parameters.cImag ?? 0.156) : imaginary;
+  let previousReal = 0;
+  let previousImaginary = 0;
   let minTrapDistance = Number.POSITIVE_INFINITY;
 
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
     let nextReal: number;
     let nextImaginary: number;
 
-    if (formulaId === 'multibrot') {
+    if (phoenix) {
+      nextReal = zReal * zReal - zImaginary * zImaginary + cReal + phoenix.memory * previousReal;
+      nextImaginary = 2 * zReal * zImaginary + cImaginary + phoenix.memory * previousImaginary;
+    } else if (formulaId === 'multibrot') {
       const powered = multibrotPower(zReal, zImaginary, power);
       nextReal = powered[0] + cReal;
       nextImaginary = powered[1] + cImaginary;
@@ -92,6 +100,8 @@ export function iterateFormulaDetailed(
       nextImaginary = (2 * zReal * zImaginary) + cImaginary;
     }
 
+    previousReal = zReal;
+    previousImaginary = zImaginary;
     zReal = nextReal;
     zImaginary = nextImaginary;
     if (trackOrbitTrap) {

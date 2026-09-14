@@ -26,6 +26,7 @@ import { VisualLab } from '../components/VisualLab';
 import { formulaRegistry } from '../fractals/registry';
 import { MultibrotControls } from '../components/MultibrotControls';
 import { NewtonControls } from '../components/NewtonControls';
+import { PhoenixControls } from '../components/PhoenixControls';
 import { resolveCompatibleRenderConfig } from '../visuals/materials/registry';
 import { complexFromNumbers } from '../math/complex';
 import { toNumber } from '../math/doubleSingle';
@@ -810,6 +811,7 @@ export function App() {
 
             <MultibrotControls config={mainConfig} onChange={setMainConfig} />
             <NewtonControls config={mainConfig} onChange={setMainConfig} />
+            <PhoenixControls config={mainConfig} onChange={setMainConfig} />
             {mainConfig.fractal.formulaId === 'julia' ? (
               <div className="control-panel__section control-panel__grid">
                 <label>

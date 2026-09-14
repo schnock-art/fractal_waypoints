@@ -20,6 +20,14 @@ flowchart TD
 
 The renderer consumes configurations. It should not know whether a configuration came from an editor, Waypoint, animation frame, URL, or discovery engine.
 
+## Standalone instrument and future external signals
+
+Fractal Waypoints is independently useful, with room to become a peer in a larger generative system. Future hardware/software adapters must address semantic domain parameters and produce effective `RenderConfig` values; formulas, materials, and renderers remain unaware of MIDI, audio, synths, music generation, or node graphs. Signals, events, and persistent state require distinct semantics. A future node editor is a view over an independent domain model, not the architecture itself.
+
+Preserve the conceptual order: persisted/base configuration → Journey/keyframes → modulation or future inputs → domain normalisation/validation → effective configuration → renderer. Today Journey applies deterministic modulation after interpolation; normalisation is distributed among domain helpers, import, interpolation, target setters, and render preparation. This is a suitable foundation, not a complete external-input runtime or universal final validator.
+
+Formula metrics can later feed independent statistical analysis and export without colour or musical interpretation. The GPU metric-field texture is a lossy material intermediate, not a public metric contract. See [ADR-026](DECISIONS.md#adr-026-external-control-and-generative-interoperability) and [the interoperability audit](INTEROPERABILITY.md) for semantic addressing conventions, output boundaries, current limitations, and post-9.3 decisions. No external integration dependencies are introduced.
+
 ## Suggested source layout
 
 ```text
@@ -107,11 +115,13 @@ This separation keeps keyboard movement configurable without coupling key bindin
 
 ## Formula, orbit metrics, materials, and lens interfaces
 
-Newton and Nova use a separate convergence kernel (`fractals/newton.ts` / `rendering/webgpu/newtonShader.ts`) with bounded regular-root polynomials, derivative-based iteration, and explicit converged/unresolved/singular/diverged status. Newton reports verified root identity; Nova is a parameter-plane fixed-point family and does not advertise polynomial-root identity. Root Basins and Convergence Speed are point materials; escape-only looks resolve to a compatible convergence material without changing saved configurations. Presets and material selectors expose compatible choices. The GPU uniform layout is now 19 vec4s (304 bytes), with polynomial constants packed as double-single values.
+Phoenix adds one per-pixel previous-orbit state to the shared escape kernel, with a Julia-plane initial condition and bounded real memory coefficient. Domain parameter metadata and normalisation live in `fractals/phoenix.ts`, shared by UI, import, and Journey. Both GPU orbit values are double-single; packing adds a named Phoenix vec4 (20 vec4s / 320 bytes total). Existing escape/orbit capabilities and point/neighbourhood materials apply unchanged. No derivative, distance estimate, or root metric is advertised. See ADR-027 and [FORMULA_ADMISSION.md](FORMULA_ADMISSION.md) for the specialist-formula decisions and separately scoped IFS architecture.
+
+Newton and Nova use a separate convergence kernel (`fractals/newton.ts` / `rendering/webgpu/newtonShader.ts`) with bounded regular-root polynomials, derivative-based iteration, and explicit converged/unresolved/singular/diverged status. Newton reports verified root identity; Nova is a parameter-plane fixed-point family and does not advertise polynomial-root identity. Root Basins and Convergence Speed are point materials; escape-only looks resolve to a compatible convergence material without changing saved configurations. Presets and material selectors expose compatible choices. Phase 9.2 expanded the GPU uniform layout to 19 vec4s with double-single polynomial constants; Phase 9.3's Phoenix section takes the current total to 20 vec4s (320 bytes).
 
 Explore and Compare share compact polynomial controls; advanced shape/tolerance settings expand separately and report the centre orbit's CPU diagnostic. Discovery compares root identities for Newton, settled/unsettled states for Nova, and convergence-step variance for both; saved presentation state never affects ranking. Journey rounds root count to a valid integer while interpolating radius, rotation, and relaxation. URLs and Waypoints normalise the additive parameters under schema 5. See ADR-025 for mathematical definitions and numerical limits.
 
-Each formula has an `id`, display name, parameter definitions, and supported metric capabilities. The current baseline set is Mandelbrot, Julia, Burning Ship, and Tricorn. The next 2D formula candidates are Multibrot, Newton, Phoenix, Nova, Magnet, and Lyapunov; formulas with substantially different sampling models, such as IFS, should remain separate additions rather than being forced through escape-time assumptions.
+Each formula has an `id`, display name, parameter definitions, and supported metric capabilities. Current formulas are Mandelbrot, Julia, Burning Ship, Tricorn, Multibrot, Newton, Nova, and Phoenix. Magnet and Lyapunov remain assessed candidates; formulas with substantially different sampling models, such as IFS, require separately scoped additions rather than being forced through escape-time assumptions.
 
 Formula iteration should return an extensible `OrbitMetrics` record rather than directly select colours. The first record can contain escape state, iteration count, smooth iteration, final `z`, magnitude, minimum distance for each requested trap, and a derivative when the formula supports it. Distance estimates, convergence/root information, potential, and formula-specific metrics can be added as capabilities without leaking formula details into UI components.
 

@@ -1,5 +1,6 @@
 import { getFormulaCode } from '../../fractals/runtime';
 import { normalizeMultibrotPower } from '../../fractals/multibrot';
+import { normalizePhoenixParameters } from '../../fractals/phoenix';
 import { normalizeNewtonParameters, polynomialRoots } from '../../fractals/newton';
 import { multibrotPower } from '../../fractals/multibrot';
 import { getLensEffectAmount } from '../../visuals/lenses/model';
@@ -8,8 +9,8 @@ import { getOrbitTrapMetricCode, getOrbitTrapPaletteMappingCode } from '../../vi
 import { getOrbitTrapCompositionCode, getOrbitTrapShapeCode } from '../../visuals/traps/orbitTraps';
 import type { RenderConfig } from '../../types/config';
 
-/** Matches RenderUniforms in mandelbrotShader.ts: 19 vec4 values, 16-byte aligned. */
-export const RENDER_UNIFORM_FLOAT_COUNT = 19 * 4;
+/** Matches RenderUniforms in mandelbrotShader.ts: 20 vec4 values, 16-byte aligned. */
+export const RENDER_UNIFORM_FLOAT_COUNT = 20 * 4;
 export const RENDER_UNIFORM_BUFFER_SIZE = RENDER_UNIFORM_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
 
 export function buildRenderUniformData(config: RenderConfig, width: number, height: number): Float32Array {
@@ -18,12 +19,15 @@ export function buildRenderUniformData(config: RenderConfig, width: number, heig
   const firstTrap = traps.traps[0];
   const secondTrap = traps.traps[1] ?? firstTrap;
   const parameters = config.material.parameters;
+  const phoenix = normalizePhoenixParameters(config.fractal.parameters);
+  const cReal = config.fractal.formulaId === 'phoenix' ? phoenix.cReal : config.fractal.parameters.cReal ?? 0;
+  const cImag = config.fractal.formulaId === 'phoenix' ? phoenix.cImag : config.fractal.parameters.cImag ?? 0;
   const polynomial = normalizeNewtonParameters(config.fractal.parameters);
   const constant = multibrotPower(...polynomialRoots(polynomial)[0], polynomial.degree);
 
   return new Float32Array([
     ...buildViewportUniformData(config),
-    config.fractal.parameters.cReal ?? 0, 0, config.fractal.parameters.cImag ?? 0, 0,
+    Math.fround(cReal), cReal - Math.fround(cReal), Math.fround(cImag), cImag - Math.fround(cImag),
     config.fractal.bailout, config.fractal.maxIterations, width, height,
     getMaterialDensity(config), getMaterialCode(config.material.id), config.viewport.aspectRatio, getFormulaCode(config.fractal.formulaId),
     getOrbitTrapScale(config), getLensEffectAmount(config.lens, 'exposure'), getLensEffectAmount(config.lens, 'vignette'), appearance.emission,
@@ -40,6 +44,7 @@ export function buildRenderUniformData(config: RenderConfig, width: number, heig
     getLensEffectAmount(config.lens, 'chromaticAberration'), Math.max(1, Math.floor(width / 2)), Math.max(1, Math.floor(height / 2)), 0,
     polynomial.degree, polynomial.relaxation, 10 ** -polynomial.toleranceExponent, polynomial.rootRadius,
     Math.fround(constant[0]), constant[0] - Math.fround(constant[0]), Math.fround(constant[1]), constant[1] - Math.fround(constant[1]),
+    Math.fround(phoenix.memory), phoenix.memory - Math.fround(phoenix.memory), 0, 0,
   ]);
 }
 

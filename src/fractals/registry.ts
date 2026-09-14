@@ -1,4 +1,5 @@
 import type { FormulaId } from '../types/config';
+import { phoenixParameterDefinitions } from './phoenix';
 import type { MetricCapability } from '../visuals/metrics/capabilities';
 
 export interface FormulaParameterDefinition {
@@ -26,6 +27,7 @@ const ESCAPE_METRICS: readonly MetricCapability[] = [
 ];
 
 export const formulaRegistry: Record<FormulaId, FormulaDefinition> = {
+  phoenix: { id: 'phoenix', displayName: 'Phoenix', parameters: [...phoenixParameterDefinitions], supportedMetrics: ESCAPE_METRICS },
   newton: {
     id: 'newton', displayName: 'Newton',
     parameters: [{ id: 'degree', label: 'Roots', defaultValue: 3, step: 1 }],

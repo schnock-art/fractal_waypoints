@@ -1,5 +1,6 @@
 import type { LensConfig, MaterialConfig, RenderConfig, Waypoint } from '../types/config';
 import { normalizeMultibrotPower } from '../fractals/multibrot';
+import { normalizePhoenixParameters } from '../fractals/phoenix';
 import { normalizeNewtonParameters } from '../fractals/newton';
 import { SCHEMA_VERSION } from '../types/config';
 import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
@@ -28,7 +29,9 @@ export function migrateRenderConfig(value: unknown): RenderConfig | null {
   return {
     ...(value as Omit<RenderConfig, 'schemaVersion' | 'material' | 'lens' | 'modulations'>),
     schemaVersion: SCHEMA_VERSION,
-    fractal: value.fractal.formulaId === 'newton' || value.fractal.formulaId === 'nova'
+    fractal: value.fractal.formulaId === 'phoenix'
+      ? { ...(value.fractal as unknown as RenderConfig['fractal']), parameters: normalizePhoenixParameters(isRecord(value.fractal.parameters) ? value.fractal.parameters : {}) }
+      : value.fractal.formulaId === 'newton' || value.fractal.formulaId === 'nova'
       ? { ...(value.fractal as unknown as RenderConfig['fractal']), parameters: normalizeNewtonParameters(isRecord(value.fractal.parameters) ? value.fractal.parameters : {}) }
       : value.fractal.formulaId === 'multibrot'
       ? { ...(value.fractal as unknown as RenderConfig['fractal']), parameters: { power: normalizeMultibrotPower(isRecord(value.fractal.parameters) ? value.fractal.parameters.power : undefined) } }

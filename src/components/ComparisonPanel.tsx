@@ -6,6 +6,8 @@ import type { ComparisonConfig, ComparisonMode, ComparisonSide, FormulaId, Mater
 import { formulaRegistry } from '../fractals/registry';
 import { MultibrotControls } from './MultibrotControls';
 import { NewtonControls } from './NewtonControls';
+import { PhoenixControls } from './PhoenixControls';
+import { normalizePhoenixParameters } from '../fractals/phoenix';
 import { isConvergentFormula, normalizeNewtonParameters } from '../fractals/newton';
 import { resolveCompatibleRenderConfig, getMaterialCompatibility } from '../visuals/materials/registry';
 
@@ -198,7 +200,7 @@ function ComparisonSideCard({
                 cReal: config.fractal.parameters.cReal ?? -0.8,
                 cImag: config.fractal.parameters.cImag ?? 0.156,
               }
-              : isConvergentFormula(formulaId) ? normalizeNewtonParameters() : formulaId === 'multibrot' ? { power: 3 } : {};
+              : formulaId === 'phoenix' ? normalizePhoenixParameters() : isConvergentFormula(formulaId) ? normalizeNewtonParameters() : formulaId === 'multibrot' ? { power: 3 } : {};
 
             onConfigChange((current) => resolveCompatibleRenderConfig({
               ...current,
@@ -220,6 +222,7 @@ function ComparisonSideCard({
 
       <MultibrotControls config={config} onChange={(next) => onConfigChange(() => next)} />
       <NewtonControls config={config} onChange={(next) => onConfigChange(() => next)} />
+      <PhoenixControls config={config} onChange={(next) => onConfigChange(() => next)} />
       <label>
         <span>Palette preset</span>
         <select

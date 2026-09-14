@@ -1,5 +1,31 @@
 # Architecture Decision Records
 
+## ADR-027: Admit Phoenix through existing escape metrics; gate specialist families
+
+**Status:** Accepted
+
+Phase 9.3 implements Julia-plane Phoenix as `z[n+1] = z[n]^2 + c + memory*z[n-1]`, starting at the pixel with zero earlier history. c is complex, memory real; bounded semantic parameters and defaults are owned by `fractals/phoenix.ts`, not UI or GPU offsets. Zero memory is Julia. CPU and WGSL iteration reuse escape/orbit metrics and current materials; GPU keeps both orbit states and c/memory packing double-single. The previous value is local iteration state, unrelated to external-control feedback. Quadratic smooth-escape colouring does not imply a derivative/distance-estimate capability. Schema 5's parameter map remains sufficient.
+
+The [admission review](FORMULA_ADMISSION.md) assesses metric fit, cost, Discover value, visual distinction, and testability. Magnet I/II remain deferred until combined convergence/escape/singularity semantics are designed and benchmarked. Lyapunov needs a signed stability statistic and sequence/burn-in contract. IFS/Barnsley fern needs deterministic seeded sampling and density accumulation, not an escape-kernel branch. These decisions preserve the formula → metrics → material boundary and do not introduce speculative signal, audio, or graph abstractions.
+
+## ADR-026: External control and generative interoperability
+
+**Status:** Accepted — architectural constraints only; no integration runtime is implemented.
+
+Fractal Waypoints remains a standalone fractal instrument. It may later become a peer in a Schnock Generative Instrument, alongside independent music generators, physical or software synths, controllers, and other visual instruments. Components connect through explicit domain interfaces, not knowledge of one another's implementation.
+
+Control targets are stable semantic domain parameters, never React state paths, DOM identifiers, slider order, or shader uniform offsets. UI, presets, Journey, internal modulation, and future external controllers operate on the same serialisable configuration model. Preserve existing typed structures and persisted target IDs; do not introduce a general parameter registry or migrate names just for a hypothetical integration.
+
+The intended evaluation order is base configuration → Journey interpolation → modulation/external input application → domain normalisation and validation → effective configuration → renderer. Preserve the base separately from evaluated output. The present implementation has this ordering in parts, with distributed normalisation rather than one complete final validation boundary; see the implementation audit in [INTEROPERABILITY.md](INTEROPERABILITY.md). Future adapters must use domain transformations, never mutate GPU state.
+
+Sources must be independent of origin: internal waveforms, hardware controls, software-synth state, audio analysis, generative events, protocols, and fractal-derived metrics must not leak source-specific dependencies into formulas, materials, or renderers. Continuous signals, discrete events, and persistent state are distinct concepts; do not reduce them to one float sampled every frame. A future node graph is an editor over a serialisable source → transforms → mapping → target model, not the model itself. Neither the graph nor its transforms is implemented now.
+
+Mathematical metrics may later be outputs with no knowledge of consumers. Iteration histograms, convergence distributions, root populations, and complexity statistics belong to fractal analysis; their interpretation as notes, scales, rhythm, or Markov transition probabilities belongs to a separate music generator. A synth consumes musical events; it must not contain that generator. Prefer a physical MIDI synth/control surface for the first eventual integration, then let a software adapter implement the interaction model informed by real hardware.
+
+Do not assume flow is permanently one-way. Feedback requires explicit event ordering, clocks/update rates, state ownership, deterministic replay/export rules, and delayed/bounded scheduling that prevents unstable synchronous recursion. These semantics must be designed before feedback is enabled, not inferred from React renders or GPU frame completion.
+
+No MIDI, audio, OSC, synth, DAW, node-editor, graph-runtime, or feedback-scheduler dependencies are authorised by this decision. Phase 9.3 continues through the existing formula → metrics → material architecture. Revisit concrete integration contracts after Phase 9.3 and before the first hardware integration; do not build a framework in anticipation.
+
 ## ADR-025: Convergence formulas use explicit status and verified root identity
 
 **Status:** Accepted

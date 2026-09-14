@@ -355,12 +355,18 @@ Phase 9.2 implements regular-root polynomials (2–6 roots, configurable radius/
 
 ### Phase 9.3 — Organic and specialist formulas
 
-- [ ] Add Phoenix, then evaluate Magnet I/II and Lyapunov against a written formula-admission checklist: shared metric fit, interactive performance, discovery usefulness, visual distinction, and testability.
-- [ ] Treat IFS/Barnsley fern as a separately scoped sampling architecture, not a quick registry entry.
+- [x] Add Phoenix, then evaluate Magnet I/II and Lyapunov against a written formula-admission checklist: shared metric fit, interactive performance, discovery usefulness, visual distinction, and testability.
+- [x] Treat IFS/Barnsley fern as a separately scoped sampling architecture, not a quick registry entry.
+
+Phase 9.3 ships Julia-plane Phoenix with bounded complex c and real Orbit memory, double-single GPU orbit history, existing escape materials, Explore/Compare controls, Journey interpolation, persistence, and material-independent Discover. Curated Waypoints: Phoenix Feather, Phoenix Ember Lace, and Phoenix Tidal Wings. [Formula admission review](FORMULA_ADMISSION.md) records the checklist and defers Magnet I/II pending dual-stop metric contracts, Lyapunov pending stability-field semantics, and IFS pending a separate seeded sampling renderer. These candidates have been assessed, not implemented or locally benchmarked.
+
+- [ ] Add a one-click Phoenix versus matching zero-memory Julia comparison, so the recurrence relationship can be explored without manually copying the constant.
 
 Definition of done: each added formula advertises capabilities, has CPU/WGSL coverage, works through Explore/Discover/Compare/Journey/Waypoints, and ships with compelling curated destinations rather than just a dropdown entry.
 
 ## Phase 10 — Deep zoom and 3D research tracks
+
+Interoperability guardrail: ADR-026 and [INTEROPERABILITY.md](INTEROPERABILITY.md) preserve future external-control and metric-output seams without changing Phase 9.3 scope or priority. After Phase 9.3, revisit final domain validation, source/target composition, stable parameter metadata, and metric snapshot contracts before scheduling a first physical-hardware integration. MIDI/audio/synth/node-graph/feedback work remains explicitly unscheduled; these are not prerequisites for the formula work or research tracks below.
 
 These are deliberate research tracks rather than prerequisites for the Visual Lab.
 

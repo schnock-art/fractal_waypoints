@@ -14,7 +14,7 @@ export interface DoubleSingleComplex {
   im: DoubleSingle;
 }
 
-export type FormulaId = 'mandelbrot' | 'julia' | 'burningShip' | 'tricorn' | 'multibrot' | 'newton' | 'nova';
+export type FormulaId = 'mandelbrot' | 'julia' | 'burningShip' | 'tricorn' | 'multibrot' | 'newton' | 'nova' | 'phoenix';
 export type MaterialId = 'classic' | 'orbitTrap' | 'topographic' | 'domainColouring' | 'surface' | 'rootBasin' | 'convergenceSpeed';
 export type OrbitTrapShape = 'point' | 'line' | 'circle' | 'cross' | 'spiral';
 export type OrbitTrapComposition = 'minimum' | 'maximum';

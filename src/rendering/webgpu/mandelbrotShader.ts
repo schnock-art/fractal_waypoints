@@ -21,6 +21,7 @@ struct RenderUniforms {
   post_c: vec4f,
   newton: vec4f,
   polynomial: vec4f,
+  phoenix: vec4f,
 }
 
 struct VertexOutput {
@@ -329,7 +330,7 @@ fn multibrot_power(value: DsComplex, power: f32) -> DsComplex {
 }
 
 fn smooth_iteration_value(iteration: u32, magnitude_squared: f32) -> f32 {
-  let power = select(2.0, clamp(render.detail.y, 2.0, 8.0), render.material.w > 3.5);
+  let power = select(2.0, clamp(render.detail.y, 2.0, 8.0), render.material.w > 3.5 && render.material.w < 4.5);
   return f32(iteration) + 1.0 - log2(log2(max(sqrt(magnitude_squared), 1.0001))) / log2(power);
 }
 
@@ -340,12 +341,13 @@ fn iterate_formula(
   formula_code: f32,
   track_trap: bool,
 ) -> OrbitMetrics {
-  if (formula_code > 4.5) { return iterate_newton(point, max_iterations, formula_code > 5.5); }
+  if (formula_code > 4.5 && formula_code < 6.5) { return iterate_newton(point, max_iterations, formula_code > 5.5); }
   var z = DsComplex(vec2f(0.0, 0.0), vec2f(0.0, 0.0));
+  var previous_z = z;
   var c = point;
   var trap_min = 1e9;
 
-  if (formula_code > 0.5 && formula_code < 1.5) {
+  if ((formula_code > 0.5 && formula_code < 1.5) || formula_code > 6.5) {
     z = point;
     c = DsComplex(render.julia.xy, render.julia.zw);
   }
@@ -358,7 +360,11 @@ fn iterate_formula(
       break;
     }
 
-    if (formula_code > 1.5 && formula_code < 2.5) {
+    if (formula_code > 6.5) {
+      let next = ds_complex_add(ds_complex_add(ds_complex_square(z), c), DsComplex(ds_mul(previous_z.re, render.phoenix.xy), ds_mul(previous_z.im, render.phoenix.xy)));
+      previous_z = z;
+      z = next;
+    } else if (formula_code > 1.5 && formula_code < 2.5) {
       z = ds_complex_add(ds_complex_burning_ship_square(z), c);
     } else if (formula_code > 3.5) {
       z = ds_complex_add(multibrot_power(z, clamp(render.detail.y, 2.0, 8.0)), c);

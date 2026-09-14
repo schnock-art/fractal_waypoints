@@ -1,4 +1,5 @@
 import { complexFromNumbers } from '../math/complex';
+import { normalizePhoenixParameters } from '../fractals/phoenix';
 import { isConvergentFormula, normalizeNewtonParameters } from '../fractals/newton';
 import { fromNumber, toNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
@@ -80,7 +81,7 @@ export function interpolateRenderConfigs(
       ...base.fractal,
       maxIterations: Math.round(interpolateNumber(left.fractal.maxIterations, right.fractal.maxIterations, clamped)),
       bailout: interpolateNumber(left.fractal.bailout, right.fractal.bailout, clamped),
-      parameters: isConvergentFormula(base.fractal.formulaId) ? normalizeNewtonParameters(formulaParameters) : formulaParameters,
+      parameters: base.fractal.formulaId === 'phoenix' ? normalizePhoenixParameters(formulaParameters) : isConvergentFormula(base.fractal.formulaId) ? normalizeNewtonParameters(formulaParameters) : formulaParameters,
     },
     material: {
       ...base.material,

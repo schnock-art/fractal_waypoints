@@ -5,7 +5,7 @@ import { PNG } from 'pngjs';
 
 test.use({ channel: 'chromium', launchOptions: { args: ['--enable-unsafe-webgpu'] } });
 
-test('CPU and WGSL agree on Multibrot orbit metrics', async ({ page }) => {
+test('CPU and WGSL agree on Multibrot and Phoenix orbit metrics', async ({ page }) => {
   await page.goto(createDemoUrl('/'));
   const differences = await page.evaluate(async () => {
     const load = (path: string) => import(/* @vite-ignore */ path);
@@ -30,11 +30,15 @@ test('CPU and WGSL agree on Multibrot orbit metrics', async ({ page }) => {
     const readback = device.createBuffer({ size: 32, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const bind = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uniform } }, { binding: 7, resource: { buffer: output } }] });
     const failures: string[] = [];
-    for (const power of [2, 3, 4.5, 8]) {
+    const cases = [
+      ...[2, 3, 4.5, 8].map((power) => ({ formula: 'multibrot', parameters: { power } })),
+      ...[-0.5, 0, 0.25].map((memory) => ({ formula: 'phoenix', parameters: { memory, cReal: 0.56667, cImag: 0.03 } })),
+    ];
+    for (const entry of cases) {
       for (const [re, im] of [[0, 0], [0.1, 0.1], [1.1, 0.2], [-0.6, 0.9]]) {
-        const config = createDefaultRenderConfig('multibrot');
-        config.fractal.parameters.power = power;
-        config.viewport.centre = { re: { hi: re, lo: 0 }, im: { hi: im, lo: 0 } };
+        const config = createDefaultRenderConfig(entry.formula);
+        config.fractal.parameters = entry.parameters;
+        config.viewport.centre = { re: { hi: Math.fround(re), lo: re - Math.fround(re) }, im: { hi: Math.fround(im), lo: im - Math.fround(im) } };
         device.queue.writeBuffer(uniform, 0, buildRenderUniformData(config, 1, 1));
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginComputePass();
@@ -49,7 +53,7 @@ test('CPU and WGSL agree on Multibrot orbit metrics', async ({ page }) => {
         if (cpu.escaped) expected.push(cpu.smoothIteration);
         expected.forEach((value, index) => {
           const tolerance = index < 2 ? 0 : 0.005 * Math.max(1, Math.abs(value));
-          if (!Number.isFinite(actual[index]) || Math.abs(actual[index] - value) > tolerance) failures.push(`${power} at ${re},${im}: metric ${index}: GPU ${actual[index]} CPU ${value}`);
+          if (!Number.isFinite(actual[index]) || Math.abs(actual[index] - value) > tolerance) failures.push(`${JSON.stringify(entry)} at ${re},${im}: metric ${index}: GPU ${actual[index]} CPU ${value}`);
         });
       }
     }

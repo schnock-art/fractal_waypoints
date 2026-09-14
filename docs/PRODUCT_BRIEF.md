@@ -62,6 +62,14 @@ The Journey workspace should balance authoring power with legibility. Users shou
 
 ## Non-goals for the first release
 
+### Future generative interoperability (guidance, not current scope)
+
+Fractal Waypoints may eventually be one standalone peer in a larger Schnock Generative Instrument. Keep music generation separate from synthesis, and both separate from fractal rendering. Future connections may carry continuous signals, discrete events, persistent state, and mathematical statistics in either direction. Music-specific interpretation of fractal metrics belongs outside this application.
+
+When external control is deliberately scheduled, prefer a physical MIDI synth/control surface as the first integration; real hardware should inform a shared model that a later software-synth adapter can also use. A future node graph should expose that model, not define it. No MIDI, audio, synth, OSC, node editor, or feedback implementation is part of current Phase 9 work; see ADR-026.
+
+### Current exclusions
+
 Full 3D rendering, mobile-first optimisation, perturbation theory, machine-learning discovery, collaboration, accounts, and cloud persistence.
 
 ## Design language
