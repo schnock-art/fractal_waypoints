@@ -1,12 +1,16 @@
 import type { FormulaId, RenderConfig } from '../types/config';
+import { multibrotPower, normalizeMultibrotPower } from './multibrot';
+import { isConvergentFormula, iterateNewton, type ConvergenceStatus } from './newton';
 import { computeOrbitTrapDistance } from '../visuals/materials/runtime';
 
 export interface FormulaIterationSample {
   escaped: boolean;
   normalizedIterations: number;
+  basin?: number;
 }
 
 export interface DetailedFormulaIterationSample extends FormulaIterationSample {
+  convergence?: { status: ConvergenceStatus; rootIdentity: number; residual: number; steps: number };
   iteration: number;
   magnitudeSquared: number;
   magnitude: number;
@@ -20,6 +24,9 @@ export interface DetailedFormulaIterationSample extends FormulaIterationSample {
 
 export function getFormulaCode(formulaId: FormulaId): number {
   switch (formulaId) {
+    case 'newton': return 5;
+    case 'nova': return 6;
+    case 'multibrot': return 4;
     case 'mandelbrot':
       return 0;
     case 'julia':
@@ -42,6 +49,7 @@ export function iterateFormulaSample(
   return {
     escaped: detailed.escaped,
     normalizedIterations: detailed.normalizedIterations,
+    ...(detailed.convergence ? { basin: detailed.convergence.status === 'converged' ? detailed.convergence.rootIdentity + 2 : 0 } : {}),
   };
 }
 
@@ -51,9 +59,11 @@ export function iterateFormulaDetailed(
   imaginary: number,
   trackOrbitTrap = true,
 ): DetailedFormulaIterationSample {
+  if (isConvergentFormula(config.fractal.formulaId)) return iterateNewton(config, real, imaginary);
   const maxIterations = Math.max(1, config.fractal.maxIterations);
   const bailoutSquared = config.fractal.bailout * config.fractal.bailout;
   const formulaId = config.fractal.formulaId;
+  const power = formulaId === 'multibrot' ? normalizeMultibrotPower(config.fractal.parameters.power) : 2;
 
   let zReal = formulaId === 'julia' ? real : 0;
   let zImaginary = formulaId === 'julia' ? imaginary : 0;
@@ -65,7 +75,11 @@ export function iterateFormulaDetailed(
     let nextReal: number;
     let nextImaginary: number;
 
-    if (formulaId === 'burningShip') {
+    if (formulaId === 'multibrot') {
+      const powered = multibrotPower(zReal, zImaginary, power);
+      nextReal = powered[0] + cReal;
+      nextImaginary = powered[1] + cImaginary;
+    } else if (formulaId === 'burningShip') {
       const absReal = Math.abs(zReal);
       const absImaginary = Math.abs(zImaginary);
       nextReal = (absReal * absReal) - (absImaginary * absImaginary) + cReal;
@@ -101,7 +115,7 @@ export function iterateFormulaDetailed(
         finalTrapDistance: trackOrbitTrap
           ? computeOrbitTrapDistance(zReal, zImaginary, config.material.orbitTraps)
           : Number.POSITIVE_INFINITY,
-        smoothIteration: iteration + 1 - Math.log2(Math.log2(Math.max(Math.sqrt(magnitudeSquared), 1.0001))),
+        smoothIteration: iteration + 1 - Math.log2(Math.log2(Math.max(Math.sqrt(magnitudeSquared), 1.0001))) / Math.log2(power),
         finalReal: zReal,
         finalImaginary: zImaginary,
       };

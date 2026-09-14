@@ -324,21 +324,34 @@ Definition of done: lens presets enhance bright local detail without washing out
 
 Status on September 14, 2026: core HDR pipeline complete. Selectable post-process quality tiers remain a focused follow-up; the CPU fallback preserves the pre-HDR lens subset and treats the new GPU post effects as presentation enhancements.
 
+Rendering regression follow-up (September 14, 2026): fixed an invalid metric-pass bind group that caused black WebGPU frames for Topographic and Lit Surface presets. GPU browser regressions now require a WebGPU context and check validation errors and visible output after selection, resize, and reload; CPU fallback success does not satisfy these checks.
+
+- [ ] Surface asynchronous GPU validation/device errors in renderer diagnostics so a failed frame cannot leave a misleading healthy WebGPU status.
+
 ## Phase 9 — 2D formula families
 
 Goal: broaden discovery and comparison with formulas that reuse the new metric/material architecture instead of creating unrelated visual branches.
 
 ### Phase 9.1 — Multibrot
 
-- [ ] Add `z^n + c` with a validated, animatable power parameter and stable defaults.
-- [ ] Implement CPU/WGSL iteration and metric parity, formula-specific curated Waypoints, and discovery coverage.
-- [ ] Make Compare especially useful for power sweeps with synchronized viewport and animated power journeys.
+- [x] Add `z^n + c` with a validated, animatable power parameter and stable defaults.
+- [x] Implement CPU/WGSL iteration and metric parity, formula-specific curated Waypoints, and discovery coverage.
+- [x] Make Compare especially useful for power sweeps with synchronized viewport and animated power journeys.
+
+Phase 9.1 ships powers 2–8 (default 3), Explore and per-side Compare controls, and Cubic Butterfly, Quartic Crown, and Sixth-power Star curated Waypoints. Existing shared viewports and Journey keyframe interpolation support power comparisons and sweeps. Fractional powers have a branch seam and reduced precision, explained beside the control. Saved-view startup now respects the URL instead of resetting its formula to Mandelbrot. GPU readback tests compare orbit metrics against CPU results, including the zero-origin phase convention.
+
+- [ ] Add one-click paired power-sweep Compare and Journey templates so newcomers need not assemble keyframes manually.
 
 ### Phase 9.2 — Newton and Nova
 
-- [ ] Add polynomial/root configuration, derivative-based iteration, convergence diagnostics, and root-basin metrics.
-- [ ] Add root identity and convergence speed materials, with a useful fallback when roots are numerically ambiguous.
-- [ ] Add Newton/Nova curated Waypoints, discovery heuristics, and test coverage for convergence and persistence.
+- [x] Add polynomial/root configuration, derivative-based iteration, convergence diagnostics, and root-basin metrics.
+- [x] Add root identity and convergence speed materials, with a useful fallback when roots are numerically ambiguous.
+- [x] Add Newton/Nova curated Waypoints, discovery heuristics, and test coverage for convergence and persistence.
+
+Phase 9.2 implements regular-root polynomials (2–6 roots, configurable radius/rotation/relaxation/tolerance), Newton starting-point basins, and parameter-plane Nova. Root Atlas and Nova Silk provide compatible starting looks. Newton Triskelion, Newton Four Winds, Nova Silk Delta, and Nova Clover are curated Waypoints. CPU/WGSL readback fixtures cover convergence, roots, singularities and non-default polynomials; browser tests exercise tuning, reload, visible GPU output and Compare. Journey normalises discrete root-count transitions. Advanced controls are expandable; the sidebar reserves workspace space so expanded controls cannot hide Visual Lab.
+
+- [ ] Explore free root placement/arbitrary polynomial coefficients and a separate Nova Julia view, with root-tracking rules before enabling continuous root-identity animation.
+- [ ] Add an on-canvas convergence inspector/legend so diagnostics are available away from the viewport centre without opening advanced controls.
 
 ### Phase 9.3 — Organic and specialist formulas
 

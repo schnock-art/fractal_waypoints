@@ -1,4 +1,5 @@
 import { buildPaletteLut } from '../../palettes/sampler';
+import { resolveCompatibleRenderConfig } from '../../visuals/materials/registry';
 import type { RenderConfig } from '../../types/config';
 import type { RenderCoordinator, RenderSurface } from '../types';
 import { mandelbrotShader } from './mandelbrotShader';
@@ -102,10 +103,10 @@ class WebGpuSurface implements RenderSurface {
 
     this.metricBindGroup = device.createBindGroup({
       layout: this.metricPipeline.getBindGroupLayout(0),
+      // Auto layouts include only resources used by this entry point. Orbit
+      // metrics do not sample the palette; those bindings belong to materials.
       entries: [
         { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: this.paletteSampler },
-        { binding: 2, resource: this.paletteTexture.createView() },
       ],
     });
 
@@ -179,6 +180,7 @@ class WebGpuSurface implements RenderSurface {
   }
 
   async render(config: RenderConfig): Promise<void> {
+    config = resolveCompatibleRenderConfig(config);
     const uniformData = buildRenderUniformData(config, this.canvas.width, this.canvas.height);
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);

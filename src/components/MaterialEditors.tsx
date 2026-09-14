@@ -9,6 +9,7 @@ const trapShapes: { id: OrbitTrapShape; label: string }[] = [{ id: 'point', labe
 
 export function ActiveMaterialControls({ definition, config, onChange }: MaterialControlsProps) {
   switch (definition.editorId) {
+    case 'convergence': return <div className="control-panel__grid"><RangeControl label="Convergence bands" value={config.material.parameters.density ?? 0.08} min={0.01} max={0.25} step={0.01} onChange={(density) => updateParameters(onChange, { density })} /></div>;
     case 'orbitTrap': return <OrbitTrapMaterialControls config={config} onChange={onChange} />;
     case 'topographic': return <TopographicMaterialControls config={config} onChange={onChange} />;
     case 'domainColouring': return <DomainMaterialControls config={config} onChange={onChange} />;

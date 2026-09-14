@@ -4,6 +4,10 @@ import { palettePresets } from '../palettes/presets';
 import { summarizeComparisonWorkspace } from '../comparison/workspace';
 import type { ComparisonConfig, ComparisonMode, ComparisonSide, FormulaId, MaterialId, RenderConfig } from '../types/config';
 import { formulaRegistry } from '../fractals/registry';
+import { MultibrotControls } from './MultibrotControls';
+import { NewtonControls } from './NewtonControls';
+import { isConvergentFormula, normalizeNewtonParameters } from '../fractals/newton';
+import { resolveCompatibleRenderConfig, getMaterialCompatibility } from '../visuals/materials/registry';
 
 interface ComparisonPanelProps {
   enabled: boolean;
@@ -185,6 +189,7 @@ function ComparisonSideCard({
       <label>
         <span>Formula</span>
         <select
+          aria-label="Formula"
           value={config.fractal.formulaId}
           onChange={(event) => {
             const formulaId = event.target.value as FormulaId;
@@ -193,9 +198,9 @@ function ComparisonSideCard({
                 cReal: config.fractal.parameters.cReal ?? -0.8,
                 cImag: config.fractal.parameters.cImag ?? 0.156,
               }
-              : {};
+              : isConvergentFormula(formulaId) ? normalizeNewtonParameters() : formulaId === 'multibrot' ? { power: 3 } : {};
 
-            onConfigChange((current) => ({
+            onConfigChange((current) => resolveCompatibleRenderConfig({
               ...current,
               fractal: {
                 ...current.fractal,
@@ -213,6 +218,8 @@ function ComparisonSideCard({
         </select>
       </label>
 
+      <MultibrotControls config={config} onChange={(next) => onConfigChange(() => next)} />
+      <NewtonControls config={config} onChange={(next) => onConfigChange(() => next)} />
       <label>
         <span>Palette preset</span>
         <select
@@ -252,7 +259,7 @@ function ComparisonSideCard({
           }
         >
           {Object.values(materialRegistry).map((material) => (
-            <option key={material.id} value={material.id}>
+            <option key={material.id} value={material.id} disabled={!getMaterialCompatibility(config.fractal.formulaId, material.id).compatible}>
               {material.displayName}
             </option>
           ))}

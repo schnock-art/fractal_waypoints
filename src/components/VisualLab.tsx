@@ -1,4 +1,4 @@
-import { cloneMaterialPreset, createMaterialConfig, getMaterialCompatibility, materialPresets, materialRegistry } from '../visuals/materials/registry';
+import { cloneMaterialPreset, createMaterialConfig, getMaterialCompatibility, materialPresets, materialRegistry, resolveCompatibleRenderConfig } from '../visuals/materials/registry';
 import { getLensEffectAmount, lensEffectRegistry, updateLensEffect } from '../visuals/lenses/model';
 import type { MaterialId, RenderConfig } from '../types/config';
 import { ActiveMaterialControls, RangeControl } from './MaterialEditors';
@@ -22,11 +22,11 @@ export function VisualLab({ config, onChange }: VisualLabProps) {
           <span>{material.description}</span>
           <span>{material.sampling === 'point' ? 'Uses local orbit metrics in the direct render path.' : 'Requires neighbouring metric samples.'}</span>
           {material.cpuSupport === 'approximate' ? <span>CPU fallback preserves this look with a lighter approximation; WebGPU enables full field detail.</span> : null}
-          {!compatibility.compatible ? <span>Unavailable for this formula: {compatibility.missing.join(', ')}</span> : null}
+          {!compatibility.compatible ? <span>This saved look needs {compatibility.missing.join(', ')}. Rendering with {materialRegistry[resolveCompatibleRenderConfig(config).material.id].displayName} instead; your saved look is preserved.</span> : null}
         </div>
         <div className="control-panel__section-heading"><div><p className="control-panel__label">Material presets</p><strong>Reusable looks, independent of the formula</strong></div></div>
         <div className="visual-lab__preset-grid">
-          {materialPresets.map((preset) => <button className="visual-lab__preset-card" key={preset.id} type="button" onClick={() => onChange((current) => ({ ...current, ...cloneMaterialPreset(preset) }))}><strong>{preset.name}</strong><span>{preset.description}</span></button>)}
+          {materialPresets.filter((preset) => getMaterialCompatibility(config.fractal.formulaId, preset.material.id).compatible).map((preset) => <button className="visual-lab__preset-card" key={preset.id} type="button" onClick={() => onChange((current) => ({ ...current, ...cloneMaterialPreset(preset) }))}><strong>{preset.name}</strong><span>{preset.description}</span></button>)}
         </div>
         <div className="control-panel__grid">
           <label><span>Material</span><select value={config.material.id} onChange={(event) => onChange((current) => {

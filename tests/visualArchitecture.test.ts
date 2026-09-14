@@ -9,7 +9,7 @@ import { formulaRegistry } from '../src/fractals/registry';
 describe('visual architecture contracts', () => {
   it('advertises concrete reusable metrics for every current formula', () => {
     for (const formula of Object.values(formulaRegistry)) {
-      expect(formula.supportedMetrics).toContain('smoothIteration');
+      expect(formula.supportedMetrics).toContain(formula.id === 'newton' || formula.id === 'nova' ? 'convergenceRate' : 'smoothIteration');
       expect(formula.supportedMetrics).toContain('finalComplex');
       expect(formula.supportedMetrics).toContain('complexPhase');
     }

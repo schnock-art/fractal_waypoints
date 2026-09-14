@@ -1,4 +1,5 @@
 import { complexFromNumbers } from '../math/complex';
+import { isConvergentFormula, normalizeNewtonParameters } from '../fractals/newton';
 import { fromNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
 import { defaultPalettePreset } from '../palettes/presets';
@@ -14,7 +15,7 @@ export function createDefaultRenderConfig(formulaId: FormulaId = 'mandelbrot'): 
   const isJulia = formulaId === 'julia';
   const defaultCentre = formulaId === 'burningShip'
     ? complexFromNumbers(-0.45, -0.5)
-    : formulaId === 'tricorn'
+    : formulaId === 'tricorn' || formulaId === 'multibrot' || isConvergentFormula(formulaId)
       ? complexFromNumbers(0, 0)
       : isJulia
         ? complexFromNumbers(0, 0)
@@ -37,14 +38,14 @@ export function createDefaultRenderConfig(formulaId: FormulaId = 'mandelbrot'): 
     },
     fractal: {
       formulaId,
-      parameters: isJulia ? juliaDefaults : {},
+      parameters: isConvergentFormula(formulaId) ? normalizeNewtonParameters() : isJulia ? juliaDefaults : formulaId === 'multibrot' ? { power: 3 } : {},
       maxIterations: 180,
       bailout: 32,
     },
     material: {
-      id: 'classic',
+      id: formulaId === 'newton' ? 'rootBasin' : formulaId === 'nova' ? 'convergenceSpeed' : 'classic',
       parameters: {
-        density: 0.032,
+        density: isConvergentFormula(formulaId) ? 0.08 : 0.032,
       },
     },
     lens: createLensConfig(),

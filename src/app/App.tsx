@@ -24,6 +24,9 @@ import { WaypointPanel } from '../components/WaypointPanel';
 import { WorkspaceModeNav } from '../components/WorkspaceModeNav';
 import { VisualLab } from '../components/VisualLab';
 import { formulaRegistry } from '../fractals/registry';
+import { MultibrotControls } from '../components/MultibrotControls';
+import { NewtonControls } from '../components/NewtonControls';
+import { resolveCompatibleRenderConfig } from '../visuals/materials/registry';
 import { complexFromNumbers } from '../math/complex';
 import { toNumber } from '../math/doubleSingle';
 import { getCuratedWaypoints } from '../navigation/curatedWaypoints';
@@ -55,9 +58,9 @@ import { advanceFirstFlight, createFirstFlightRenderConfig, type FirstFlightStat
 import './styles/app.css';
 
 export function App() {
-  const [mainConfig, setMainConfig] = useState<RenderConfig>(() => createFirstFlightRenderConfig(
+  const [mainConfig, setMainConfig] = useState<RenderConfig>(() =>
     readRenderConfigFromLocation() ?? createDefaultRenderConfig('mandelbrot'),
-  ));
+  );
   const [juliaConfig, setJuliaConfig] = useState<RenderConfig>(() => createDefaultRenderConfig('julia'));
   const [juliaSeed, setJuliaSeed] = useState<DoubleSingleComplex | null>(null);
   const [showJuliaPanel, setShowJuliaPanel] = useState(true);
@@ -252,7 +255,7 @@ export function App() {
         quality: current.quality,
       };
       writeRenderConfigToHistory(nextConfig, 'push');
-      return nextConfig;
+      return resolveCompatibleRenderConfig(nextConfig);
     });
   }
 
@@ -761,7 +764,7 @@ export function App() {
       />
       <section className="hero">
         <div className="hero__copy">
-          <p className="hero__eyebrow">Fractal Explorer / Phase 8</p>
+          <p className="hero__eyebrow">Fractal Explorer / Phase 9</p>
           <h1>Explore Mandelbrot space, then peel open Julia worlds from any point.</h1>
           <p>
             Explore the mathematics, then shape the look in Visual Lab: materials read
@@ -805,6 +808,8 @@ export function App() {
               </select>
             </div>
 
+            <MultibrotControls config={mainConfig} onChange={setMainConfig} />
+            <NewtonControls config={mainConfig} onChange={setMainConfig} />
             {mainConfig.fractal.formulaId === 'julia' ? (
               <div className="control-panel__section control-panel__grid">
                 <label>

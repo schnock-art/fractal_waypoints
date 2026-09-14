@@ -5,6 +5,8 @@ import { normalizeOrbitTrapSet } from '../traps/orbitTraps';
 
 export function getMaterialCode(materialId: MaterialId): number {
   switch (materialId) {
+    case 'rootBasin': return 5;
+    case 'convergenceSpeed': return 6;
     case 'classic':
       return 0;
     case 'orbitTrap':

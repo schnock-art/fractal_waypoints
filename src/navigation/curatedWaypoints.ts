@@ -31,6 +31,30 @@ export function getCuratedWaypoints(): Waypoint[] {
   juliaBloom.palette = ember;
 
   return [
+    ...(['newton', 'nova'] as const).flatMap((formula) => [3, 4].map((degree) => {
+      const config = createDefaultRenderConfig(formula);
+      config.fractal.parameters.degree = degree;
+      config.palette = clonePalette(degree === 3 ? electric : glacier);
+      if (formula === 'nova') {
+        config.viewport.centre = complexFromNumbers(-0.35, 0);
+        config.viewport.scale = fromNumber(2.2);
+      }
+      return createWaypoint({
+        name: formula === 'newton' ? (degree === 3 ? 'Newton Triskelion' : 'Newton Four Winds') : (degree === 3 ? 'Nova Silk Delta' : 'Nova Clover'),
+        description: `${degree}-root ${formula === 'newton' ? 'basins: follow the interwoven boundaries or compare another root count' : 'parameter plane: convergence bands reveal flowing detail'}. Try the polynomial controls or save as a Journey keyframe.`,
+        renderConfig: config, source: 'curated', tags: [formula, 'convergence', `roots-${degree}`],
+      });
+    })),
+    ...[3, 4, 6].map((power) => {
+      const config = createDefaultRenderConfig('multibrot');
+      config.fractal.parameters.power = power;
+      config.palette = clonePalette(power === 4 ? ember : glacier);
+      return createWaypoint({
+        name: power === 3 ? 'Cubic Butterfly' : power === 4 ? 'Quartic Crown' : 'Sixth-power Star',
+        description: `The full power-${power} Multibrot landscape. Compare with another power or use it as a Journey keyframe.`,
+        renderConfig: config, source: 'curated', tags: ['multibrot', `power-${power}`, 'symmetric'],
+      });
+    }),
     createWaypoint({
       name: 'Seahorse Ridge',
       description: 'A classic Mandelbrot coastline with branching detail.',

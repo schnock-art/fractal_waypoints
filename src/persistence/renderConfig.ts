@@ -1,4 +1,6 @@
 import type { LensConfig, MaterialConfig, RenderConfig, Waypoint } from '../types/config';
+import { normalizeMultibrotPower } from '../fractals/multibrot';
+import { normalizeNewtonParameters } from '../fractals/newton';
 import { SCHEMA_VERSION } from '../types/config';
 import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
 import { normalizeOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
@@ -26,6 +28,11 @@ export function migrateRenderConfig(value: unknown): RenderConfig | null {
   return {
     ...(value as Omit<RenderConfig, 'schemaVersion' | 'material' | 'lens' | 'modulations'>),
     schemaVersion: SCHEMA_VERSION,
+    fractal: value.fractal.formulaId === 'newton' || value.fractal.formulaId === 'nova'
+      ? { ...(value.fractal as unknown as RenderConfig['fractal']), parameters: normalizeNewtonParameters(isRecord(value.fractal.parameters) ? value.fractal.parameters : {}) }
+      : value.fractal.formulaId === 'multibrot'
+      ? { ...(value.fractal as unknown as RenderConfig['fractal']), parameters: { power: normalizeMultibrotPower(isRecord(value.fractal.parameters) ? value.fractal.parameters.power : undefined) } }
+      : value.fractal as unknown as RenderConfig['fractal'],
     material,
     lens,
     modulations: Array.isArray(value.modulations) ? value.modulations.filter(isParameterModulation).map((modulation) => ({ ...modulation })) : [],
@@ -65,7 +72,7 @@ function migrateLegacyColouring(value: unknown): MaterialConfig {
 }
 
 function isMaterialConfig(value: unknown): value is MaterialConfig {
-  return isRecord(value) && ['classic', 'orbitTrap', 'topographic', 'domainColouring', 'surface'].includes(String(value.id)) && isRecord(value.parameters);
+  return isRecord(value) && ['classic', 'orbitTrap', 'topographic', 'domainColouring', 'surface', 'rootBasin', 'convergenceSpeed'].includes(String(value.id)) && isRecord(value.parameters);
 }
 
 function cloneMaterial(value: MaterialConfig): MaterialConfig {

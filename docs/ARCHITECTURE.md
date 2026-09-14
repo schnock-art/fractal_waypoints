@@ -1,5 +1,7 @@
 # Fractal Explorer — Architecture
 
+Multibrot extends the formula registry with a normalised power parameter (2–8, default 3). The CPU helper lives in `src/fractals/multibrot.ts`; WebGPU packs power into `render.detail.y` and evaluates integer powers in double-single arithmetic or fractional powers via principal-branch f32 exponentiation. Both direct and metric-field paths use power-aware smooth iteration. Explore and Compare share `MultibrotControls`; URL/Waypoint configurations and Journey interpolation retain the parameter without a new schema shape. Fractional powers have a branch seam and are not a deep-zoom precision guarantee.
+
 ## System boundary
 
 ```mermaid
@@ -104,6 +106,10 @@ Navigation should be separated into:
 This separation keeps keyboard movement configurable without coupling key bindings to rendering code or UI components. `RenderView` consumes navigation actions; it should not hardcode specific keys such as `W`, `A`, `S`, or `D`.
 
 ## Formula, orbit metrics, materials, and lens interfaces
+
+Newton and Nova use a separate convergence kernel (`fractals/newton.ts` / `rendering/webgpu/newtonShader.ts`) with bounded regular-root polynomials, derivative-based iteration, and explicit converged/unresolved/singular/diverged status. Newton reports verified root identity; Nova is a parameter-plane fixed-point family and does not advertise polynomial-root identity. Root Basins and Convergence Speed are point materials; escape-only looks resolve to a compatible convergence material without changing saved configurations. Presets and material selectors expose compatible choices. The GPU uniform layout is now 19 vec4s (304 bytes), with polynomial constants packed as double-single values.
+
+Explore and Compare share compact polynomial controls; advanced shape/tolerance settings expand separately and report the centre orbit's CPU diagnostic. Discovery compares root identities for Newton, settled/unsettled states for Nova, and convergence-step variance for both; saved presentation state never affects ranking. Journey rounds root count to a valid integer while interpolating radius, rotation, and relaxation. URLs and Waypoints normalise the additive parameters under schema 5. See ADR-025 for mathematical definitions and numerical limits.
 
 Each formula has an `id`, display name, parameter definitions, and supported metric capabilities. The current baseline set is Mandelbrot, Julia, Burning Ship, and Tricorn. The next 2D formula candidates are Multibrot, Newton, Phoenix, Nova, Magnet, and Lyapunov; formulas with substantially different sampling models, such as IFS, should remain separate additions rather than being forced through escape-time assumptions.
 

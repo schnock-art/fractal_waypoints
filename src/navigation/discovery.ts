@@ -1,6 +1,7 @@
 import { complexFromNumbers } from '../math/complex';
 import { add, fromNumber, multiplyByFloat, toNumber } from '../math/doubleSingle';
 import { iterateFormulaSample } from '../fractals/runtime';
+import { isConvergentFormula } from '../fractals/newton';
 import { clonePalette } from '../palettes/model';
 import { createLensConfig } from '../visuals/lenses/model';
 import type { RenderConfig, Waypoint } from '../types/config';
@@ -123,12 +124,12 @@ function analyzeTile(
 function sampleTile(config: RenderConfig, samplesPerAxis: number): SampleMetrics {
   const analysisConfig = createMaterialIndependentDiscoveryConfig(config);
   const iterationGrid: number[][] = [];
-  const escapedGrid: boolean[][] = [];
+  const escapedGrid: number[][] = [];
   let escapedCount = 0;
 
   for (let row = 0; row < samplesPerAxis; row += 1) {
     const rowIterations: number[] = [];
-    const rowEscapes: boolean[] = [];
+    const rowEscapes: number[] = [];
 
     for (let column = 0; column < samplesPerAxis; column += 1) {
       const x = samplesPerAxis === 1 ? 0.5 : column / (samplesPerAxis - 1);
@@ -136,9 +137,9 @@ function sampleTile(config: RenderConfig, samplesPerAxis: number): SampleMetrics
       const point = mapSamplePoint(analysisConfig, x, y);
       const sample = iterateFractal(analysisConfig, point.real, point.imaginary);
       rowIterations.push(sample.normalizedIterations);
-      rowEscapes.push(sample.escaped);
+      rowEscapes.push(sample.basin ?? Number(sample.escaped));
 
-      if (sample.escaped) {
+      if (sample.basin !== undefined ? sample.basin > 0 : sample.escaped) {
         escapedCount += 1;
       }
     }
@@ -171,7 +172,7 @@ export function createMaterialIndependentDiscoveryConfig(config: RenderConfig): 
   };
 }
 
-function computeBoundaryDensity(escapedGrid: boolean[][]): number {
+function computeBoundaryDensity(escapedGrid: number[][]): number {
   let transitions = 0;
   let comparisons = 0;
 
@@ -250,7 +251,7 @@ function rotateOffset(x: number, y: number, rotation: number): { x: number; y: n
   };
 }
 
-function iterateFractal(config: RenderConfig, real: number, imaginary: number): { escaped: boolean; normalizedIterations: number } {
+function iterateFractal(config: RenderConfig, real: number, imaginary: number): ReturnType<typeof iterateFormulaSample> {
   return iterateFormulaSample(config, real, imaginary);
 }
 
@@ -285,7 +286,9 @@ function isNearCandidate(left: TileCandidate, right: TileCandidate): boolean {
 }
 
 function candidateToWaypoint(candidate: TileCandidate, index: number): Waypoint {
-  const descriptor = describeCandidate(candidate.metrics);
+  const descriptor = isConvergentFormula(candidate.config.fractal.formulaId)
+    ? { label: 'Convergence Frontier', description: 'Root-basin or settled/unsettled transitions and convergence-step variation suggest a detailed region.', tags: [candidate.config.fractal.formulaId, 'convergence', 'discovery'] }
+    : describeCandidate(candidate.metrics);
   const nextConfig = {
     ...candidate.config,
     viewport: {

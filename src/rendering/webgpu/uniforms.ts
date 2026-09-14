@@ -1,12 +1,15 @@
 import { getFormulaCode } from '../../fractals/runtime';
+import { normalizeMultibrotPower } from '../../fractals/multibrot';
+import { normalizeNewtonParameters, polynomialRoots } from '../../fractals/newton';
+import { multibrotPower } from '../../fractals/multibrot';
 import { getLensEffectAmount } from '../../visuals/lenses/model';
 import { getMaterialCode, getMaterialDensity, getOrbitTrapAppearance, getOrbitTrapScale, getOrbitTrapSet } from '../../visuals/materials/runtime';
 import { getOrbitTrapMetricCode, getOrbitTrapPaletteMappingCode } from '../../visuals/traps/orbitMaterial';
 import { getOrbitTrapCompositionCode, getOrbitTrapShapeCode } from '../../visuals/traps/orbitTraps';
 import type { RenderConfig } from '../../types/config';
 
-/** Matches RenderUniforms in mandelbrotShader.ts: 17 vec4 values, 16-byte aligned. */
-export const RENDER_UNIFORM_FLOAT_COUNT = 17 * 4;
+/** Matches RenderUniforms in mandelbrotShader.ts: 19 vec4 values, 16-byte aligned. */
+export const RENDER_UNIFORM_FLOAT_COUNT = 19 * 4;
 export const RENDER_UNIFORM_BUFFER_SIZE = RENDER_UNIFORM_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
 
 export function buildRenderUniformData(config: RenderConfig, width: number, height: number): Float32Array {
@@ -15,6 +18,8 @@ export function buildRenderUniformData(config: RenderConfig, width: number, heig
   const firstTrap = traps.traps[0];
   const secondTrap = traps.traps[1] ?? firstTrap;
   const parameters = config.material.parameters;
+  const polynomial = normalizeNewtonParameters(config.fractal.parameters);
+  const constant = multibrotPower(...polynomialRoots(polynomial)[0], polynomial.degree);
 
   return new Float32Array([
     ...buildViewportUniformData(config),
@@ -29,10 +34,12 @@ export function buildRenderUniformData(config: RenderConfig, width: number, heig
     parameters.contourLevels ?? 18, parameters.contourWidth ?? 0.13, parameters.relief ?? 0.72, 0,
     parameters.height ?? 3.4, parameters.lightAngle ?? 0.7, parameters.specular ?? 0.32, parameters.ambient ?? 0.28,
     parameters.phaseScale ?? 1, parameters.magnitudeScale ?? 0.38, 0, 0,
-    parameters.roughness ?? 0.55, 0, 0, 0,
+    parameters.roughness ?? 0.55, config.fractal.formulaId === 'multibrot' ? normalizeMultibrotPower(config.fractal.parameters.power) : 2, polynomial.rootRotation, 0,
     getLensEffectAmount(config.lens, 'exposure'), getLensEffectAmount(config.lens, 'vignette'), getLensEffectAmount(config.lens, 'toneMapping'), getLensEffectAmount(config.lens, 'bloom'),
     getLensEffectParameter(config, 'bloom', 'threshold', 1.1), getLensEffectAmount(config.lens, 'grain'), getLensEffectAmount(config.lens, 'colourGrade'), getLensEffectAmount(config.lens, 'sharpen'),
     getLensEffectAmount(config.lens, 'chromaticAberration'), Math.max(1, Math.floor(width / 2)), Math.max(1, Math.floor(height / 2)), 0,
+    polynomial.degree, polynomial.relaxation, 10 ** -polynomial.toleranceExponent, polynomial.rootRadius,
+    Math.fround(constant[0]), constant[0] - Math.fround(constant[0]), Math.fround(constant[1]), constant[1] - Math.fround(constant[1]),
   ]);
 }
 

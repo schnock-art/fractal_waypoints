@@ -1,4 +1,5 @@
 import { complexFromNumbers } from '../math/complex';
+import { isConvergentFormula, normalizeNewtonParameters } from '../fractals/newton';
 import { fromNumber, toNumber } from '../math/doubleSingle';
 import { clonePalette } from '../palettes/model';
 import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
@@ -58,6 +59,7 @@ export function interpolateRenderConfigs(
 ): RenderConfig {
   const clamped = Math.min(1, Math.max(0, t));
   const base = clamped < 0.5 ? left : right;
+  const formulaParameters = interpolateParameterMap(left.fractal.parameters, right.fractal.parameters, clamped);
 
   return {
     ...cloneRenderConfig(base),
@@ -78,7 +80,7 @@ export function interpolateRenderConfigs(
       ...base.fractal,
       maxIterations: Math.round(interpolateNumber(left.fractal.maxIterations, right.fractal.maxIterations, clamped)),
       bailout: interpolateNumber(left.fractal.bailout, right.fractal.bailout, clamped),
-      parameters: interpolateParameterMap(left.fractal.parameters, right.fractal.parameters, clamped),
+      parameters: isConvergentFormula(base.fractal.formulaId) ? normalizeNewtonParameters(formulaParameters) : formulaParameters,
     },
     material: {
       ...base.material,

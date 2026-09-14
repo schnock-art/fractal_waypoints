@@ -1,3 +1,5 @@
+import { newtonShader } from './newtonShader';
+
 const shaderContracts = /* wgsl */ `
 struct RenderUniforms {
   centre: vec4f,
@@ -17,6 +19,8 @@ struct RenderUniforms {
   post_a: vec4f,
   post_b: vec4f,
   post_c: vec4f,
+  newton: vec4f,
+  polynomial: vec4f,
 }
 
 struct VertexOutput {
@@ -36,6 +40,7 @@ struct OrbitMetrics {
   trap_min: f32,
   final_trap_distance: f32,
   final_z: DsComplex,
+  convergence: vec4f,
 }
 
 @group(0) @binding(0) var<uniform> render: RenderUniforms;
@@ -235,7 +240,12 @@ fn topographic_colour(field: vec4f, frag_coord: vec4f) -> vec3f {
     + abs(field_sample(frag_coord, vec2i(0, 1)).x - field_sample(frag_coord, vec2i(0, -1)).x);
   let band_distance = abs(fract(field.x * levels) - 0.5) * 2.0;
   let contour = 1.0 - smoothstep(0.0, max(contour_width + nearby * 1.8, 0.012), band_distance);
-  let terrain = textureSampleLevel(paletteTexture, paletteSampler, vec2f(fract(field.x * (1.0 + render.material.x * 18.0)), 0.5), 0.0).rgb;
+  // The normalised height field occupies only a small part of 0..1 at a wide
+  // viewport. Repeat it through a useful part of the palette so cartographic
+  // materials keep their structure and colour instead of collapsing to the
+  // palette's near-black first stop.
+  let terrain_t = fract(0.18 + field.x * max(levels * 0.32, 4.0) + field.z * 0.55);
+  let terrain = textureSampleLevel(paletteTexture, paletteSampler, vec2f(terrain_t, 0.5), 0.0).rgb;
   let interior = vec3f(0.02, 0.03, 0.06);
   let base = select(mix(interior, terrain, 0.22), terrain, field.w > 0.5);
   return mix(base, vec3f(0.01, 0.012, 0.02), contour * relief);
@@ -254,9 +264,11 @@ fn surface_colour(field: vec4f, frag_coord: vec4f) -> vec3f {
   let roughness = clamp(render.detail.x, 0.05, 1.0);
   let specular = pow(max(reflected.z, 0.0), 6.0 + ((1.0 - roughness) * 44.0)) * clamp_unit(render.surface.z);
   let ambient = clamp_unit(render.surface.w);
-  let base = textureSampleLevel(paletteTexture, paletteSampler, vec2f(fract(field.x * max(render.material.x * 30.0, 0.1)), 0.5), 0.0).rgb;
+  let palette_t = fract(0.18 + field.x * max(render.topography.x * 0.24, 4.3) + field.z * 0.55);
+  let base = textureSampleLevel(paletteTexture, paletteSampler, vec2f(palette_t, 0.5), 0.0).rgb;
   let rim = pow(1.0 - max(normal.z, 0.0), 2.0) * 0.18;
-  let lit = base * (ambient + ((1.0 - ambient) * diffuse) + rim) + vec3f(specular);
+  let illumination = max(ambient + ((1.0 - ambient) * diffuse) + rim, 0.34);
+  let lit = base * illumination + vec3f(specular);
   let interior = vec3f(0.02, 0.03, 0.06);
   return select(mix(interior, lit, 0.2), lit, field.w > 0.5);
 }
@@ -289,6 +301,38 @@ fn pixel_to_complex(frag_coord: vec4f) -> DsComplex {
   );
 }
 
+fn orbit_phase(value: DsComplex) -> f32 {
+  let re = ds_to_f32(value.re);
+  let im = ds_to_f32(value.im);
+  if (re == 0.0 && im == 0.0) { return 0.0; }
+  return atan2(im, re);
+}
+
+fn multibrot_power(value: DsComplex, power: f32) -> DsComplex {
+  if (power == floor(power)) {
+    var result = value;
+    for (var exponent = 1u; exponent < u32(power); exponent += 1u) {
+      result = DsComplex(
+        ds_sub(ds_mul(result.re, value.re), ds_mul(result.im, value.im)),
+        ds_add(ds_mul(result.re, value.im), ds_mul(result.im, value.re))
+      );
+    }
+    return result;
+  }
+  let re = ds_to_f32(value.re);
+  let im = ds_to_f32(value.im);
+  let radius = length(vec2f(re, im));
+  if (radius == 0.0) { return DsComplex(vec2f(0.0), vec2f(0.0)); }
+  let angle = atan2(select(im, 0.0, im == 0.0), re) * power;
+  let magnitude = pow(radius, power);
+  return DsComplex(vec2f(magnitude * cos(angle), 0.0), vec2f(magnitude * sin(angle), 0.0));
+}
+
+fn smooth_iteration_value(iteration: u32, magnitude_squared: f32) -> f32 {
+  let power = select(2.0, clamp(render.detail.y, 2.0, 8.0), render.material.w > 3.5);
+  return f32(iteration) + 1.0 - log2(log2(max(sqrt(magnitude_squared), 1.0001))) / log2(power);
+}
+
 fn iterate_formula(
   point: DsComplex,
   bailout_squared: f32,
@@ -296,6 +340,7 @@ fn iterate_formula(
   formula_code: f32,
   track_trap: bool,
 ) -> OrbitMetrics {
+  if (formula_code > 4.5) { return iterate_newton(point, max_iterations, formula_code > 5.5); }
   var z = DsComplex(vec2f(0.0, 0.0), vec2f(0.0, 0.0));
   var c = point;
   var trap_min = 1e9;
@@ -315,6 +360,8 @@ fn iterate_formula(
 
     if (formula_code > 1.5 && formula_code < 2.5) {
       z = ds_complex_add(ds_complex_burning_ship_square(z), c);
+    } else if (formula_code > 3.5) {
+      z = ds_complex_add(multibrot_power(z, clamp(render.detail.y, 2.0, 8.0)), c);
     } else if (formula_code > 2.5) {
       z = ds_complex_add(ds_complex_tricorn_square(z), c);
     } else {
@@ -327,14 +374,14 @@ fn iterate_formula(
 
     if (magnitude_squared > bailout_squared) {
       let final_trap_distance = select(1e9, trap_distance(z), track_trap);
-      return OrbitMetrics(true, iteration, magnitude_squared, atan2(ds_to_f32(z.im), ds_to_f32(z.re)), trap_min, final_trap_distance, z);
+      return OrbitMetrics(true, iteration, magnitude_squared, orbit_phase(z), trap_min, final_trap_distance, z, vec4f(0.0));
     }
 
     iteration = iteration + 1u;
   }
 
   let final_trap_distance = select(1e9, trap_distance(z), track_trap);
-  return OrbitMetrics(false, max_iterations, magnitude_squared, atan2(ds_to_f32(z.im), ds_to_f32(z.re)), trap_min, final_trap_distance, z);
+  return OrbitMetrics(false, max_iterations, magnitude_squared, orbit_phase(z), trap_min, final_trap_distance, z, vec4f(0.0));
 }
 `;
 
@@ -365,6 +412,24 @@ fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
 
   let metrics = iterate_formula(point, bailout_squared, max_iterations, formula_code, material_code > 0.5 && material_code < 1.5);
 
+  if (material_code > 4.5) {
+    let status = metrics.convergence.x;
+    if (status != 1.0) {
+      if (status == 2.0) { return vec4f(0.22, 0.12, 0.2, 1.0); }
+      if (status == 3.0) { return vec4f(0.1, 0.12, 0.16, 1.0); }
+      return vec4f(0.025, 0.035, 0.055, 1.0);
+    }
+    let speed = fract(f32(metrics.iteration) * max(render.material.x, 0.0001));
+    var palette_t = speed;
+    var shade = 1.0;
+    if (material_code < 5.5 && metrics.convergence.y >= 0.0) {
+      palette_t = (metrics.convergence.y + 0.5) / render.newton.x;
+      shade = 0.45 + 0.55 * (1.0 - speed);
+    }
+    let colour = textureSampleLevel(paletteTexture, paletteSampler, vec2f(palette_t, 0.5), 0.0).rgb;
+    return vec4f(colour * shade, 1.0);
+  }
+
   if (material_code > 2.5 && material_code < 3.5) {
     let phase_t = fract(((metrics.complex_phase / 6.2831853) + 0.5) * max(render.domain.x, 0.01));
     let magnitude_t = fract(log2(max(sqrt(metrics.magnitude_squared), 1.0001)) * max(render.domain.y, 0.0));
@@ -386,7 +451,7 @@ fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
     return vec4f(vec3f(0.02, 0.03, 0.06), 1.0);
   }
 
-  let smooth_iteration = f32(metrics.iteration) + 1.0 - log2(log2(max(sqrt(metrics.magnitude_squared), 1.0001)));
+  let smooth_iteration = smooth_iteration_value(metrics.iteration, metrics.magnitude_squared);
   let palette_t = fract(smooth_iteration * max(render.material.x, 0.0001));
   let color = textureSampleLevel(paletteTexture, paletteSampler, vec2f(palette_t, 0.5), 0.0);
 
@@ -408,7 +473,7 @@ fn metric_field_fs(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
   let bailout = max(render.control.x, 4.0);
   let max_iterations = max(u32(render.control.y), 1u);
   let metrics = iterate_formula(point, bailout * bailout, max_iterations, render.material.w, false);
-  let smooth_iteration = f32(metrics.iteration) + 1.0 - log2(log2(max(sqrt(metrics.magnitude_squared), 1.0001)));
+  let smooth_iteration = smooth_iteration_value(metrics.iteration, metrics.magnitude_squared);
   let height = fract(smooth_iteration / f32(max_iterations));
   let phase = (metrics.complex_phase / 6.2831853) + 0.5;
   let magnitude = clamp(log2(max(sqrt(metrics.magnitude_squared), 1.0001)) / 8.0, 0.0, 1.0);
@@ -465,7 +530,7 @@ export const webGpuShaderModules = {
   contracts: shaderContracts,
   coordinates: doubleSingleCoordinateKernel,
   fieldsAndMaterials: fieldAndMaterialKernel,
-  formulaMetrics: formulaMetricKernel,
+  formulaMetrics: formulaMetricKernel + newtonShader,
   presentation: presentationEntryPoint,
 };
 

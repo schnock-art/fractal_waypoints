@@ -50,6 +50,6 @@ describe('metric field orchestration', () => {
     expect([...data.slice(40, 44)]).toMatchObject([18, expect.closeTo(0.13), expect.closeTo(0.72), 0]);
     expect([...data.slice(44, 48)]).toMatchObject([4.5, expect.closeTo(0.55), expect.closeTo(0.55), expect.closeTo(0.2)]);
     expect([...data.slice(48, 52)]).toMatchObject([1, expect.closeTo(0.38), 0, 0]);
-    expect([...data.slice(52, 56)]).toMatchObject([expect.closeTo(0.3), 0, 0, 0]);
+    expect([...data.slice(52, 56)]).toMatchObject([expect.closeTo(0.3), 2, 0, 0]);
   });
 });

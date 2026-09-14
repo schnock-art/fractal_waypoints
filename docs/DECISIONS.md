@@ -1,5 +1,23 @@
 # Architecture Decision Records
 
+## ADR-025: Convergence formulas use explicit status and verified root identity
+
+**Status:** Accepted
+
+Phase 9.2 selects the bounded polynomial family `p(z) = z^n - (r exp(iθ))^n`, with 2–6 evenly spaced roots, radius 0.5–2, rotation ±π, and real relaxation 0.2–1.8. Newton uses the pixel as its initial z and iterates `z - relaxation * p(z)/p'(z)`. Nova uses the first polynomial root as its initial z and adds the pixel coordinate at every iteration. This is the parameter-plane Nova variant, not a Nova Julia view. References: [Newton's method](https://mathworld.wolfram.com/NewtonsMethod.html) and [Nova implementation notes](https://hpdz.net/StillImages/Nova.htm).
+
+Newton convergence requires polynomial residual ≤ tolerance; Nova requires step size ≤ tolerance. Tolerance ranges from 1e-4 to 1e-7. Zero/near-zero derivatives (squared magnitude < 1e-20), a safety radius of 1000, and iteration exhaustion have distinct diagnostic statuses. The safety bound is not a claim of escape-set membership. Newton verifies a unique nearby analytic root before assigning a root ID. Nova fixed points generally are not roots of p, so Nova advertises convergence but not root identity. Unknown identities fall back to convergence-speed colouring, never invented basin labels. Unresolved, singular, and divergent pixels have neutral diagnostic colours.
+
+Polynomial iteration and complex division retain double-single arithmetic on WebGPU; scalar convergence tests and visual metrics use f32. CPU/GPU comparisons use stable fixtures and tolerances, not pixel-identical boundary guarantees. The derivative is used internally; no orbit derivative or distance-estimate capability is advertised. Escape-only materials are incompatible and render through a compatible fallback while saved state is retained. New parameters and material IDs fit schema 5; imports and Journey frames normalise bounded/discrete parameters. Arbitrary polynomials, free root placement, and Nova Julia variants remain follow-up work rather than implicit supported inputs.
+
+## ADR-024: Multibrot powers are bounded and branch-aware
+
+**Status:** Accepted
+
+Multibrot evaluates `z^power + c` from zero with finite power in [2, 8], default 3. It uses the existing serialisable formula-parameter map, so schema 5 remains compatible; loading normalises invalid values. Journey parameter interpolation animates power continuously.
+
+Whole powers use repeated complex multiplication (double-single on WebGPU). Fractional powers use the principal complex argument, choosing +pi on the negative real axis, and return zero explicitly at the origin. GPU fractional exponentiation uses f32 transcendental operations; its reduced precision and branch seam are disclosed in the UI. Smooth iteration uses the formula power. Multibrot advertises escape/orbit metrics, not derivative or distance-estimate capabilities. CPU/GPU parity is tolerance-based at stable points, not a promise of identical boundary pixels.
+
 ## ADR-001: WebGPU is the primary renderer
 
 **Status:** Accepted

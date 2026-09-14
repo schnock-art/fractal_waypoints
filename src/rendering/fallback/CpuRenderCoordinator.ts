@@ -8,9 +8,10 @@ import {
   getOrbitTrapAppearance,
   getOrbitTrapScale,
   sampleOrbitTrapPaletteT,
-  sampleSmoothEscapePaletteT,
 } from '../../visuals/materials/runtime';
 import { iterateFormulaDetailed } from '../../fractals/runtime';
+import { resolveCompatibleRenderConfig } from '../../visuals/materials/registry';
+import { normalizeNewtonParameters } from '../../fractals/newton';
 import { samplePalette } from '../../palettes/sampler';
 import type { RenderConfig, RgbaColor } from '../../types/config';
 import type { RenderCoordinator, RenderSurface } from '../types';
@@ -109,6 +110,7 @@ export function sampleCpuPixelColor(
   x = 0.5,
   y = 0.5,
 ): RgbaColor {
+  config = resolveCompatibleRenderConfig(config);
   const isOrbitTrap = config.material.id === 'orbitTrap';
   const sample = iterateFormulaDetailed(config, real, imaginary, isOrbitTrap);
 
@@ -135,6 +137,20 @@ function resolveMaterialColor(
   density: number,
   orbitTrapScale: number,
 ): RgbaColor {
+  if (config.material.id === 'rootBasin' || config.material.id === 'convergenceSpeed') {
+    const convergence = sample.convergence;
+    if (convergence?.status !== 'converged') {
+      if (convergence?.status === 'singular') return { r: 0.22, g: 0.12, b: 0.2, a: 1 };
+      if (convergence?.status === 'diverged') return { r: 0.1, g: 0.12, b: 0.16, a: 1 };
+      return { r: 0.025, g: 0.035, b: 0.055, a: 1 };
+    }
+    const speed = fract(sample.iteration * Math.max(config.material.parameters.density ?? 0.08, 0.0001));
+    const rooted = config.material.id === 'rootBasin' && convergence.rootIdentity >= 0;
+    const t = rooted ? (convergence.rootIdentity + 0.5) / normalizeNewtonParameters(config.fractal.parameters).degree : speed;
+    const colour = samplePalette(config.palette, t);
+    const shade = rooted ? 0.45 + 0.55 * (1 - speed) : 1;
+    return { r: colour.r * shade, g: colour.g * shade, b: colour.b * shade, a: 1 };
+  }
   if (config.material.id === 'orbitTrap') {
     const appearance = getOrbitTrapAppearance(config);
     const trapDistance = appearance.metric === 'final' ? sample.finalTrapDistance : sample.minTrapDistance;
@@ -152,7 +168,7 @@ function resolveMaterialColor(
       );
     }
 
-    const smoothT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);
+    const smoothT = fract(sample.smoothIteration * Math.max(density, 0.0001));
     const smoothColor = samplePalette(config.palette, smoothT);
     const exteriorMix = computeOrbitTrapExteriorMix(
       sample.normalizedIterations,
@@ -185,7 +201,8 @@ function resolveMaterialColor(
     const height = fract(sample.smoothIteration / Math.max(config.fractal.maxIterations, 1));
     const band = fract(height * levels);
     const contour = 1 - smoothstep(0.5 - width, 0.5 + width, Math.abs(band - 0.5));
-    const terrain = samplePalette(config.palette, fract(height * (1 + (density * 18))));
+    const magnitude = clampUnit(Math.log2(Math.max(sample.magnitude, 1.0001)) / 8);
+    const terrain = samplePalette(config.palette, fract(0.18 + (height * Math.max(levels * 0.32, 4)) + (magnitude * 0.55)));
     const base = sample.escaped ? terrain : blendColor(INTERIOR_COLOR, terrain, 0.22);
     return blendColor(base, { r: 0.01, g: 0.012, b: 0.02, a: 1 }, contour * relief);
   }
@@ -196,10 +213,12 @@ function resolveMaterialColor(
     const specular = clampUnit(config.material.parameters.specular ?? 0.32);
     const roughness = clampUnit(config.material.parameters.roughness ?? 0.55);
     const ambient = clampUnit(config.material.parameters.ambient ?? 0.28);
-    const paletteT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);
+    const fieldHeight = fract(sample.smoothIteration / Math.max(config.fractal.maxIterations, 1));
+    const magnitude = clampUnit(Math.log2(Math.max(sample.magnitude, 1.0001)) / 8);
+    const paletteT = fract(0.18 + (fieldHeight * 4.32) + (magnitude * 0.55));
     const base = samplePalette(config.palette, paletteT);
     const directional = Math.max(0, Math.cos(sample.complexPhase - lightAngle));
-    const lit = ambient + ((1 - ambient) * directional * Math.min(height / 3.4, 1.35));
+    const lit = Math.max(ambient + ((1 - ambient) * directional * Math.min(height / 3.4, 1.35)), 0.34);
     const highlight = Math.pow(directional, 6 + ((1 - roughness) * 44)) * specular;
     const shaded = {
       r: clampUnit((base.r * lit) + highlight),
@@ -210,7 +229,7 @@ function resolveMaterialColor(
     return sample.escaped ? shaded : blendColor(INTERIOR_COLOR, shaded, 0.2);
   }
 
-  const smoothT = sampleSmoothEscapePaletteT(sample.iteration, sample.magnitudeSquared, density);
+  const smoothT = fract(sample.smoothIteration * Math.max(density, 0.0001));
   return samplePalette(config.palette, smoothT);
 }
 

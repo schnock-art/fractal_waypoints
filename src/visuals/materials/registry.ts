@@ -3,6 +3,8 @@ import { cloneOrbitTrapSet, defaultOrbitTrapSet } from '../traps/orbitTraps';
 import { cloneOrbitTrapAppearance } from '../traps/orbitMaterial';
 import { cloneLensConfig, createLensConfig } from '../lenses/model';
 import { formulaRegistry } from '../../fractals/registry';
+import { isConvergentFormula } from '../../fractals/newton';
+import type { RenderConfig } from '../../types/config';
 import type { MetricCapability, MetricSamplingRequirement } from '../metrics/capabilities';
 import { validateMetricRequirements } from '../metrics/capabilities';
 
@@ -12,13 +14,23 @@ export interface MaterialDefinition {
   description: string;
   requiredMetrics: readonly MetricCapability[];
   sampling: MetricSamplingRequirement;
-  editorId: 'classic' | 'orbitTrap' | 'topographic' | 'domainColouring' | 'surface';
+  editorId: 'classic' | 'orbitTrap' | 'topographic' | 'domainColouring' | 'surface' | 'convergence';
   cpuSupport: 'full' | 'approximate';
   defaults: MaterialConfig;
   validate: (config: MaterialConfig) => string[];
 }
 
 export const materialRegistry: Record<MaterialId, MaterialDefinition> = {
+  rootBasin: {
+    id: 'rootBasin', displayName: 'Root Basins', description: 'Distinct root colours with convergence-speed shading. Unresolved roots use neutral diagnostic shading.',
+    requiredMetrics: ['rootIdentity', 'convergenceRate'], sampling: 'point', editorId: 'convergence', cpuSupport: 'full',
+    defaults: { id: 'rootBasin', parameters: { density: 0.08 } }, validate: validateClassicMaterial,
+  },
+  convergenceSpeed: {
+    id: 'convergenceSpeed', displayName: 'Convergence Speed', description: 'Palette bands show the number of steps needed to settle. Unresolved, singular, and divergent orbits remain distinguishable.',
+    requiredMetrics: ['convergenceRate'], sampling: 'point', editorId: 'convergence', cpuSupport: 'full',
+    defaults: { id: 'convergenceSpeed', parameters: { density: 0.08 } }, validate: validateClassicMaterial,
+  },
   classic: {
     id: 'classic',
     displayName: 'Classic',
@@ -85,6 +97,8 @@ export interface MaterialPreset {
 }
 
 export const materialPresets: MaterialPreset[] = [
+  { id: 'rootAtlas', name: 'Root Atlas', description: 'Newton root identities with shaded convergence bands.', material: { id: 'rootBasin', parameters: { density: 0.08 } }, lens: createLensConfig() },
+  { id: 'novaSilk', name: 'Nova Silk', description: 'Flowing convergence-speed bands for Newton and Nova.', material: { id: 'convergenceSpeed', parameters: { density: 0.06 } }, lens: createLensConfig(1.08, 0.12) },
   {
     id: 'classic',
     name: 'Classic Escape',
@@ -235,6 +249,14 @@ export function validateMaterialConfig(config: MaterialConfig): string[] {
 
 export function getMaterialCompatibility(formulaId: import('../../types/config').FormulaId, materialId: MaterialId) {
   return validateMetricRequirements(formulaRegistry[formulaId].supportedMetrics, materialRegistry[materialId].requiredMetrics);
+}
+
+/** Preserve saved looks, but never feed escape-only materials invented convergence metrics. */
+export function resolveCompatibleRenderConfig(config: RenderConfig): RenderConfig {
+  if (getMaterialCompatibility(config.fractal.formulaId, config.material.id).compatible) return config;
+  const fallback = isConvergentFormula(config.fractal.formulaId)
+    ? (config.fractal.formulaId === 'newton' ? 'rootBasin' : 'convergenceSpeed') : 'classic';
+  return { ...config, material: createMaterialConfig(fallback) };
 }
 
 function validateClassicMaterial(config: MaterialConfig): string[] {
