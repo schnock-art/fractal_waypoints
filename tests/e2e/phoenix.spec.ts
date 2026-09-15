@@ -33,6 +33,9 @@ test('Phoenix tunes, renders materials, reloads and compares on WebGPU', async (
   await page.getByLabel('Orbit memory', { exact: true }).fill('-0.47');
   await page.getByText('Phoenix shape', { exact: true }).click();
   await page.getByLabel('Phoenix real', { exact: true }).fill('0.545');
+  await page.getByRole('button', { name: 'Palette', exact: true }).click();
+  await page.getByRole('slider', { name: /^Offset/ }).fill('0.37');
+  await visibleFrame(canvas);
   await page.getByRole('button', { name: 'Visual Lab', exact: true }).click();
   for (const name of ['Filament', 'Topographic Atlas', 'Molten Metal']) {
     await page.getByRole('button', { name: new RegExp(`^${name}`) }).click();
@@ -41,6 +44,8 @@ test('Phoenix tunes, renders materials, reloads and compares on WebGPU', async (
   await canvas.screenshot({ path: testInfo.outputPath('phoenix-surface.png') });
   await page.reload();
   await expect(page.getByLabel('Orbit memory', { exact: true })).toHaveValue('-0.47');
+  await page.getByRole('button', { name: 'Palette', exact: true }).click();
+  await expect(page.getByRole('slider', { name: /^Offset/ })).toHaveValue('0.37');
   await visibleFrame(canvas);
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
   const sides = page.locator('.comparison-panel__side-card');

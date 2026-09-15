@@ -1,4 +1,5 @@
 import type { PaletteConfig, PaletteRepeatMode, PaletteStop, RgbaColor } from '../types/config';
+import { readPaletteOffset } from './offset';
 
 export interface PaletteValidationIssue {
   message: string;
@@ -26,7 +27,7 @@ export function normalizePalette(config: PaletteConfig): PaletteConfig {
 
   return {
     ...config,
-    offset: Number.isFinite(config.offset) ? config.offset : 0,
+    offset: readPaletteOffset(config),
     scale: Number.isFinite(config.scale) && Math.abs(config.scale) > Number.EPSILON ? config.scale : 1,
     stops,
   };

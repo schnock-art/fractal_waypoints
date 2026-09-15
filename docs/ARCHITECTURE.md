@@ -100,6 +100,8 @@ This keeps the main canvas visually primary while still allowing each workflow t
 
 ## Domain model
 
+Phase 10.1 adds a deliberately closed two-target semantic seam in `src/parameters/semantic.ts`. Phoenix owns `formula.phoenix.memory`; the palette domain owns existing `palette.offset`. Domain accessors supply bounds/defaults and immutable writes; a narrow continuous-number descriptor separates domain bounds from display hints. Unknown, inactive and invalid writes are explicit no-ops with reasons. Existing editors and palette modulation reuse the domain writes; Phoenix is not added to the waveform target union. See [SEMANTIC_PARAMETERS.md](SEMANTIC_PARAMETERS.md) and ADR-030. This is neither a universal parameter registry nor the future final-frame validator.
+
 `RenderConfig` contains `schemaVersion`, `viewport`, `fractal`, `material`, `lens`, `palette`, `modulations`, and `quality`. Version 2 migrated the narrow colouring selection to serialisable material and lens configurations; version 3 added structured orbit-trap sets; version 4 migrated exposure/vignette to ordered lens effects and added deterministic parameter modulations. The common render configuration remains the interchange format for URLs, Waypoints, comparisons, Journey keyframes, and exports.
 
 `NavigationSettings` contains schema versioned input bindings and movement parameters such as pan speed, zoom speed, rotation speed, and optional precision or boost modifiers. It should remain serialisable so user preferences and future presets can be stored and restored cleanly.

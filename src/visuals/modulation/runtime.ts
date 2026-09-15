@@ -2,6 +2,7 @@ import { cloneOrbitTrapAppearance } from '../traps/orbitMaterial';
 import { cloneOrbitTrapSet } from '../traps/orbitTraps';
 import { cloneLensConfig, getLensEffect, updateLensEffect } from '../lenses/model';
 import type { ParameterModulation, RenderConfig } from '../../types/config';
+import { writeSemanticParameter } from '../../parameters/semantic';
 
 export function cloneModulations(modulations: ParameterModulation[] = []): ParameterModulation[] {
   return modulations.map((modulation) => ({ ...modulation }));
@@ -48,7 +49,7 @@ export function applyModulations(config: RenderConfig, timeSeconds: number): Ren
 function applyModulationValue(config: RenderConfig, target: ParameterModulation['target'], value: number): RenderConfig {
   switch (target) {
     case 'palette.offset':
-      return { ...config, palette: { ...config.palette, offset: config.palette.offset + value } };
+      return writeSemanticParameter(config, target, config.palette.offset + value).config;
     case 'material.orbitAppearance.emission': {
       const appearance = cloneOrbitTrapAppearance(config.material.orbitAppearance);
       return { ...config, material: { ...config.material, orbitAppearance: { ...appearance, emission: clamp(appearance.emission + value, 0, 0.7) } } };

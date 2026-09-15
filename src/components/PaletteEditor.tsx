@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { downloadPalettePng } from '../palettes/export';
+import { paletteOffsetParameter, setPaletteOffset } from '../palettes/offset';
 import {
   addPaletteStop,
   cyclePaletteRepeatMode,
@@ -323,15 +324,12 @@ export function PaletteEditor({ palette, onChange }: PaletteEditorProps) {
             <span>Offset</span>
             <input
               type="range"
-              min="-1"
-              max="1"
-              step="0.01"
+              min={paletteOffsetParameter.display.min}
+              max={paletteOffsetParameter.display.max}
+              step={paletteOffsetParameter.display.step}
               value={palette.offset}
               onChange={(event) =>
-                onChange({
-                  ...palette,
-                  offset: Number(event.target.value),
-                })
+                onChange(setPaletteOffset(palette, Number(event.target.value)))
               }
             />
             <strong>{palette.offset.toFixed(2)}</strong>

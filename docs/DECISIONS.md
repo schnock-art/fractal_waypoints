@@ -1,5 +1,15 @@
 # Architecture Decision Records
 
+## ADR-030: Domain-owned numeric targets, tested with two owners
+
+**Status:** Accepted — limited Phase 10.1 pressure test.
+
+Use a closed semantic dispatcher over domain-owned accessors for `formula.phoenix.memory` and `palette.offset`. The first address qualifies the formula owner without changing the persisted `memory` field; the second preserves an existing persisted modulation ID. Do not traverse arbitrary object paths or derive addresses from UI/GPU layout. Callers supply an explicit configuration, not an implicit focused view.
+
+Memory is continuous and clamped to Phoenix's domain range; it is inactive for other formulas. Palette offset is finite, unbounded and linearly interpolated, not wrapped; its slider range is not a mathematical limit. Metadata distinguishes display hints and modulation eligibility from actual waveform-runtime support. Phoenix is not added to that runtime in this slice.
+
+Interactive writes reject non-finite input and return unknown/inactive/invalid reasons without mutation; imports retain their domain-default repair policy. Descriptor reads normalize selected values without mutating the document. A final evaluated-frame validator, discrete/event/state semantics, trap instance identities, and new persisted mapping formats are not inferred from this experiment. [SEMANTIC_PARAMETERS.md](SEMANTIC_PARAMETERS.md) records evidence and review gates before broadening.
+
 ## ADR-029: Separate authored world state from performance evaluation
 
 **Status:** Accepted — Phase 10.0 design; runtime implementation follows in 10.2/10.3.

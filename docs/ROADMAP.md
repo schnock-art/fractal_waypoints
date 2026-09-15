@@ -2,14 +2,14 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and the **Phase 10.0 design** are complete. The next implementation slice is **Phase 10.1**. Perform and the new evaluator are not implemented yet. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3, the **Phase 10.0 design**, and the **Phase 10.1 two-target semantic pressure test** are complete. Next is Phase 10.2, after reviewing the pressure-test findings. Perform and the new evaluator are not implemented yet. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
 | Phases 1–7 | Core explorer: navigation, Waypoints, Discover, Compare, Journey | Delivered foundation; historical follow-ups remain |
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
-| Phase 10 | The Instrument: make the existing world playable | 10.0 design complete; 10.1 semantic controls next |
+| Phase 10 | The Instrument: make the existing world playable | 10.0 design and scoped 10.1 complete; 10.2 next |
 | Phases 11–12 | Connections, then Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -410,11 +410,16 @@ Status on September 15, 2026: design complete in [WORKSPACE_DESIGN.md](WORKSPACE
 
 ### Phase 10.1 — Semantic parameter surface
 
-- [ ] Expose stable semantic parameter identities incrementally, with domain owner, type (numeric/discrete/event/state), bounds, defaults, units, interpolation rules, modulation eligibility, and useful display metadata.
-- [ ] Preserve existing persisted target IDs. Never address controls through slider order, DOM identifiers, React state paths, or shader uniform offsets; do not build a giant universal registry.
-- [ ] Consolidate incomplete metadata and distributed validation where the first real consumers require it. Define inactive/incompatible-target behaviour and a final domain validation boundary.
+- [x] Expose domain-owned descriptors/accessors for Phoenix Orbit memory and palette offset only: continuous numeric kind, owner, bounds/defaults/units, linear interpolation, modulation eligibility, and separate display hints.
+- [x] Preserve existing persisted target IDs. Never address controls through slider order, DOM identifiers, React state paths, or shader uniform offsets; do not build a giant universal registry.
+- [x] Share these two domain write policies with existing editors and palette modulation; return explicit unknown/inactive/invalid results without mutating inputs. Keep import repair distinct from command rejection.
+- [x] Test semantic addressing, formula availability, bounds/non-finite inputs, serialization compatibility, and shared use by editing helpers, Journey, and legacy palette modulation.
+
+Status: scoped two-target implementation complete. [Pressure-test findings](SEMANTIC_PARAMETERS.md) and ADR-030 record the limits: no new waveform target, no universal final validator, no discrete/event/state protocol, and no trap reordering. Review before broadening. The original broader gates remain below, not falsely claimed by two continuous targets.
+
+- [ ] Before admitting discrete/event/state targets, define their actual transition and scheduling contracts and add tests; this slice intentionally does not model them.
+- [ ] Complete the final evaluated-frame validation boundary in 10.2; current semantic validation covers only selected writes.
 - [ ] Resolve bounded positional trap-slot addressing before any reorderable target model; use stable instance identities and a migration only if reordering is introduced.
-- [ ] Test semantic addressing, bounds/non-finite inputs, discrete behaviour, serialization compatibility, and shared use by editing, Journey, and modulation.
 
 Definition of done: selected controls can be addressed independently of their UI or renderer, with domain-owned behaviour. Metric outputs remain the separate Phase 10.4 contract, not parameter metadata inferred from material textures.
 
@@ -498,6 +503,8 @@ These preserve the former Phase 10 requirements; they are not cancelled and are 
 - [ ] Apply the [formula admission checklist](FORMULA_ADMISSION.md) to future specialists: metric fit, interactive performance, Discover value, visual distinction, and testability. A new abstraction is appropriate when the mathematical contract requires it.
 
 ### Polish backlog — Not instrument prerequisites
+
+- [ ] Let Palette editing accurately represent imported/modulated offsets outside its −1…1 slider window (for example, a numeric input); preserve unbounded domain values and test repeat/mirror/clamp behaviour. (Phase 10.1 UX review.)
 
 - [ ] Add one-click paired power-sweep Compare and Journey templates so newcomers need not assemble keyframes manually. (From Phase 9.1.)
 - [ ] Add an on-canvas convergence inspector/legend so diagnostics are available away from the viewport centre without opening advanced controls. (From Phase 9.2.)

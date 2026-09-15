@@ -1,5 +1,6 @@
 import { normalizePhoenixParameters, phoenixParameterDefinitions } from '../fractals/phoenix';
 import type { RenderConfig } from '../types/config';
+import { writeSemanticParameter } from '../parameters/semantic';
 
 export function PhoenixControls({ config, onChange }: { config: RenderConfig; onChange: (config: RenderConfig) => void }) {
   if (config.fractal.formulaId !== 'phoenix') return null;
@@ -7,7 +8,9 @@ export function PhoenixControls({ config, onChange }: { config: RenderConfig; on
   const control = (definition: typeof phoenixParameterDefinitions[number]) => <label key={definition.id}>
     <span>{definition.label}</span>
     <input aria-label={definition.label} type="range" min={definition.min} max={definition.max} step={definition.step} value={parameters[definition.id]}
-      onChange={(event) => onChange({ ...config, fractal: { ...config.fractal, parameters: normalizePhoenixParameters({ ...parameters, [definition.id]: Number(event.target.value) }) } })} />
+      onChange={(event) => onChange(definition.id === 'memory'
+        ? writeSemanticParameter(config, 'formula.phoenix.memory', Number(event.target.value)).config
+        : { ...config, fractal: { ...config.fractal, parameters: normalizePhoenixParameters({ ...parameters, [definition.id]: Number(event.target.value) }) } })} />
     <strong>{parameters[definition.id].toFixed(5)}</strong>
   </label>;
   return <div className="control-panel__section">
