@@ -1,14 +1,26 @@
 # Architecture Decision Records
 
+## ADR-029: Separate authored world state from performance evaluation
+
+**Status:** Accepted — Phase 10.0 design; runtime implementation follows in 10.2/10.3.
+
+The application owns authored base configurations separately from effective render values. A shared explicit-time evaluator consumes base/Journey data and semantic modulation/overrides; its output never becomes the next base or an automatic URL update. Existing modulation must be applied once, not again after `sampleAnimationClip`. Renderer and workspace panels do not own the transport or authoritative performance data.
+
+Workspace switching preserves domain state and transport. The first Perform workspace targets Primary only; Compare selection and Julia focus cannot implicitly retarget controls or recording. User-directed promotion copies a named source into Primary without modifying the source. This bounds the first implementation and avoids introducing multi-view recording semantics before a concrete need.
+
+Static visible-frame captures bake evaluated values and exclude their already-applied modulation; authored-base saves retain behaviour definitions. Performance setup is separate from the mathematical view and references one canonical set of domain mappings. New setup/take/project formats require versioned persistence and compatibility tests when implemented; no schema changes are made by this ADR. Reload/import starts stopped, not with automatically resumed motion or recording.
+
+The consequence is an app-level ownership/evaluation change before live modulation ships, not another renderer or a required state-management framework. Navigation, action semantics, persistence responsibilities, acceptance specifications, alternatives to implicit multi-view targeting, and staged implementation are recorded in [WORKSPACE_DESIGN.md](WORKSPACE_DESIGN.md). ADR-026's external-source and feedback constraints remain unchanged; Phase 11/12 are still unscheduled.
+
 ## ADR-028: Workspaces share one mathematical world
 
-**Status:** Accepted — ownership boundary; workspace implementation and persistence design remain Phase 10.0 work.
+**Status:** Accepted — ownership boundary; Phase 10.0 design is now recorded in WORKSPACE_DESIGN.md and ADR-029; workspace implementation remains future work.
 
 Explore, Perform, and future Patch are different benches over the same mathematical world. They share semantic domain parameters, rendering and analysis contracts, and reusable Waypoint/Journey/modulation/persistence mechanisms. Workspace switching must preserve the current world; it must not implicitly clone configurations, create separate application models, or introduce per-workspace renderer backends. Explicit user-directed multi-view configurations such as Compare remain valid.
 
 This prevents performance controls and future graph editing from becoming parallel applications with incompatible saved state. Workspaces orchestrate domain operations; their UI identities do not become parameter addresses. ADR-026 continues to govern semantic controls, evaluation order, external adapters, and feedback safeguards.
 
-This decision does not select navigation, assign every state field, prescribe a new schema, or implement Perform/Patch. Phase 10.0 must decide global/local UI state, base/effective state ownership, performance-setup persistence, workflow placement, and active-view semantics; see [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches). Phase numbering and feature sequencing remain roadmap matters, not new architectural abstractions.
+This decision itself does not select navigation, assign every state field, prescribe a new schema, or implement Perform/Patch. The subsequent [Phase 10.0 design](WORKSPACE_DESIGN.md) resolves global/local UI state, base/effective ownership, performance-setup persistence responsibilities, workflow placement, and active-view semantics. Phase numbering and feature sequencing remain roadmap matters, not new architectural abstractions.
 
 ## ADR-027: Admit Phoenix through existing escape metrics; gate specialist families
 

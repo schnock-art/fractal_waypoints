@@ -2,14 +2,14 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 is complete. The next planned slice is **Phase 10.0**, not yet started. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and the **Phase 10.0 design** are complete. The next implementation slice is **Phase 10.1**. Perform and the new evaluator are not implemented yet. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
 | Phases 1–7 | Core explorer: navigation, Waypoints, Discover, Compare, Journey | Delivered foundation; historical follow-ups remain |
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
-| Phase 10 | The Instrument: make the existing world playable | Committed next direction; start with 10.0 design |
+| Phase 10 | The Instrument: make the existing world playable | 10.0 design complete; 10.1 semantic controls next |
 | Phases 11–12 | Connections, then Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -395,16 +395,18 @@ The existing sidebar modes are focused workflows, not an already implemented Exp
 
 Goal: decide information architecture and state responsibilities before implementing the performance surface. This is not an aesthetic redesign.
 
-- [ ] Define Explore/Perform/future Patch boundaries, navigation, and where Visual Lab, palette editing, Waypoints, Discover, Compare, and Journey live without losing existing workflows.
-- [ ] Separate shared mathematical/domain state, performance setup, and ephemeral UI state; identify global versus workspace-local ownership and lifecycle.
-- [ ] Decide what belongs in URLs, project files, session persistence, and Waypoints, including versioning/migration needs. Do not choose a new schema merely from this roadmap.
-- [ ] Specify base versus evaluated configuration ownership, Journey playback/recording, restoration, and what a workspace switch retains. Address current playback writing evaluated values into `mainConfig` and therefore URL state.
-- [ ] Define how an explicitly selected Compare side or Julia preview relates to Perform; do not silently collapse independent views or duplicate the world per bench.
-- [ ] Validate navigation and state flows with a small UX/state design, leaving room for future Patch without implementing a graph or general framework.
+- [x] Define Explore/Perform/future Patch boundaries, navigation, and where Visual Lab, palette editing, Waypoints, Discover, Compare, and Journey live without losing existing workflows.
+- [x] Separate shared mathematical/domain state, performance setup, and ephemeral UI state; identify global versus workspace-local ownership and lifecycle.
+- [x] Decide what belongs in URLs, project files, session persistence, and Waypoints, including versioning/migration needs. Do not choose a new schema merely from this roadmap.
+- [x] Specify base versus evaluated configuration ownership, Journey playback/recording, restoration, and what a workspace switch retains. Address current playback writing evaluated values into `mainConfig` and therefore URL state.
+- [x] Define how an explicitly selected Compare side or Julia preview relates to Perform; do not silently collapse independent views or duplicate the world per bench.
+- [x] Validate navigation and state flows with a small UX/state design, leaving room for future Patch without implementing a graph or general framework.
 
 Acceptance flow: discover Phoenix → save a Waypoint → enter Perform on the same world → pin Orbit memory and palette controls → modulate and record → later replace the LFO with hardware through Patch without rebuilding the fractal configuration. The hardware/Patch portion is a design walkthrough only, not Phase 10 implementation.
 
 Definition of done: documented workspace/navigation and ownership decisions, persistence responsibilities, and acceptance scenarios are specific enough for incremental runnable slices. No guessed schema or navigation redesign is required by this revision.
+
+Status on September 15, 2026: design complete in [WORKSPACE_DESIGN.md](WORKSPACE_DESIGN.md), with ownership invariants recorded in ADR-029. Desk-checked acceptance scenarios specify later automated/browser tests; no new workspace, evaluator, or persistence runtime is claimed. Explore retains its six focused tools; Perform initially targets Primary, with explicit promotion from Compare/Julia. Base state is separate from evaluated output; shared transport survives workspace changes. Concrete versioned formats and visual layout are implementation work under these decided responsibilities.
 
 ### Phase 10.1 — Semantic parameter surface
 
@@ -424,6 +426,7 @@ Definition of done: selected controls can be addressed independently of their UI
 - [ ] Specify composition/order (including add/replace/priority), target units, inactive mappings, clocks, and smoothing/noise state. Keep continuous signals, discrete events, and persistent state distinct in evaluation, persistence, and replay; they are not all floats sampled at 60 Hz.
 - [ ] Preserve base settings separately from effective values: base configuration → Journey interpolation → modulation/future external application → domain normalisation/validation → effective configuration → renderer. Never accumulate evaluated values into the base.
 - [ ] Share explicit-time evaluation between live playback and deterministic Journey/export; test ordering, repeated evaluation, seeking, reset, bounds, and replay of stateful transforms.
+- [ ] Implement the [10.0 base/transport/snapshot contract](WORKSPACE_DESIGN.md): stop playback writing effective frames into base/URL state, apply legacy modulation exactly once, and bake static captures without changing the active setup.
 
 Definition of done: internal modulation is independently playable and reproducible. No MIDI, audio, synth, graph-editor, or feedback runtime is introduced.
 
@@ -433,6 +436,7 @@ Definition of done: internal modulation is independently playable and reproducib
 - [ ] Support macros with explicit inspectable mappings. Form, Energy, Glow, Surface, Colour, Chaos, and Motion are design hypotheses to test, not hardcoded universal mathematical meanings.
 - [ ] Define and expose freeze, pause/resume, manual override, record, restore, and mapping reset behaviour, including what each action affects and how users recover their base settings.
 - [ ] Verify workspace switching, keyboard/accessibility behaviour, incompatible formula targets, recording/replay, and the Phoenix acceptance flow from 10.0.
+- [ ] Implement explicit Primary scope and Compare/Julia promotion, global activity/Stop visibility, and versioned setup/take save/load; do not claim reproducible performance recording from navigation capture alone. Follow [the design acceptance specifications](WORKSPACE_DESIGN.md#6-design-walkthrough-and-acceptance-specifications).
 
 Definition of done: Perform feels like playing selected relationships, not Visual Lab with more sliders. Users need neither a graph nor knowledge of external protocols to play or return to Explore safely.
 
@@ -500,8 +504,9 @@ These preserve the former Phase 10 requirements; they are not cancelled and are 
 - [ ] Add a one-click Phoenix versus matching zero-memory Julia comparison, so the recurrence relationship can be explored without manually copying the constant. (From Phase 9.3.)
 - [ ] Add selectable post-process quality tiers; the first HDR slice intentionally uses a stable half-resolution bloom target. (From Phase 8.3.)
 - [ ] Surface asynchronous GPU validation/device errors in renderer diagnostics so a failed frame cannot leave a misleading healthy WebGPU status. (From Phase 8.3 regression follow-up.)
+- [ ] Verify first-Perform UX for focus-loss gesture cancellation, unavailable-pin cleanup, distinct freeze/pause indicators, and honest unsaved-take/recovery messaging. Safe scope and recording indicators are required in 10.3; further recovery convenience may follow explicit save/load. (Phase 10.0 UX review.)
 
-These remain worthwhile independent improvements, not gates to starting 10.0. Other unchecked historical items remain visible at their original phases: tutorial persistence/coverage, CPU/GPU visual parity and styled-Waypoint verification, sharing fallback, and capability-gated distance-estimate materials. Audit their remaining scope before claiming completion; this revision does not retroactively check them off. Phase 10.0 should also address the UX risk of recording, override, and reset acting on an unclear active Compare side or silently changing the saved base view.
+These remain worthwhile independent improvements, not gates to starting the instrument work. Other unchecked historical items remain visible at their original phases: tutorial persistence/coverage, CPU/GPU visual parity and styled-Waypoint verification, sharing fallback, and capability-gated distance-estimate materials. Audit their remaining scope before claiming completion; this revision does not retroactively check them off. Phase 10.0's design addresses ambiguous recording/override/reset targets and base ownership; implementation verification belongs to 10.2/10.3.
 
 ## Historical implementation slice — Rendering foundation
 

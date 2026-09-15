@@ -34,17 +34,19 @@ Formula metrics can later feed independent statistical analysis and export witho
 
 Explore investigates and configures with the existing product language. Perform presents pinned immediate controls, inspectable macros, active modulation values, triggers, recording, and safe restoration. Patch later edits relationships over an independently validated serialisable model; it must not be required to play. These roles describe the committed direction, not current UI capabilities.
 
-### Current implementation and Phase 10.0 decisions
+### Current implementation and completed Phase 10.0 design
 
 `src/app/workspaceModes.ts` currently defines focused sidebar workflows (`visualLab`, `palette`, `waypoints`, `discover`, `compare`, `journey`), not the proposed top-level benches. `App.tsx` owns `mainConfig`, explicit comparison configurations, Journey state, and local active-workspace state. Journey playback writes sampled/evaluated configurations into `mainConfig`, whose changes also update the URL. There is not yet a separate persistent performance setup or general live base/effective evaluator. Existing rendering/configuration seams support the direction, but these state responsibilities need design rather than a cosmetic shell rename.
 
-| Responsibility | Constraint | Decision deferred to Phase 10.0 |
+The [Phase 10.0 design](WORKSPACE_DESIGN.md) is complete; these decisions describe the target implementation, not features already shipped. ADR-029 records authored/effective ownership and explicit Primary scope.
+
+| Responsibility | Constraint | Phase 10.0 decision |
 | --- | --- | --- |
-| Mathematical world | Shared domain model, not one clone per workspace | Ownership/lifecycle of base and evaluated values; explicit Compare-side/preview selection |
-| Performance setup | Semantic controls and mappings, separate from mathematical meaning | Which pins, macros, mappings, transport/recording state are saved and where |
-| Ephemeral UI | Layout and selection must not define domain identity | Global versus workspace-local navigation, panels, selection, and reset behaviour |
-| Persistence | Versioned, reproducible data; preserve existing saved views | URL/project/session/Waypoint responsibilities and any necessary migrations |
-| Workflow placement | Preserve Visual Lab, palette editing, Waypoints, Discover, Compare, Journey | Navigation hierarchy and transitions into/out of Perform and future Patch |
+| Mathematical world | Shared domain model, not one clone per workspace | Separate authored base and effective output; Perform targets Primary, with explicit promotion from Compare/Julia |
+| Performance setup | Semantic controls and mappings, separate from mathematical meaning | Save pins/macros and mapping references with project/setup data; shared transient transport survives workspace switches |
+| Ephemeral UI | Layout and selection must not define domain identity | Remember Explore tool locally; global settings/activity controls; focus never retargets performance |
+| Persistence | Versioned, reproducible data; preserve existing saved views | Address bar follows base; labelled visible-frame captures bake motion; future project/take formats versioned; recovery starts stopped |
+| Workflow placement | Preserve Visual Lab, palette editing, Waypoints, Discover, Compare, Journey | Six tools remain within Explore; Perform is a peer workspace; Patch hidden until intentionally implemented |
 
 Acceptance walkthrough: discover Phoenix, save a Waypoint, enter Perform on the same world, pin Orbit memory and palette controls, modulate and record. A future Patch change can replace the internal source with hardware without reconstructing the fractal. Hardware and graph portions are future design checks, not Phase 10 runtime scope.
 

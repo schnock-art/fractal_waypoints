@@ -1,6 +1,6 @@
 # Interoperability seams — Phase 9 audit and second-era direction
 
-This is architecture guidance, not an implemented external-control API. The original post-9.2 audit remains applicable after Phase 9.3 completion. ADR-026 records the semantic boundaries; ADR-028 adds shared-world workspace ownership. Phase 10.0 is now the next planned slice. Nothing here adds integration dependencies or changes rendering behaviour.
+This is architecture guidance, not an implemented external-control API. The original post-9.2 audit remains applicable after Phase 9.3 completion. ADR-026 records the semantic boundaries; ADR-028 adds shared-world workspace ownership. The [Phase 10.0 design](WORKSPACE_DESIGN.md) and ADR-029 now specify ownership and persistence responsibilities; Phase 10.1 is next. Nothing here adds integration dependencies or changes rendering behaviour.
 
 ## Current configuration and modulation flow
 
@@ -46,7 +46,7 @@ Fractal analysis may expose a histogram and its normalised probabilities. An ext
 
 ## Sequencing after Phase 9.3
 
-1. **Phase 10.0:** specify workspace responsibilities and base/effective state ownership before choosing navigation or persistence schemas. Current Journey playback writes evaluated values into `mainConfig` and its URL mirror; there is no separate saved performance setup. Decide active Compare-side/preview semantics rather than cloning configurations per workspace. See [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches).
+1. **Phase 10.0 — design complete:** [WORKSPACE_DESIGN.md](WORKSPACE_DESIGN.md) specifies Explore/Perform hierarchy, separate base/effective ownership, Primary-only performance with explicit Compare/Julia promotion, and persistence responsibilities. Current Journey playback still writes evaluated values into `mainConfig` and its URL mirror; there is no separate saved performance setup. Correcting that implementation belongs to 10.2/10.3, not this completed documentation phase.
 2. **Phase 10.1:** expose semantic metadata incrementally and address bounds, units, inactive-target behaviour, distributed normalisation, and final validation. Preserve existing IDs and resolve trap instance identities only if reordering requires them.
 3. **Phase 10.2:** separate internal source evaluation from target application through a small serialisable source/transform/mapping/target model. Define composition (add/replace/priority), clocks, timestamps, ordering, source lifetime, and deterministic stateful evaluation. Do not model events or persistent state as waveform samples. Start with justified scale/offset/invert/clamp/curve/smoothing transforms; more elaborate transforms are deferred. Phase 10.3 exposes the proven mechanisms through Perform.
 4. **Phase 10.4:** implement the metric snapshot contract and aggregation budget separately from material textures and consumer interpretations. Validate internal Discover/diagnostic/Perform-meter/region-comparison uses before external consumers.
