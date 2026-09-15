@@ -1,5 +1,17 @@
 # Architecture Decision Records
 
+## ADR-031: One explicit-time internal evaluator, separate from authored state
+
+**Status:** Accepted — Phase 10.2, existing internal targets only.
+
+Separate Journey interpolation from modulation evaluation and final typed-frame validation. App preview time and a cloned playback clip are distinct from `mainConfig`; evaluated frames do not update authored state or URL history. View resize is presentation-local during preview and surface callbacks cannot copy formula/palette/effects back into the base. Live sampling and exports use the same path once.
+
+An optional independently versioned `modulationProgram` holds sources and ordered mappings; legacy entries adapt into this model in memory. Reject configurations containing both a program and nonempty legacy entries. Keep the outer schema and existing saved target IDs; future-version portability beyond this optional extension must be reviewed before project-level promises. No new targets are admitted, including Phoenix memory.
+
+Mapping order is priority, with explicit add/replace and existing target-local bounds. Disabled/inactive mappings are no-ops with inactive reasons; invalid signals are skipped with issues. Sources are internal waveforms/seeded held noise. Smoothing is a bounded 16-point trailing mean rather than hidden frame-history state, giving reproducible seeks without a scheduler or general signal graph. There are no discrete/event/state, external-control or feedback semantics.
+
+Final evaluation rejects non-finite data before repair, composes current domain validation/normalisers and resolves compatibility only in effective output. Static capture bakes output without motion definitions; explicit base saves preserve them. Full Perform controls, overrides, freeze and take persistence are deferred to 10.3. [MODULATION_EVALUATION.md](MODULATION_EVALUATION.md) records limits, migration policy and review questions rather than claiming a universal architecture.
+
 ## ADR-030: Domain-owned numeric targets, tested with two owners
 
 **Status:** Accepted — limited Phase 10.1 pressure test.

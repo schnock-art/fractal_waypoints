@@ -167,7 +167,7 @@ export function RenderView({
   }, [renderingEnabled]);
 
   useEffect(() => {
-    if (!hasKeyboardFocus || !isInteractive) {
+    if (!hasKeyboardFocus || !isInteractive || !interactionEnabled) {
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
@@ -207,7 +207,15 @@ export function RenderView({
       }
       lastFrameTimeRef.current = null;
     };
-  }, [hasKeyboardFocus, isInteractive, onConfigChange]);
+  }, [hasKeyboardFocus, isInteractive, interactionEnabled, onConfigChange]);
+
+  useEffect(() => {
+    if (!interactionEnabled) {
+      dragRef.current = null;
+      activeActionsRef.current.clear();
+      setHasKeyboardFocus(false);
+    }
+  }, [interactionEnabled]);
 
   useEffect(() => {
     if (!hasKeyboardFocus || !isInteractive || !interactionEnabled) {
@@ -227,8 +235,10 @@ export function RenderView({
       return;
     }
 
-    void surfaceRef.current.render(config);
-  }, [config, renderingEnabled]);
+    void surfaceRef.current.render(interactionEnabled ? config : {
+      ...config, viewport: updateAspectRatio(config.viewport, sizeRef.current.width / Math.max(sizeRef.current.height, 1)),
+    });
+  }, [config, renderingEnabled, interactionEnabled]);
 
   useEffect(() => {
     if (!canvasRef.current) {
@@ -243,7 +253,7 @@ export function RenderView({
     resizeSurface();
 
     return () => observer.disconnect();
-  }, [config.quality.pixelDensity, onConfigChange]);
+  }, [config.quality.pixelDensity, interactionEnabled, onConfigChange]);
 
   function resizeSurface() {
     const canvas = canvasRef.current;
@@ -265,6 +275,11 @@ export function RenderView({
     surface.resize(deviceWidth, deviceHeight);
 
     const nextAspectRatio = rect.width / Math.max(rect.height, 1);
+    if (!interactionEnabled) {
+      // Presentation geometry must not write an evaluated frame back into authored state.
+      void surface.render({ ...configRef.current, viewport: updateAspectRatio(configRef.current.viewport, nextAspectRatio) });
+      return;
+    }
     if (Math.abs(configRef.current.viewport.aspectRatio - nextAspectRatio) > 1e-6) {
       onConfigChange({
         ...configRef.current,

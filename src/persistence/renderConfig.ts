@@ -3,6 +3,7 @@ import { normalizeMultibrotPower } from '../fractals/multibrot';
 import { normalizePhoenixParameters } from '../fractals/phoenix';
 import { normalizeNewtonParameters } from '../fractals/newton';
 import { SCHEMA_VERSION } from '../types/config';
+import { isInternalModulationProgram } from '../visuals/modulation/program';
 import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
 import { normalizeOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
 import { cloneLensConfig, createLensConfig, normalizeLensConfig } from '../visuals/lenses/model';
@@ -25,6 +26,8 @@ export function migrateRenderConfig(value: unknown): RenderConfig | null {
     ? cloneMaterial(value.material)
     : migrateLegacyColouring(value.colouring);
   const lens = migrateLens(value.lens);
+  if (value.modulationProgram !== undefined && (!isInternalModulationProgram(value.modulationProgram)
+    || (Array.isArray(value.modulations) && value.modulations.length > 0))) return null;
 
   return {
     ...(value as Omit<RenderConfig, 'schemaVersion' | 'material' | 'lens' | 'modulations'>),
@@ -39,6 +42,7 @@ export function migrateRenderConfig(value: unknown): RenderConfig | null {
     material,
     lens,
     modulations: Array.isArray(value.modulations) ? value.modulations.filter(isParameterModulation).map((modulation) => ({ ...modulation })) : [],
+    ...(value.modulationProgram ? { modulationProgram: structuredClone(value.modulationProgram) } : {}),
   };
 }
 

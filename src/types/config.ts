@@ -1,3 +1,5 @@
+import type { InternalModulationProgram } from '../visuals/modulation/program';
+
 export const SCHEMA_VERSION = 5 as const;
 export const NAVIGATION_SCHEMA_VERSION = 1 as const;
 export const WAYPOINT_SCHEMA_VERSION = 1 as const;
@@ -162,6 +164,8 @@ export interface RenderConfig {
   material: MaterialConfig;
   lens: LensConfig;
   modulations: ParameterModulation[];
+  /** Optional independently versioned replacement. Must not coexist with nonempty legacy entries. */
+  modulationProgram?: InternalModulationProgram;
   palette: PaletteConfig;
   quality: QualityConfig;
 }

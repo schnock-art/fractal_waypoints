@@ -29,6 +29,7 @@ export function cloneRenderConfig(config: RenderConfig): RenderConfig {
     },
     lens: cloneLensConfig(config.lens),
     modulations: cloneModulations(config.modulations),
+    ...(config.modulationProgram ? { modulationProgram: structuredClone(config.modulationProgram) } : {}),
     palette: clonePalette(config.palette),
     quality: {
       ...config.quality,

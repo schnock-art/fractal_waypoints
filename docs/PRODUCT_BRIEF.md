@@ -56,6 +56,8 @@ The Compare workspace should feel decision-oriented rather than inspector-driven
 
 ### Animate and record
 
+Phase 10.2 makes Journey preview non-destructive: playback changes the visible frame without overwriting authored settings or URL state. Pause/resume and Stop remain reachable when changing tools; Stop restores the base. Saving or sharing the current view creates a static frame, while Save base configuration retains authored motion definitions. Internal explicit-time sources/mappings underpin this behaviour without requiring a new workspace or graph editor; Perform remains the next phase.
+
 Create journeys between Waypoints or animate zoom, Julia parameters, formula parameters, iterations, palettes, and comparison transitions. Animations are keyframed render configurations, not UI recordings. Support PNG, image sequences, and browser-native WebM initially.
 
 The Journey workspace should balance authoring power with legibility. Users should get a quick read on clip duration, frame count, and recording state, then choose whether they are building from Waypoints, shaping keyframes manually, or converting live navigation into a draft path.

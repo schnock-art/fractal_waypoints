@@ -6,28 +6,36 @@ import { clonePalette } from '../palettes/model';
 import { cloneOrbitTrapSet, normalizeOrbitTrapSet } from '../visuals/traps/orbitTraps';
 import { cloneOrbitTrapAppearance, normalizeOrbitTrapAppearance } from '../visuals/traps/orbitMaterial';
 import { cloneLensConfig, normalizeLensConfig } from '../visuals/lenses/model';
-import { applyModulations } from '../visuals/modulation/runtime';
+import { evaluateConfiguration } from './evaluation';
+import { assertFiniteNumbers } from '../parameters/validateRenderConfig';
 import type { AnimationClip, AnimationEasing, AnimationKeyframe, RenderConfig } from '../types/config';
 import { cloneRenderConfig } from '../navigation/waypoints';
 
 export function sampleAnimationClip(clip: AnimationClip, timeMs: number): RenderConfig {
+  return evaluateConfiguration(sampleAnimationBase(clip, timeMs), timeMs / 1000).config;
+}
+
+/** Interpolation only. No modulation here: both live and exported frames evaluate it once. */
+export function sampleAnimationBase(clip: AnimationClip, timeMs: number): RenderConfig {
+  assertFiniteNumbers(clip);
+  if (!Number.isFinite(timeMs) || timeMs < 0) throw new Error('Journey time must be finite and non-negative.');
   const keyframes = [...clip.keyframes].sort((left, right) => left.time - right.time);
   if (keyframes.length === 0) {
     throw new Error('Animation clip needs at least one keyframe.');
   }
 
   if (keyframes.length === 1 || clip.durationMs <= 0) {
-    return applyModulations(cloneRenderConfig(keyframes[0].renderConfig), timeMs / 1000);
+    return cloneRenderConfig(keyframes[0].renderConfig);
   }
 
   const normalizedTime = Math.min(1, Math.max(0, timeMs / clip.durationMs));
   const rightIndex = keyframes.findIndex((keyframe) => keyframe.time >= normalizedTime);
-  if (rightIndex <= 0) {
-    return applyModulations(cloneRenderConfig(keyframes[0].renderConfig), timeMs / 1000);
+  if (rightIndex === 0) {
+    return cloneRenderConfig(keyframes[0].renderConfig);
   }
 
   if (rightIndex === -1) {
-    return applyModulations(cloneRenderConfig(keyframes[keyframes.length - 1].renderConfig), timeMs / 1000);
+    return cloneRenderConfig(keyframes[keyframes.length - 1].renderConfig);
   }
 
   const left = keyframes[rightIndex - 1];
@@ -35,10 +43,13 @@ export function sampleAnimationClip(clip: AnimationClip, timeMs: number): Render
   const span = Math.max(right.time - left.time, Number.EPSILON);
   const localT = (normalizedTime - left.time) / span;
 
-  return applyModulations(interpolateRenderConfigs(left.renderConfig, right.renderConfig, applyEasing(clip.easing, localT)), timeMs / 1000);
+  return interpolateRenderConfigs(left.renderConfig, right.renderConfig, applyEasing(clip.easing, localT));
 }
 
 export function generateAnimationFrames(clip: AnimationClip): RenderConfig[] {
+  if (!Number.isFinite(clip.fps) || clip.fps <= 0 || !Number.isFinite(clip.durationMs) || clip.durationMs < 0) {
+    throw new Error('Journey duration and frame rate must be finite and valid.');
+  }
   const fps = Math.max(1, Math.round(clip.fps));
   const frameCount = Math.max(2, Math.round((clip.durationMs / 1000) * fps) + 1);
   const frames: RenderConfig[] = [];

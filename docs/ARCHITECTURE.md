@@ -24,7 +24,7 @@ The renderer consumes configurations. It should not know whether a configuration
 
 Fractal Waypoints is independently useful, with room to become a peer in a larger generative system. Future hardware/software adapters must address semantic domain parameters and produce effective `RenderConfig` values; formulas, materials, and renderers remain unaware of MIDI, audio, synths, music generation, or node graphs. Signals, events, and persistent state require distinct semantics. A future node editor is a view over an independent domain model, not the architecture itself.
 
-Preserve the conceptual order: persisted/base configuration → Journey/keyframes → modulation or future inputs → domain normalisation/validation → effective configuration → renderer. Today Journey applies deterministic modulation after interpolation; normalisation is distributed among domain helpers, import, interpolation, target setters, and render preparation. This is a suitable foundation, not a complete external-input runtime or universal final validator.
+Preserve the order: persisted/base configuration → Journey/keyframes → modulation or future inputs → domain normalisation/validation → effective configuration → renderer. Phase 10.2 separates `sampleAnimationBase` from `evaluateConfiguration`, composing domain helpers in `normalizeEvaluatedConfig` after a single modulation application. Live Journey and export share this explicit-time path. Import repair and target-command rejection remain separate; this is a current typed-frame boundary, not an external-input runtime or universal JSON schema validator. [MODULATION_EVALUATION.md](MODULATION_EVALUATION.md) specifies the limited source/transform/mapping model.
 
 Formula metrics can later feed independent statistical analysis and export without colour or musical interpretation. The GPU metric-field texture is a lossy material intermediate, not a public metric contract. See [ADR-026](DECISIONS.md#adr-026-external-control-and-generative-interoperability) and [the interoperability audit](INTEROPERABILITY.md) for semantic addressing conventions, output boundaries, current limitations, and post-9.3 decisions. No external integration dependencies are introduced.
 
@@ -36,7 +36,7 @@ Explore investigates and configures with the existing product language. Perform 
 
 ### Current implementation and completed Phase 10.0 design
 
-`src/app/workspaceModes.ts` currently defines focused sidebar workflows (`visualLab`, `palette`, `waypoints`, `discover`, `compare`, `journey`), not the proposed top-level benches. `App.tsx` owns `mainConfig`, explicit comparison configurations, Journey state, and local active-workspace state. Journey playback writes sampled/evaluated configurations into `mainConfig`, whose changes also update the URL. There is not yet a separate persistent performance setup or general live base/effective evaluator. Existing rendering/configuration seams support the direction, but these state responsibilities need design rather than a cosmetic shell rename.
+`src/app/workspaceModes.ts` still defines focused sidebar workflows (`visualLab`, `palette`, `waypoints`, `discover`, `compare`, `journey`), not the proposed top-level benches. `App.tsx` owns authored `mainConfig`, explicit comparison configurations, a cloned Journey playback clip and independent preview time. Only authored changes update the URL. Playback, pause/resume, tool switching and preview resize do not commit evaluated values. Primary surface callbacks own viewport only and are guarded while previewing. There is not yet a persistent performance setup or Perform workspace.
 
 The [Phase 10.0 design](WORKSPACE_DESIGN.md) is complete; these decisions describe the target implementation, not features already shipped. ADR-029 records authored/effective ownership and explicit Primary scope.
 
@@ -168,6 +168,8 @@ The editor must not depend on a formula. A visual preset is a named palette plus
 Comparison should compose reusable `RenderView` instances plus layout and interaction policy instead of introducing a separate renderer-specific code path. The same abstraction should support the earlier Julia secondary-panel experience.
 
 ## Animation
+
+Optional `RenderConfig.modulationProgram` (independent schema 1, outer schema 5 retained) holds bounded internal sources and ordered add/replace mappings over the six existing modulation targets. Nonempty legacy `modulations` and a program cannot coexist. Legacy entries adapt in memory without a persisted duplicate. Seeded held noise and fixed 16-sample trailing smoothing are explicit-time functions without frame history. Static captures remove both motion representations; authored-base saves retain them. See ADR-031 and [the evaluation contract](MODULATION_EVALUATION.md).
 
 Animations contain a schema version, duration, easing, and ordered keyframes. Each keyframe stores a time and `RenderConfig`. Zoom interpolates logarithmically; exported frames are deterministic and independent of display refresh rate.
 

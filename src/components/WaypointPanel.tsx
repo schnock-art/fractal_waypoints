@@ -10,6 +10,7 @@ interface WaypointPanelProps {
   activeConfig: RenderConfig;
   waypoints: Waypoint[];
   onSaveWaypoint: (draft: { name: string; description: string }) => void;
+  onSaveBaseWaypoint?: () => void;
   onLoadWaypoint: (waypoint: Waypoint) => void;
   onDeleteWaypoint: (waypointId: string) => void;
   onClearDiscoveredWaypoints: () => void;
@@ -24,6 +25,7 @@ export function WaypointPanel({
   activeConfig,
   waypoints,
   onSaveWaypoint,
+  onSaveBaseWaypoint,
   onLoadWaypoint,
   onDeleteWaypoint,
   onClearDiscoveredWaypoints,
@@ -77,7 +79,7 @@ export function WaypointPanel({
         <div className="control-panel__note">
           <p>Current capture</p>
           <strong>{activeFormulaLabel} / score {activeScore.toFixed(2)}</strong>
-          <span>Save the current view, refresh an existing saved portal, or share the exact state through the URL.</span>
+          <span>Save or share a static current frame. Save base configuration separately to keep authored motion definitions.</span>
         </div>
 
         <div className="waypoint-panel__capture-card">
@@ -93,6 +95,7 @@ export function WaypointPanel({
               <button type="button" onClick={onCopyShareLink}>
                 Copy share link
               </button>
+              {onSaveBaseWaypoint ? <button type="button" onClick={onSaveBaseWaypoint}>Save base configuration</button> : null}
             </div>
           </div>
 

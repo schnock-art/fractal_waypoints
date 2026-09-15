@@ -8,6 +8,7 @@ interface SettingsPortalProps {
   open: boolean;
   navigationSettings: NavigationSettings;
   pixelDensity: number;
+  qualityLocked?: boolean;
   rebindingAction: NavigationActionId | null;
   rendererDiagnostics: RendererDiagnostics | null;
   deepZoomDiagnostics: DeepZoomDiagnostics;
@@ -23,6 +24,7 @@ export function SettingsPortal({
   open,
   navigationSettings,
   pixelDensity,
+  qualityLocked = false,
   rebindingAction,
   rendererDiagnostics,
   deepZoomDiagnostics,
@@ -63,9 +65,11 @@ export function SettingsPortal({
                 max="2"
                 step="0.25"
                 value={pixelDensity}
+                disabled={qualityLocked}
                 onChange={(event) => onPixelDensityChange(Number(event.target.value))}
               />
               <strong>{pixelDensity.toFixed(2)}x</strong>
+              {qualityLocked ? <small>Stop the Journey preview to edit authored quality.</small> : null}
             </label>
           </section>
 

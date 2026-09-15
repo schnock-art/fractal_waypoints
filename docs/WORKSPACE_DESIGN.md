@@ -2,6 +2,8 @@
 
 Status: design complete, September 15, 2026. This specifies subsequent implementation; the current application has not acquired Perform, new persistence, or a new evaluator. Read alongside [ADR-028](DECISIONS.md#adr-028-workspaces-share-one-mathematical-world), ADR-029, and [INTEROPERABILITY.md](INTEROPERABILITY.md).
 
+Implementation update after 10.2: authored/preview separation, explicit-time internal evaluation, Journey pause/resume/Stop, and static-versus-base capture now exist; optional internal program persistence is versioned independently. The original design below remains the wider target. Perform, overrides/freeze and performance-take/project persistence are still future work. See [MODULATION_EVALUATION.md](MODULATION_EVALUATION.md) for exact shipped scope and limitations.
+
 ## 1. One world, different benches
 
 Choose two navigation levels. The top-level workspaces are **Explore** and **Perform** when Perform ships. Explore remains the default. Do not show a disabled Patch tab before Phase 12 is deliberately started. Settings/help remain global, outside either workspace's tool list.

@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { exportAnimationImageSequence, exportAnimationWebm } from '../animation/export';
-import { generateAnimationFrames, sampleAnimationClip } from '../animation/interpolation';
+import { sampleAnimationBase } from '../animation/interpolation';
+import { evaluateConfiguration, snapshotEffectiveConfig } from '../animation/evaluation';
+import { normalizeEvaluatedConfig } from '../parameters/validateRenderConfig';
 import {
   createAnimationKeyframe,
   createDefaultAnimationClip,
@@ -82,6 +84,8 @@ export function App() {
   const [showSettingsPortal, setShowSettingsPortal] = useState(false);
   const [animationClip, setAnimationClip] = useState(() => createDefaultAnimationClip(mainConfig));
   const [isPlayingAnimation, setIsPlayingAnimation] = useState(false);
+  const [previewTimeMs, setPreviewTimeMs] = useState<number | null>(null);
+  const [playbackClip, setPlaybackClip] = useState<typeof animationClip | null>(null);
   const [playbackStatus, setPlaybackStatus] = useState<string | null>(null);
   const [isRecordingNavigation, setIsRecordingNavigation] = useState(false);
   const [recordedNavigationEvents, setRecordedNavigationEvents] = useState<RecordedNavigationEvent[]>([]);
@@ -94,12 +98,44 @@ export function App() {
   const playbackStartedAtRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordingBaseConfigRef = useRef<RenderConfig | null>(null);
+  const previewActive = previewTimeMs !== null;
+  const preview = useMemo<{ config: RenderConfig; issues: string[]; failed?: boolean }>(() => {
+    if (previewTimeMs === null) return { config: mainConfig, issues: [] as string[] };
+    try { return evaluateConfiguration(sampleAnimationBase(playbackClip ?? animationClip, previewTimeMs), previewTimeMs / 1000); }
+    catch (error) {
+      let fallback = createDefaultRenderConfig('mandelbrot');
+      try { fallback = normalizeEvaluatedConfig(mainConfig); } catch { /* Never render the invalid candidate. */ }
+      return { config: fallback, issues: [error instanceof Error ? error.message : 'Invalid Journey frame.'], failed: true };
+    }
+  }, [mainConfig, animationClip, playbackClip, previewTimeMs]);
+  const effectiveConfig = preview.config;
+  const previewActiveRef = useRef(previewActive);
+  previewActiveRef.current = previewActive;
+  const handlePrimarySurfaceChange = useCallback((next: RenderConfig) => {
+    // Surface callbacks may outlive the render that created them. They own viewport only.
+    if (!previewActiveRef.current) setMainConfig((current) => ({ ...current, viewport: next.viewport }));
+  }, []);
+
+  useEffect(() => {
+    if (preview.failed) setIsPlayingAnimation(false);
+  }, [preview.failed]);
+
+  useEffect(() => {
+    const pauseWhenHidden = () => {
+      if (document.hidden) {
+        setIsPlayingAnimation(false);
+        setPlaybackStatus('Journey paused while the page is hidden. Resume when ready.');
+      }
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    return () => document.removeEventListener('visibilitychange', pauseWhenHidden);
+  }, []);
 
   const userWaypoints = useMemo(
     () => waypoints.filter((waypoint) => waypoint.source === 'user'),
     [waypoints],
   );
-  const frameCount = useMemo(() => generateAnimationFrames(animationClip).length, [animationClip]);
+  const frameCount = Math.max(2, Math.round(animationClip.durationMs / 1000 * Math.max(1, Math.round(animationClip.fps))) + 1);
   const deepZoomDiagnostics = useMemo(() => analyzeDeepZoom(mainConfig), [mainConfig]);
   const juliaPanelPresentation = useMemo(
     () => getJuliaPanelPresentation(mainConfig.fractal.formulaId, juliaSeed !== null),
@@ -146,6 +182,7 @@ export function App() {
     function handlePopState() {
       const fromUrl = readRenderConfigFromLocation();
       if (fromUrl) {
+        handleStopPlayback();
         setMainConfig(fromUrl);
       }
     }
@@ -219,16 +256,17 @@ export function App() {
     }
 
     function tick(timestamp: number) {
+      const clip = playbackClip ?? animationClip;
       const startedAt = playbackStartedAtRef.current ?? (timestamp - playbackElapsedRef.current);
       playbackStartedAtRef.current = startedAt;
-      const elapsed = Math.min(animationClip.durationMs, timestamp - startedAt);
+      const elapsed = Math.min(clip.durationMs, timestamp - startedAt);
       playbackElapsedRef.current = elapsed;
-      setMainConfig(sampleAnimationClip(animationClip, elapsed));
-      setPlaybackStatus(`Playing ${animationClip.name} at ${animationClip.fps} FPS target`);
+      setPreviewTimeMs(elapsed);
+      setPlaybackStatus(`Playing ${clip.name} at ${clip.fps} FPS target`);
 
-      if (elapsed >= animationClip.durationMs) {
+      if (elapsed >= clip.durationMs) {
         setIsPlayingAnimation(false);
-        setPlaybackStatus(`Journey complete: ${animationClip.name}`);
+        setPlaybackStatus(`Journey complete: ${clip.name}. Preview held; Stop restores the authored base.`);
         return;
       }
 
@@ -243,7 +281,7 @@ export function App() {
         playbackFrameRef.current = null;
       }
     };
-  }, [animationClip, isPlayingAnimation]);
+  }, [animationClip, playbackClip, isPlayingAnimation]);
 
   function handleMainFormulaChange(formulaId: FormulaId) {
     setMainConfig((current) => {
@@ -366,6 +404,7 @@ export function App() {
   }
 
   function handleLoadWaypoint(waypoint: Waypoint) {
+    handleStopPlayback();
     const next = cloneRenderConfig(waypoint.renderConfig);
     writeRenderConfigToHistory(next, 'push');
     setMainConfig(next);
@@ -404,7 +443,7 @@ export function App() {
       return upsertAnimationKeyframe(current, createAnimationKeyframe({
         label: `Keyframe ${current.keyframes.length + 1}`,
         time: Math.min(1, Number(slot.toFixed(2))),
-        renderConfig: mainConfig,
+        renderConfig: previewActive ? snapshotEffectiveConfig(effectiveConfig) : mainConfig,
       }));
     });
   }
@@ -418,12 +457,13 @@ export function App() {
 
       return upsertAnimationKeyframe(current, {
         ...keyframe,
-        renderConfig: mainConfig,
+        renderConfig: previewActive ? snapshotEffectiveConfig(effectiveConfig) : mainConfig,
       });
     });
   }
 
   function handleLoadKeyframe(keyframeId: string) {
+    handleStopPlayback();
     const keyframe = animationClip.keyframes.find((entry) => entry.id === keyframeId);
     if (!keyframe) {
       return;
@@ -446,26 +486,31 @@ export function App() {
   }
 
   function handleStartPlayback() {
+    if (isRecordingNavigation) handleStopRecordingNavigation();
     if (animationClip.keyframes.length < 2) {
       setPlaybackStatus('Add at least two keyframes to play a journey.');
       return;
     }
 
-    setActiveWorkspaceMode('journey');
     setShowComparison(false);
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
+    setPreviewTimeMs(0);
+    setPlaybackClip(structuredClone(animationClip));
     setIsPlayingAnimation(true);
   }
 
   function handleStopPlayback() {
     setIsPlayingAnimation(false);
+    setPreviewTimeMs(null);
+    setPlaybackClip(null);
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPlaybackStatus(`Playback stopped. ${frameCount} deterministic frames are ready to export.`);
   }
 
   function handleStartRecordingNavigation() {
+    handleStopPlayback();
     setActiveWorkspaceMode('journey');
     setShowComparison(false);
     setIsRecordingNavigation(true);
@@ -519,14 +564,24 @@ export function App() {
   }
 
   async function handleSaveWaypoint(draft: { name: string; description: string }) {
-    const renderConfig = cloneRenderConfig(mainConfig);
+    return saveWaypointConfig(draft, capturePrimaryFrame());
+  }
+
+  function capturePrimaryFrame() {
+    const captured = snapshotEffectiveConfig(effectiveConfig);
+    const rect = mainCanvasRef.current?.getBoundingClientRect();
+    if (rect && rect.height > 0) captured.viewport.aspectRatio = rect.width / rect.height;
+    return captured;
+  }
+
+  async function saveWaypointConfig(draft: { name: string; description: string }, renderConfig: RenderConfig) {
     const thumbnailDataUrl = await renderWaypointThumbnail(renderConfig);
     const waypoint = createWaypoint({
-      name: draft.name || `${mainConfig.fractal.formulaId} waypoint`,
+      name: draft.name || `${renderConfig.fractal.formulaId} waypoint`,
       description: draft.description,
       renderConfig,
       source: 'user',
-      tags: [mainConfig.fractal.formulaId],
+      tags: [renderConfig.fractal.formulaId],
       thumbnailDataUrl,
     });
 
@@ -539,6 +594,7 @@ export function App() {
   }
 
   function startFirstFlight() {
+    handleStopPlayback();
     setFirstFlightState('navigate');
     setShowComparison(false);
     setShowJuliaPanel(true);
@@ -567,7 +623,7 @@ export function App() {
   }
 
   async function handleRefreshWaypointFromCurrent(waypointId: string) {
-    const renderConfig = cloneRenderConfig(mainConfig);
+    const renderConfig = capturePrimaryFrame();
     const thumbnailDataUrl = await renderWaypointThumbnail(renderConfig);
 
     setWaypoints((current) => current.map((waypoint) => waypoint.id === waypointId
@@ -611,7 +667,7 @@ export function App() {
 
   async function handleCopyShareLink() {
     const url = new URL(window.location.href);
-    url.searchParams.set('view', encodeRenderConfigToUrlParam(mainConfig));
+    url.searchParams.set('view', encodeRenderConfigToUrlParam(capturePrimaryFrame()));
 
     try {
       await navigator.clipboard.writeText(url.toString());
@@ -671,9 +727,10 @@ export function App() {
       case 'waypoints':
         return (
           <WaypointPanel
-            activeConfig={mainConfig}
+            activeConfig={effectiveConfig}
             waypoints={waypoints}
             onSaveWaypoint={handleSaveWaypoint}
+            onSaveBaseWaypoint={() => saveWaypointConfig({ name: `${mainConfig.fractal.formulaId} base`, description: 'Authored configuration with motion definitions.' }, cloneRenderConfig(mainConfig))}
             onLoadWaypoint={handleLoadWaypoint}
             onDeleteWaypoint={handleDeleteWaypoint}
             onClearDiscoveredWaypoints={handleClearDiscoveredWaypoints}
@@ -788,13 +845,14 @@ export function App() {
         <aside className="control-panel">
           <div className="control-panel__essentials">
             <div className="control-panel__section control-panel__section--compact">
-              <p className="control-panel__label">Explore</p>
+              <p className="control-panel__label">Explore · authored base</p>
               <strong>{formulaRegistry[mainConfig.fractal.formulaId].displayName}</strong>
               <span className="control-panel__section-copy">
                 Drag to pan, scroll to zoom, then click a surface to enable keyboard flight.
               </span>
             </div>
 
+            <fieldset disabled={previewActive} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div className="control-panel__section">
               <p className="control-panel__label">Formula</p>
               <select
@@ -915,6 +973,16 @@ export function App() {
               </details>
             ) : null}
 
+            </fieldset>
+            {previewActive ? <div className="control-panel__section" role="status">
+              <strong>{isPlayingAnimation ? 'Journey playing' : 'Journey paused'} · Primary preview</strong>
+              <small>Base settings and URL are unchanged.</small>
+              {preview.issues.map((issue, index) => <small key={index}>{issue}</small>)}
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <button type="button" onClick={() => setIsPlayingAnimation(!isPlayingAnimation)} disabled={preview.failed}>{isPlayingAnimation ? 'Pause Journey' : 'Resume Journey'}</button>
+                <button type="button" onClick={handleStopPlayback}>Stop and edit base</button>
+              </div>
+            </div> : null}
             <WorkspaceModeNav
               activeMode={activeWorkspaceMode}
               onModeChange={setActiveWorkspaceMode}
@@ -926,7 +994,9 @@ export function App() {
 
           <div className="control-panel__workspace-scroll">
             <div className="control-panel__workspace-body">
-              {renderActiveWorkspacePanel()}
+              <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                {renderActiveWorkspacePanel()}
+              </fieldset>
             </div>
 
           {rendererDiagnostics && rendererDiagnostics.code !== 'ok' ? (
@@ -975,8 +1045,9 @@ export function App() {
               viewId="main"
               title="Explore"
               subtitle={mainConfig.fractal.formulaId === 'mandelbrot' ? 'Click to reveal a linked Julia view' : 'Primary render surface'}
-              config={mainConfig}
-              onConfigChange={setMainConfig}
+              config={effectiveConfig}
+              interactionEnabled={!previewActive}
+              onConfigChange={handlePrimarySurfaceChange}
               onPointSelect={mainConfig.fractal.formulaId === 'mandelbrot' ? handleJuliaSeedSelect : undefined}
               onDiagnosticsChange={setRendererDiagnostics}
               navigationSettings={navigationSettings}
@@ -1019,6 +1090,7 @@ export function App() {
         open={showSettingsPortal}
         navigationSettings={navigationSettings}
         pixelDensity={mainConfig.quality.pixelDensity}
+        qualityLocked={previewActive}
         rebindingAction={rebindingAction}
         rendererDiagnostics={rendererDiagnostics}
         deepZoomDiagnostics={deepZoomDiagnostics}
