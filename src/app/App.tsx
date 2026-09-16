@@ -25,6 +25,9 @@ import { SettingsPortal } from '../components/SettingsPortal';
 import { WaypointPanel } from '../components/WaypointPanel';
 import { WorkspaceModeNav } from '../components/WorkspaceModeNav';
 import { VisualLab } from '../components/VisualLab';
+import { PerformPanel } from '../components/PerformPanel';
+import { applyPerformanceOverrides, type PerformanceOverrides } from '../performance/model';
+import type { MappingEvaluation } from '../visuals/modulation/runtime';
 import { formulaRegistry } from '../fractals/registry';
 import { MultibrotControls } from '../components/MultibrotControls';
 import { NewtonControls } from '../components/NewtonControls';
@@ -81,6 +84,9 @@ export function App() {
   const [showComparison, setShowComparison] = useState(false);
   const [comparisonConfig, setComparisonConfig] = useState(() => createDefaultComparisonConfig(mainConfig));
   const [activeWorkspaceMode, setActiveWorkspaceMode] = useState<WorkspaceModeId>('palette');
+  const [workspace, setWorkspace] = useState<'explore' | 'perform'>('explore');
+  const [previewKind, setPreviewKind] = useState<'journey' | 'internal'>('journey');
+  const [overrides, setOverrides] = useState<PerformanceOverrides>({});
   const [showSettingsPortal, setShowSettingsPortal] = useState(false);
   const [animationClip, setAnimationClip] = useState(() => createDefaultAnimationClip(mainConfig));
   const [isPlayingAnimation, setIsPlayingAnimation] = useState(false);
@@ -93,24 +99,29 @@ export function App() {
   const [selectedEndWaypointId, setSelectedEndWaypointId] = useState('');
   const [firstFlightState, setFirstFlightState] = useState<FirstFlightState>('navigate');
   const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const exploreWorkspaceButtonRef = useRef<HTMLButtonElement | null>(null);
   const playbackFrameRef = useRef<number | null>(null);
   const playbackElapsedRef = useRef(0);
   const playbackStartedAtRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordingBaseConfigRef = useRef<RenderConfig | null>(null);
   const previewActive = previewTimeMs !== null;
-  const preview = useMemo<{ config: RenderConfig; issues: string[]; failed?: boolean }>(() => {
+  const preview = useMemo<{ config: RenderConfig; issues: string[]; mappings?: MappingEvaluation[]; failed?: boolean }>(() => {
     if (previewTimeMs === null) return { config: mainConfig, issues: [] as string[] };
-    try { return evaluateConfiguration(sampleAnimationBase(playbackClip ?? animationClip, previewTimeMs), previewTimeMs / 1000); }
+    try {
+      const input = previewKind === 'internal' ? mainConfig : sampleAnimationBase(playbackClip ?? animationClip, previewTimeMs);
+      const result = evaluateConfiguration(input, previewTimeMs / 1000);
+      return { ...result, config: applyPerformanceOverrides(result.config, overrides) };
+    }
     catch (error) {
       let fallback = createDefaultRenderConfig('mandelbrot');
       try { fallback = normalizeEvaluatedConfig(mainConfig); } catch { /* Never render the invalid candidate. */ }
       return { config: fallback, issues: [error instanceof Error ? error.message : 'Invalid Journey frame.'], failed: true };
     }
-  }, [mainConfig, animationClip, playbackClip, previewTimeMs]);
+  }, [mainConfig, animationClip, playbackClip, previewTimeMs, previewKind, overrides]);
   const effectiveConfig = preview.config;
   const previewActiveRef = useRef(previewActive);
-  previewActiveRef.current = previewActive;
+  previewActiveRef.current = previewActive || workspace === 'perform' || showComparison;
   const handlePrimarySurfaceChange = useCallback((next: RenderConfig) => {
     // Surface callbacks may outlive the render that created them. They own viewport only.
     if (!previewActiveRef.current) setMainConfig((current) => ({ ...current, viewport: next.viewport }));
@@ -124,7 +135,7 @@ export function App() {
     const pauseWhenHidden = () => {
       if (document.hidden) {
         setIsPlayingAnimation(false);
-        setPlaybackStatus('Journey paused while the page is hidden. Resume when ready.');
+        setPlaybackStatus('Primary paused while the page is hidden. Resume when ready.');
       }
     };
     document.addEventListener('visibilitychange', pauseWhenHidden);
@@ -259,12 +270,12 @@ export function App() {
       const clip = playbackClip ?? animationClip;
       const startedAt = playbackStartedAtRef.current ?? (timestamp - playbackElapsedRef.current);
       playbackStartedAtRef.current = startedAt;
-      const elapsed = Math.min(clip.durationMs, timestamp - startedAt);
+      const elapsed = previewKind === 'internal' ? timestamp - startedAt : Math.min(clip.durationMs, timestamp - startedAt);
       playbackElapsedRef.current = elapsed;
       setPreviewTimeMs(elapsed);
-      setPlaybackStatus(`Playing ${clip.name} at ${clip.fps} FPS target`);
+      if (previewKind === 'journey') setPlaybackStatus(`Playing ${clip.name} at ${clip.fps} FPS target`);
 
-      if (elapsed >= clip.durationMs) {
+      if (previewKind === 'journey' && elapsed >= clip.durationMs) {
         setIsPlayingAnimation(false);
         setPlaybackStatus(`Journey complete: ${clip.name}. Preview held; Stop restores the authored base.`);
         return;
@@ -281,7 +292,7 @@ export function App() {
         playbackFrameRef.current = null;
       }
     };
-  }, [animationClip, playbackClip, isPlayingAnimation]);
+  }, [animationClip, playbackClip, isPlayingAnimation, previewKind]);
 
   function handleMainFormulaChange(formulaId: FormulaId) {
     setMainConfig((current) => {
@@ -292,6 +303,10 @@ export function App() {
         material: current.material,
         lens: current.lens,
         quality: current.quality,
+        modulations: current.modulations.map((entry) => ({ ...entry, enabled: false })),
+        ...(current.modulationProgram ? { modulationProgram: {
+          ...structuredClone(current.modulationProgram), mappings: current.modulationProgram.mappings.map((entry) => ({ ...structuredClone(entry), enabled: false })),
+        } } : {}),
       };
       writeRenderConfigToHistory(nextConfig, 'push');
       return resolveCompatibleRenderConfig(nextConfig);
@@ -380,6 +395,8 @@ export function App() {
         material: current.material,
         lens: current.lens,
         quality: current.quality,
+        modulations: current.modulations,
+        ...(current.modulationProgram ? { modulationProgram: current.modulationProgram } : {}),
       };
       writeRenderConfigToHistory(nextConfig, 'push');
       return nextConfig;
@@ -492,7 +509,8 @@ export function App() {
       return;
     }
 
-    setShowComparison(false);
+    setPreviewKind('journey');
+    setOverrides({});
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPreviewTimeMs(0);
@@ -501,12 +519,24 @@ export function App() {
   }
 
   function handleStopPlayback() {
+    setOverrides({});
     setIsPlayingAnimation(false);
     setPreviewTimeMs(null);
     setPlaybackClip(null);
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPlaybackStatus(`Playback stopped. ${frameCount} deterministic frames are ready to export.`);
+  }
+
+  function handleStartPerformance() {
+    if (isRecordingNavigation) handleStopRecordingNavigation();
+    setPreviewKind('internal');
+    setOverrides({});
+    playbackElapsedRef.current = 0;
+    playbackStartedAtRef.current = null;
+    setPlaybackClip(null);
+    setPreviewTimeMs(0);
+    setIsPlayingAnimation(true);
   }
 
   function handleStartRecordingNavigation() {
@@ -595,6 +625,7 @@ export function App() {
 
   function startFirstFlight() {
     handleStopPlayback();
+    setWorkspace('explore');
     setFirstFlightState('navigate');
     setShowComparison(false);
     setShowJuliaPanel(true);
@@ -822,12 +853,33 @@ export function App() {
       />
       <section className="hero">
         <div className="hero__copy">
-          <p className="hero__eyebrow">Fractal Explorer / Phase 9</p>
-          <h1>Explore Mandelbrot space, then peel open Julia worlds from any point.</h1>
-          <p>
+          <p className="hero__eyebrow">Fractal Waypoints / The Instrument</p>
+          <h1>{workspace === 'perform' ? 'One world. Play its relationships.' : 'Explore Mandelbrot space, then peel open Julia worlds from any point.'}</h1>
+          {!previewActive && workspace === 'explore' ? <p>
             Explore the mathematics, then shape the look in Visual Lab: materials read
             orbit metrics while lens treatment refines the completed image.
-          </p>
+          </p> : null}
+          <div className="control-panel__section workspace-transport">
+          <nav aria-label="Workspace" className="perform-actions">
+            <button ref={exploreWorkspaceButtonRef} type="button" aria-pressed={workspace === 'explore'} onClick={() => setWorkspace('explore')}>Explore</button>
+            <button type="button" aria-pressed={workspace === 'perform'} onClick={() => { if (isRecordingNavigation) handleStopRecordingNavigation(); setWorkspace('perform'); }}>Perform</button>
+            <button type="button" className={firstFlightState === 'openSettings' ? 'is-first-flight-target' : undefined} onClick={openSettings}>Settings</button>
+          </nav>
+          <strong>{workspace === 'perform' ? 'Performing' : 'Scope'}: Primary · {formulaRegistry[effectiveConfig.fractal.formulaId].displayName}</strong>
+          {effectiveConfig.fractal.formulaId !== mainConfig.fractal.formulaId ? <small>Authored formula: {formulaRegistry[mainConfig.fractal.formulaId].displayName}; Journey is previewing another formula.</small> : null}
+          {isRecordingNavigation ? <div role="status"><span>Navigation capture · Primary · not a performance take</span><button type="button" onClick={handleStopRecordingNavigation}>Stop navigation capture</button></div> : null}
+          {workspace === 'perform' && showComparison ? <small>Compare is preserved in Explore; its selected side is not Primary.</small> : null}
+          {previewActive ? <div className="primary-transport">
+            <strong role="status">{previewKind === 'internal' ? 'Internal motion' : 'Journey'} {isPlayingAnimation ? 'playing' : previewKind === 'journey' && previewTimeMs >= (playbackClip ?? animationClip).durationMs ? 'complete' : 'paused'} · Primary preview</strong>
+            <span data-testid="transport-time">{(previewTimeMs / 1000).toFixed(2)} s</span>
+            <small>Base settings and URL are unchanged. Stop restores base and clears overrides.</small>
+            <div className="perform-actions">
+              <button type="button" onClick={() => setIsPlayingAnimation(!isPlayingAnimation)} disabled={preview.failed || (!isPlayingAnimation && previewKind === 'journey' && previewTimeMs >= (playbackClip ?? animationClip).durationMs)}>{isPlayingAnimation ? `Pause ${previewKind === 'internal' ? 'motion' : 'Journey'}` : `Resume ${previewKind === 'internal' ? 'motion' : 'Journey'}`}</button>
+              <button type="button" onClick={handleStopPlayback}>Stop and edit base</button>
+            </div>
+            {preview.issues.length ? <details className="perform-warning"><summary>{preview.issues.length} evaluation warning(s) · skipped or failed</summary>{preview.issues.map((issue, index) => <p key={index}>{issue}</p>)}</details> : null}
+          </div> : workspace === 'perform' ? <div className="primary-transport"><span>Stopped · authored base · 0.00 s</span><button type="button" onClick={handleStartPerformance}>Play internal motion</button></div> : null}
+          </div>
         </div>
         <div className="hero__status-card">
           <span>Renderer</span>
@@ -835,15 +887,15 @@ export function App() {
           <span>Precision</span>
           <strong>Double-single viewport path</strong>
           <span>Workspace</span>
-          <strong>{activeWorkspaceMode}</strong>
+          <strong>{workspace === 'perform' ? 'Perform' : activeWorkspaceMode}</strong>
           <span>{frameCount} journey frames ready</span>
           {shareStatus ? <span>{shareStatus}</span> : null}
         </div>
       </section>
 
       <section className="workspace">
-        <aside className="control-panel">
-          <div className="control-panel__essentials">
+        <aside className={workspace === 'perform' ? 'control-panel control-panel--perform' : 'control-panel'}>
+          <div className="control-panel__essentials" style={workspace === 'perform' ? { display: 'none' } : undefined}>
             <div className="control-panel__section control-panel__section--compact">
               <p className="control-panel__label">Explore · authored base</p>
               <strong>{formulaRegistry[mainConfig.fractal.formulaId].displayName}</strong>
@@ -974,29 +1026,20 @@ export function App() {
             ) : null}
 
             </fieldset>
-            {previewActive ? <div className="control-panel__section" role="status">
-              <strong>{isPlayingAnimation ? 'Journey playing' : 'Journey paused'} · Primary preview</strong>
-              <small>Base settings and URL are unchanged.</small>
-              {preview.issues.map((issue, index) => <small key={index}>{issue}</small>)}
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <button type="button" onClick={() => setIsPlayingAnimation(!isPlayingAnimation)} disabled={preview.failed}>{isPlayingAnimation ? 'Pause Journey' : 'Resume Journey'}</button>
-                <button type="button" onClick={handleStopPlayback}>Stop and edit base</button>
-              </div>
-            </div> : null}
             <WorkspaceModeNav
               activeMode={activeWorkspaceMode}
               onModeChange={setActiveWorkspaceMode}
-              onOpenSettings={openSettings}
-              highlightSettings={firstFlightState === 'openSettings'}
               highlightMode={firstFlightState === 'saveWaypoint' ? 'waypoints' : undefined}
             />
           </div>
 
           <div className="control-panel__workspace-scroll">
             <div className="control-panel__workspace-body">
-              <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              {workspace === 'perform' ? <PerformPanel base={mainConfig} effective={effectiveConfig} active={previewActive} journey={previewKind === 'journey'} mappings={preview.mappings ?? []} overrides={overrides}
+                onOverride={(id, value) => { if (previewActive) setOverrides((current) => { const next = { ...current }; if (value === undefined) delete next[id]; else next[id] = value; return next; }); }}
+                onChange={(config) => { if (!previewActive) setMainConfig(config); }} onEdit={() => { setWorkspace('explore'); exploreWorkspaceButtonRef.current?.focus(); }} /> : <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {renderActiveWorkspacePanel()}
-              </fieldset>
+              </fieldset>}
             </div>
 
           {rendererDiagnostics && rendererDiagnostics.code !== 'ok' ? (
@@ -1030,23 +1073,26 @@ export function App() {
           </div>
         </aside>
 
-        {showComparison ? (
+        {showComparison ? <div style={workspace === 'perform' || previewActive ? { display: 'none' } : { display: 'contents' }}>
           <ComparisonStage
             comparison={comparisonConfig}
+            interactionEnabled={workspace === 'explore' && !previewActive}
             navigationSettings={navigationSettings}
             onLeftConfigChange={(config) => handleComparisonSideConfigChange('left', config)}
             onRightConfigChange={(config) => handleComparisonSideConfigChange('right', config)}
             onDiagnosticsChange={setRendererDiagnostics}
             onResetSide={handleResetComparisonSide}
           />
-        ) : (
-          <section className={showJuliaPanel ? 'view-grid view-grid--dual' : 'view-grid'}>
+        </div> : null}
+          <section style={showComparison && workspace === 'explore' && !previewActive ? { display: 'none' } : undefined} className={showJuliaPanel && workspace === 'explore' ? 'view-grid view-grid--dual' : 'view-grid'}>
             <RenderView
               viewId="main"
-              title="Explore"
-              subtitle={mainConfig.fractal.formulaId === 'mandelbrot' ? 'Click to reveal a linked Julia view' : 'Primary render surface'}
+              title={workspace === 'perform' ? 'Primary · Perform' : 'Explore'}
+              subtitle={workspace === 'perform' ? 'Primary only · edit the world in Explore' : mainConfig.fractal.formulaId === 'mandelbrot' ? 'Click to reveal a linked Julia view' : 'Primary render surface'}
               config={effectiveConfig}
-              interactionEnabled={!previewActive}
+              interactionEnabled={!previewActive && workspace === 'explore' && !showComparison}
+              interactionDisabledLabel={previewActive ? 'Preview layer' : 'Camera editing in Explore'}
+              presentationAspectRatio
               onConfigChange={handlePrimarySurfaceChange}
               onPointSelect={mainConfig.fractal.formulaId === 'mandelbrot' ? handleJuliaSeedSelect : undefined}
               onDiagnosticsChange={setRendererDiagnostics}
@@ -1061,7 +1107,7 @@ export function App() {
               highlightForTutorial={firstFlightState === 'navigate' || firstFlightState === 'linkJulia'}
             />
 
-            {showJuliaPanel ? (
+            {showJuliaPanel && workspace === 'explore' ? (
               <RenderView
                 viewId="julia"
                 title="Julia"
@@ -1083,7 +1129,6 @@ export function App() {
               />
             ) : null}
           </section>
-        )}
       </section>
 
       <SettingsPortal

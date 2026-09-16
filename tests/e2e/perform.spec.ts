@@ -1,0 +1,215 @@
+import { test, expect } from '@playwright/test';
+import { createDefaultRenderConfig } from '../../src/app/defaultConfig';
+import { encodeRenderConfigToUrlParam, decodeRenderConfigFromUrlParam } from '../../src/persistence/urlState';
+import type { RenderConfig } from '../../src/types/config';
+// @ts-expect-error pngjs has no bundled declarations.
+import { PNG } from 'pngjs';
+
+test.use({ channel: 'chromium', launchOptions: { args: ['--enable-unsafe-webgpu'] } });
+const fixture = () => {
+  const base = createDefaultRenderConfig('phoenix'); base.palette.offset = 0.125;
+  base.modulationProgram = { schemaVersion: 1,
+    sources: [{ id: 'held', waveform: 'constant', amplitude: 0.25, offset: 0, phase: 0, frequencyHz: 1 }],
+    mappings: [{ id: 'colour', sourceId: 'held', target: 'palette.offset', mode: 'add', enabled: true, transforms: [] }],
+  };
+  return base;
+};
+async function open(page: import('@playwright/test').Page, base: RenderConfig = fixture()) {
+  await page.goto(`/?view=${encodeRenderConfigToUrlParam(base)}`);
+  await page.getByRole('button', { name: 'Skip tutorial' }).click();
+  await expect(page.getByText('WebGPU', { exact: true }).first()).toBeVisible();
+  await expect.poll(() => page.getByTestId('main-canvas').evaluate((c: HTMLCanvasElement) => c.width)).toBeGreaterThan(1);
+}
+async function visiblePrimary(page: import('@playwright/test').Page) {
+  await expect.poll(async () => {
+    const png = PNG.sync.read(await page.getByTestId('main-canvas').screenshot());
+    let bright = 0; for (let i = 0; i < png.data.length; i += 16) if (Math.max(png.data[i], png.data[i + 1], png.data[i + 2]) > 60) bright++;
+    return bright / (png.data.length / 16);
+  }).toBeGreaterThan(0.05);
+}
+test('Primary transport, live overrides, workspace continuity, capture and restoration', async ({ page }, info) => {
+  const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
+  await open(page);
+  const authoredUrl = page.url();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  expect(page.url()).toBe(authoredUrl);
+  await expect(page.getByText('Performing: Primary · Phoenix', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  const offset = page.getByTestId('control-palette.offset');
+  await expect(offset).toContainText('Base 0.125 · Effective 0.375');
+  await page.getByRole('button', { name: 'Pause motion', exact: true }).click();
+  const held = await page.getByTestId('transport-time').textContent();
+  await offset.getByRole('spinbutton').fill('2.75');
+  await expect(offset).toContainText('Temporary override · 2.75');
+  await page.getByRole('slider', { name: 'Orbit memory live' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByTestId('control-formula.phoenix.memory')).toContainText('Temporary override');
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  await expect(page.getByRole('slider', { name: /^Offset/ })).toBeDisabled();
+  expect(await page.getByTestId('transport-time').textContent()).toBe(held);
+  await page.getByRole('button', { name: 'Waypoints', exact: true }).click();
+  await page.getByRole('button', { name: 'Quick save', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('fractal-explorer:waypoints:v1') ?? '[]').length)).toBe(1);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fractal-explorer:waypoints:v1')!)[0].renderConfig);
+  expect(saved.palette.offset).toBe(2.75); expect(saved.modulationProgram).toBeUndefined();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await offset.getByRole('button', { name: /Return/ }).click();
+  await expect(offset).toContainText('Effective 0.375');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect.poll(async () => {
+    const png = PNG.sync.read(await page.getByTestId('main-canvas').screenshot());
+    let bright = 0; for (let i = 0; i < png.data.length; i += 16) if (Math.max(png.data[i], png.data[i + 1], png.data[i + 2]) > 60) bright++;
+    return bright / (png.data.length / 16);
+  }).toBeGreaterThan(0.05);
+  await page.screenshot({ path: info.outputPath('perform-live.png') });
+  expect(page.url()).toBe(authoredUrl);
+  await page.getByRole('button', { name: 'Resume motion' }).click();
+  await expect.poll(async () => Number((await page.getByTestId('transport-time').textContent())!.split(' ')[0])).toBeGreaterThan(Number(held!.split(' ')[0]));
+  await page.getByRole('button', { name: 'Stop and edit base' }).click();
+  await expect(offset).toContainText('Base 0.125 · Effective 0.125');
+  await expect(page.getByText(/^Temporary override ·/)).toHaveCount(0);
+  expect(page.url()).toBe(authoredUrl);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Stop and edit base' })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('ordered editor, smoothing, skipped mappings and lens restoration are inspectable', async ({ page }, info) => {
+  const base = fixture(); const p = base.modulationProgram!;
+  base.lens.effects.forEach((effect) => { if (effect.id === 'exposure') effect.enabled = false; });
+  p.sources.push({ id: 'overflow', waveform: 'constant', amplitude: 1e308, offset: 1e308, phase: 0, frequencyHz: 0 });
+  p.mappings.push({ ...p.mappings[0], id: 'replace', mode: 'replace' },
+    { ...p.mappings[0], id: 'inactive', target: 'material.orbitAppearance.emission' },
+    { ...p.mappings[0], id: 'invalid', sourceId: 'overflow' },
+    { ...p.mappings[0], id: 'lens', target: 'lens.effects.exposure.amount' },
+    { ...p.mappings[0], id: 'disabled', enabled: false });
+  await open(page, base);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await page.getByRole('article', { name: 'Mapping 2', exact: true }).getByRole('button', { name: 'Move up' }).click();
+  const first = page.getByRole('article', { name: 'Mapping 1', exact: true });
+  await first.getByText('Source and transforms', { exact: true }).click();
+  await first.getByRole('spinbutton', { name: /Smoothing window/ }).fill('0.5');
+  await first.getByText('Source and transforms', { exact: true }).click();
+  const authoredUrl = page.url();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 0.5');
+  await expect(page.getByText(/2 evaluation warning/)).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Mapping 3', exact: true })).toContainText('inactive');
+  await expect(page.getByRole('article', { name: 'Mapping 4', exact: true })).toContainText('invalid');
+  await expect(page.getByRole('article', { name: 'Mapping 6', exact: true })).toContainText('disabled');
+  const lens = page.getByRole('article', { name: 'Mapping 5', exact: true });
+  await expect(lens).toContainText('Base lens: off · Effective lens: on');
+  await page.getByRole('button', { name: 'Pause motion' }).click();
+  await lens.scrollIntoViewIfNeeded();
+  await visiblePrimary(page);
+  await page.screenshot({ path: info.outputPath('perform-mappings.png') });
+  await page.getByRole('button', { name: 'Stop and edit base' }).click();
+  await expect(lens).toContainText('Base lens: off · Effective lens: off');
+  expect(page.url()).toBe(authoredUrl);
+  await page.getByRole('button', { name: 'Disable all mappings (keep definitions)' }).click();
+  const saved = decodeRenderConfigFromUrlParam(new URL(page.url()).searchParams.get('view')!)!;
+  expect(saved.modulationProgram!.mappings.every((entry) => !entry.enabled)).toBe(true);
+  expect(saved.modulationProgram!.mappings[0].transforms).toEqual([{ kind: 'smooth', windowSeconds: 0.5 }]);
+});
+
+test('empty surface creates a playable wave; formula replacement keeps definitions disarmed', async ({ page }) => {
+  await open(page, createDefaultRenderConfig('phoenix'));
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await page.getByRole('button', { name: 'Add palette wave' }).click();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await expect(page.getByRole('article', { name: 'Mapping 1', exact: true })).toContainText('active');
+  await page.getByRole('button', { name: 'Stop and edit base' }).click();
+  await page.getByRole('button', { name: 'Edit in Explore' }).click();
+  await expect(page.getByRole('button', { name: 'Explore', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click();
+  expect(decodeRenderConfigFromUrlParam(new URL(page.url()).searchParams.get('view')!)!.modulationProgram?.mappings).toHaveLength(1);
+  await page.locator('.control-panel__essentials select').first().selectOption('newton');
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await expect(page.getByTestId('control-formula.phoenix.memory')).toContainText('Orbit memory requires Phoenix.');
+  await expect(page.getByRole('article', { name: 'Mapping 1', exact: true })).toContainText('disabled');
+});
+
+test('noise smoothing is editable, time advances, and hidden-document handling holds the clock', async ({ page }, info) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const mapping = page.getByRole('article', { name: 'Mapping 1', exact: true });
+  await mapping.getByText('Source and transforms', { exact: true }).click();
+  await mapping.getByRole('combobox', { name: 'Waveform', exact: true }).selectOption('noise');
+  await mapping.getByRole('spinbutton', { name: 'Frequency (Hz)', exact: true }).fill('2');
+  await mapping.getByRole('spinbutton', { name: /Smoothing window/ }).fill('0.5');
+  await mapping.getByRole('spinbutton', { name: 'Noise seed', exact: true }).fill('37');
+  await expect.poll(() => decodeRenderConfigFromUrlParam(new URL(page.url()).searchParams.get('view')!)?.modulationProgram?.sources[0].seed).toBe(37);
+  const url = page.url();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await expect.poll(async () => Number((await page.getByTestId('transport-time').textContent())!.split(' ')[0])).toBeGreaterThan(1);
+  await expect(mapping).toContainText('active');
+  // Exercise the browser visibility handler explicitly; not a claim of OS tab-switch QA.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.getByRole('button', { name: 'Resume motion' })).toBeVisible();
+  const held = await page.getByTestId('transport-time').textContent();
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  expect(await page.getByTestId('transport-time').textContent()).toBe(held);
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
+  await expect(page.getByRole('button', { name: 'Resume motion' })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.getByRole('button', { name: 'Edit in Explore' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('button', { name: 'Stop and edit base' })).toBeInViewport();
+  await expect(page.getByTestId('main-canvas')).toBeInViewport();
+  await visiblePrimary(page);
+  await page.screenshot({ path: info.outputPath('perform-short-screen.png') });
+  expect(page.url()).toBe(url);
+});
+
+test('Compare Right is never promoted and the Primary canvas survives workspace switches', async ({ page }) => {
+  await open(page);
+  await page.getByTestId('main-canvas').evaluate((canvas) => { canvas.dataset.continuity = 'same-primary'; });
+  await page.getByRole('button', { name: 'Compare', exact: true }).click();
+  const sides = page.locator('.comparison-panel__side-card');
+  await sides.nth(1).getByLabel('Formula', { exact: true }).selectOption('newton');
+  await page.getByRole('button', { name: /^Overlay Blend both/ }).click();
+  await page.getByRole('button', { name: 'Right', exact: true }).click();
+  await page.getByRole('button', { name: 'Open comparison' }).click();
+  await expect(page.getByTestId('comparison-right-canvas')).toBeVisible();
+  const url = page.url();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await expect(page.getByText('Performing: Primary · Phoenix', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Compare is preserved/)).toBeVisible();
+  await expect(page.getByTestId('main-canvas')).toHaveAttribute('data-continuity', 'same-primary');
+  await expect(page.getByTestId('comparison-right-canvas')).toBeHidden();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause motion', exact: true })).toBeVisible();
+  await expect(page.getByTestId('main-canvas')).toBeVisible();
+  await page.getByRole('button', { name: 'Stop and edit base' }).click();
+  await expect(page.getByTestId('comparison-right-canvas')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Right', exact: true })).toHaveClass('is-active');
+  await expect(sides.nth(1).getByLabel('Formula', { exact: true })).toHaveValue('newton');
+  expect(page.url()).toBe(url);
+});
+
+test('legacy motion stays unchanged until explicit conversion, and Journey shares the workspace transport', async ({ page }) => {
+  const base = fixture(); delete base.modulationProgram;
+  base.modulations = [{ id: 'saved-original', target: 'palette.offset', waveform: 'constant', frequencyHz: 1, amplitude: 0.25, phase: 0, offset: 0, enabled: true }];
+  await open(page, base);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const url = page.url();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 0.375');
+  await page.getByRole('button', { name: 'Stop and edit base' }).click();
+  expect(page.url()).toBe(url);
+  await page.getByRole('button', { name: 'Convert legacy motion for editing' }).click();
+  const converted = decodeRenderConfigFromUrlParam(new URL(page.url()).searchParams.get('view')!)!;
+  expect(converted.modulations).toEqual([]); expect(converted.modulationProgram?.schemaVersion).toBe(1);
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  await page.getByRole('button', { name: 'Journey', exact: true }).click();
+  await page.getByRole('button', { name: 'Play journey', exact: true }).click();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await expect(page.getByText(/Journey is playing its captured clip/)).toBeVisible();
+  await page.getByRole('button', { name: 'Pause Journey', exact: true }).click();
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 0.375');
+  await page.getByRole('button', { name: 'Stop and edit base' }).click();
+});

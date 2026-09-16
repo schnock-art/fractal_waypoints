@@ -3,10 +3,10 @@ import { assertFiniteNumbers, normalizeEvaluatedConfig } from '../parameters/val
 import { evaluateModulations } from '../visuals/modulation/runtime';
 
 /** Input is authored/interpolated data, never last frame's output. */
-export function evaluateConfiguration(base: RenderConfig, timeSeconds: number): { config: RenderConfig; issues: string[] } {
+export function evaluateConfiguration(base: RenderConfig, timeSeconds: number) {
   assertFiniteNumbers(base);
   const result = evaluateModulations(base, timeSeconds);
-  return { config: normalizeEvaluatedConfig(result.config), issues: result.issues };
+  return { ...result, config: normalizeEvaluatedConfig(result.config) };
 }
 
 /** Explicit static capture. It cannot reapply baked motion on reload or use as a keyframe. */

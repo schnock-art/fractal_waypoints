@@ -1,8 +1,8 @@
 # Phase 10.0 — Workspace and state design
 
-Status: design complete, September 15, 2026. This specifies subsequent implementation; the current application has not acquired Perform, new persistence, or a new evaluator. Read alongside [ADR-028](DECISIONS.md#adr-028-workspaces-share-one-mathematical-world), ADR-029, and [INTEROPERABILITY.md](INTEROPERABILITY.md).
+Status: design complete, September 15, 2026. The original design below specifies the wider target, not an assertion that every feature is implemented. Read alongside [ADR-028](DECISIONS.md#adr-028-workspaces-share-one-mathematical-world), ADR-029, and [INTEROPERABILITY.md](INTEROPERABILITY.md).
 
-Implementation update after 10.2: authored/preview separation, explicit-time internal evaluation, Journey pause/resume/Stop, and static-versus-base capture now exist; optional internal program persistence is versioned independently. The original design below remains the wider target. Perform, overrides/freeze and performance-take/project persistence are still future work. See [MODULATION_EVALUATION.md](MODULATION_EVALUATION.md) for exact shipped scope and limitations.
+Implementation update after the first 10.3 slice: Explore/Perform navigation, Primary scope, shared internal/Journey transport, two fixed semantic controls with temporary overrides, and a narrow ordered mapping editor now exist. Compare restoration, base/effective readouts, mapping issues and static-versus-base capture are exposed. Full pin setup, macros, freeze, takes, promotion/undo and project persistence remain future work by deliberate incremental scope. See [PERFORM_FINDINGS.md](PERFORM_FINDINGS.md) and [MODULATION_EVALUATION.md](MODULATION_EVALUATION.md) for exact implementation and limitations; the original acceptance specifications below remain open where those features are absent.
 
 ## 1. One world, different benches
 

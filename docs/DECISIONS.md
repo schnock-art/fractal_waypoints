@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+Implementation note after the first Phase 10.3 slice: ADR-028/029/031 now underpin a small Perform workspace, with Primary-only transport, two semantic overrides and the existing ordered mapping model. No new architectural abstraction is adopted for the UI. Primary resize is presentation-local while stopped as well as playing, to preserve base/URL ownership through workspace layout changes. The broader design remains incomplete; [PERFORM_FINDINGS.md](PERFORM_FINDINGS.md) separates implemented behaviour from actual-use hypotheses, take/persistence/promotion deferrals and review gates.
+
 ## ADR-031: One explicit-time internal evaluator, separate from authored state
 
 **Status:** Accepted — Phase 10.2, existing internal targets only.
@@ -36,7 +38,7 @@ The consequence is an app-level ownership/evaluation change before live modulati
 
 ## ADR-028: Workspaces share one mathematical world
 
-**Status:** Accepted — ownership boundary; Phase 10.0 design is now recorded in WORKSPACE_DESIGN.md and ADR-029; workspace implementation remains future work.
+**Status:** Accepted — ownership boundary; Phase 10.0 design is recorded in WORKSPACE_DESIGN.md and ADR-029; the first incremental Perform workspace is implemented in 10.3.
 
 Explore, Perform, and future Patch are different benches over the same mathematical world. They share semantic domain parameters, rendering and analysis contracts, and reusable Waypoint/Journey/modulation/persistence mechanisms. Workspace switching must preserve the current world; it must not implicitly clone configurations, create separate application models, or introduce per-workspace renderer backends. Explicit user-directed multi-view configurations such as Compare remain valid.
 

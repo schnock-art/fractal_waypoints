@@ -1,0 +1,47 @@
+# Phase 10.3 — First playable slice
+
+Implemented from main against WORKSPACE_DESIGN.md and the 10.2 findings. **This is an incremental slice, not completion of the full 10.3 roadmap.** UI choices below are hypotheses for actual use, not new universal contracts.
+
+## What ships
+
+Explore and Perform are peer workspaces. Explore keeps its six tools and last selected tool. Perform displays Primary with an explicit formula/scope label. Compare configuration, layout and selected side survive a workspace switch; focus never promotes or retargets a side. During any Primary preview, Primary is shown even if Compare was open; stopping in Explore reveals the preserved comparison. The Primary canvas remains mounted across workspace switches. Hidden comparison views retain their surfaces but cannot receive navigation gestures.
+
+Two fixed selected controls expose the existing semantic seam: palette offset and Phoenix Orbit memory. This is not a pin catalogue or saved layout. Orbit memory becomes unavailable outside Phoenix; it has not been admitted to waveform mappings. Palette offset has both a display-window slider and an exact, unbounded numeric input.
+
+Play internal motion evaluates the authored Primary at an explicit, continuously advancing logical time; it does not require a dummy Journey. Journey uses its existing captured clip and the same transport. Pause holds time; Resume continues; Stop resets time, clears overrides and restores base without disabling definitions. Completed Journeys are labelled complete and cannot misleadingly Resume past their end. Hidden-document handling pauses either activity. Starting either playback ends existing navigation capture. Entering Perform during navigation capture finalises that old capture; it is never presented as a performance take.
+
+Live controls write session-only absolute overrides **after** modulation, through the two semantic writers, then final domain validation. They remain held after pointer release and Pause, until explicit Return to modulation or Stop. Stopped controls direct users to Explore for authored edits. No live value updates the URL. Static captures in Waypoints bake the current overrides and motion once; Save base configuration retains only authored settings/definitions. Journey exports still export the authored Journey, not a live Perform session.
+
+The ordered mapping editor exposes exactly the six existing waveform targets. Add palette wave is a concrete starting gesture (0.1 Hz sine, amplitude 0.15), not a macro or preset-specific engine. Users can select targets, add/replace, enable/disable, reorder, inspect/share existing sources, edit waveform/amplitude/frequency/phase/offset/noise seed, and adjust final smoothing. Other existing transforms are shown in order but are inspect-only. Source editing explicitly warns that shared sources affect all referencing mappings. Disable all keeps definitions; no implicit delete or reset of the world occurs.
+
+Source/mapping edits require Stop. Existing programs remain canonical in RenderConfig; the editor does not own another copy. Legacy motion stays legacy until the user explicitly converts it for editing. Conversion validates before replacing the legacy list with an independently versioned program; oversized legacy lists that exceed program bounds remain playable but cannot be converted by this small editor. No outer schema change or unsupported-version guessing was added. A formula change retains current definitions disabled for review, rather than silently deleting or applying them to another formula. Loading a Waypoint replaces the base and its definitions through the existing stopped flow.
+
+## What the implementation taught us
+
+1. **Resize is an ownership operation, not just layout.** Primary aspect ratio is now presentation-local even while stopped. Changing workspace, transport header height or browser size must not author geometry accidentally. Navigation still uses the displayed geometry; static capture uses the actual canvas aspect. Existing Compare/Julia resize policy is unchanged. The same Primary renderer is retained rather than creating a Perform backend.
+2. **Mapping status must come from evaluation.** The evaluator now returns a small ordered diagnostic trace alongside its existing issues: active, disabled, inactive, invalid; active steps include input, signal and target-local result. Stopped compatible mappings say ready, not active. These are diagnostics, not new discrete/event signal semantics. Final effective readouts can differ from an intermediate step because final domain validation and overrides follow it.
+3. **Journey and Primary definitions are not interchangeable.** When Journey plays, Perform labels the displayed mapping editor as Primary base definitions, not the captured clip. Its per-mapping runtime trace is deliberately not attached to unrelated base mappings. The global warning count still reports the actual evaluated clip. Editing a clip during preview continues to affect only the authored document, not the captured playback.
+4. **A pause is not a release.** Latched overrides are useful with a mouse or keyboard, but introduce a second visible state. Return to modulation must stay explicit. This does not justify a general gesture/event log, freeze model, macro layer or take format yet.
+
+## Hypotheses to review through actual use
+
+- **Smoothing:** the proven 16-point trailing window remains unchanged, with window length, initial hold and lag explained. Browser tests verify editing/persistence and existing unit tests prove deterministic sampling. These do not establish whether lag, high-frequency aliasing or noise feel good. Try slow sine versus held noise and several windows before broadening the transform UI.
+- **Order:** numbered cards and before/signal/after traces make add/replace and intermediate clamping inspectable. Test whether this remains understandable with several mappings on one target. Move buttons may be enough; do not introduce a second priority system or drag graph merely for convenience.
+- **Lens enable-on-write:** cards explicitly show authored/effective lens enabled state and explain that even a zero-signal enabled write enables the lens. Stop demonstrably restores its base state. Decide from use whether this should remain policy before adding macros; this slice preserves it.
+- **Warnings:** per-card reasons and a global warning-count disclosure remain visible without relying on colour. Invalid signals are skipped, not described as successful motion. Review warning prominence during real play; do not flood a live region with continuously changing numeric values. Richer export warning aggregation is still outstanding; Perform does not promise take export or that a clean-looking frame means every mapping succeeded.
+- **Surface density:** browser screenshots revealed and fixed an oversized transport header and a clipped Perform scroll area. Longer mapping lists still require sidebar scrolling. Try short screens and keyboard-only play before committing to a pin layout, two-column control surface or permanent docking model.
+- **Direct values:** the exact palette numeric input preserves unbounded semantics, but the slider still represents its limited display window. Review interaction outside that window and held-value release before generalising to more owners.
+
+## Explicitly remaining
+
+User-selectable/persisted pins and ordering; macros; freeze/unfreeze; reproducible recording/takes/replay; source/transform editing beyond the narrow editor; comparison/Julia promotion with undo; keep-frame-as-base; project/setup/take persistence and recovery; export warning aggregation/forward-version recovery UX. No MIDI/audio/external control, graph/Patch, feedback scheduler, new waveform target or discrete/event/state protocol was added.
+
+The full Phoenix discover → save → pin → record → replay acceptance flow is therefore **not claimed complete**. The first playable subset covers entering the same Primary, semantic controls, modulation, workspace continuity, static capture and safe restoration. Keep the remaining roadmap boxes open.
+
+## Verification
+
+- 162 unit tests pass, including five new bounded-Perform tests for post-modulation overrides, domain validation, inactive Phoenix controls, canonical conversion, ordered diagnostics and mapping movement.
+- Full 29-test browser suite passes, including six Perform scenarios alongside existing Explore/Julia/Waypoints/Compare/Journey and GPU material/formula regressions. The Perform suite was additionally rerun after the final focus/label refinement.
+- Browser checks cover keyboard control and focus return, base/URL stability through resize and workspace switches, static captures, Stop/reload, shared source/smoothing editing, explicit legacy conversion, disabled/inactive/invalid statuses, lens restoration, and Compare Right isolation. The visibility handler is exercised by a browser document event; native OS focus switching and subjective smoothing feel still require actual-use review.
+- Visible-pixel assertions verify live and warning-scene GPU output. Inspected the live controls, mapping-warning/lens scene and 1280×720 screenshot; short screens retain global Stop and a scrollable control area.
+- TypeScript check, production build and diff whitespace checks pass. No dependencies, persisted target IDs or GPU kernels changed. Work remains on main, uncommitted and ready for review.

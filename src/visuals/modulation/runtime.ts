@@ -20,7 +20,16 @@ export function applyModulations(config: RenderConfig, timeSeconds: number): Ren
   return evaluateModulations(config, timeSeconds).config;
 }
 
-export function evaluateModulations(config: RenderConfig, timeSeconds: number): { config: RenderConfig; issues: string[] } {
+export interface MappingEvaluation {
+  id: string;
+  status: 'active' | 'disabled' | 'inactive' | 'invalid';
+  reason?: string;
+  before?: number;
+  signal?: number;
+  after?: number;
+}
+
+export function evaluateModulations(config: RenderConfig, timeSeconds: number): { config: RenderConfig; issues: string[]; mappings: MappingEvaluation[] } {
   if (!Number.isFinite(timeSeconds) || timeSeconds < 0) throw new Error('Evaluation time must be finite and non-negative.');
   if (config.modulationProgram && config.modulations.length) throw new Error('Choose one modulation representation, not both.');
   const program = config.modulationProgram ?? adaptLegacyModulations(config.modulations);
@@ -29,6 +38,7 @@ export function evaluateModulations(config: RenderConfig, timeSeconds: number): 
   if (!valid) throw new Error('Invalid internal modulation program.');
   const sources = new Map(program.sources.map((source) => [source.id, source]));
   const issues: string[] = [];
+  const mappings: MappingEvaluation[] = [];
   let resolved: RenderConfig = {
     ...config,
     material: {
@@ -44,22 +54,29 @@ export function evaluateModulations(config: RenderConfig, timeSeconds: number): 
   };
 
   for (const mapping of program.mappings) {
-    if (!mapping.enabled) continue;
+    if (!mapping.enabled) { mappings.push({ id: mapping.id, status: 'disabled' }); continue; }
     const current = readModulationTarget(resolved, mapping.target);
-    if (current === undefined) { issues.push(`${mapping.id}: target inactive.`); continue; }
+    if (current === undefined) {
+      issues.push(`${mapping.id}: target inactive.`);
+      mappings.push({ id: mapping.id, status: 'inactive', reason: 'Requires Orbit Trap material and the addressed trap slot.' });
+      continue;
+    }
     try {
       const signal = evaluateMappingSignal(sources.get(mapping.sourceId)!, mapping.transforms, timeSeconds);
       const value = mapping.mode === 'add' ? current + signal : signal;
       if (!Number.isFinite(value)) throw new Error('Non-finite target value.');
       resolved = applyModulationValue(resolved, mapping.target, value);
+      mappings.push({ id: mapping.id, status: 'active', before: current, signal, after: readModulationTarget(resolved, mapping.target) });
     } catch (error) {
-      issues.push(`${mapping.id}: ${error instanceof Error ? error.message : 'Invalid signal.'}`);
+      const reason = error instanceof Error ? error.message : 'Invalid signal.';
+      issues.push(`${mapping.id}: ${reason}`);
+      mappings.push({ id: mapping.id, status: 'invalid', reason });
     }
   }
-  return { config: resolved, issues };
+  return { config: resolved, issues, mappings };
 }
 
-function readModulationTarget(config: RenderConfig, target: ParameterModulation['target']): number | undefined {
+export function readModulationTarget(config: RenderConfig, target: ParameterModulation['target']): number | undefined {
   switch (target) {
     case 'palette.offset': return config.palette.offset;
     case 'material.orbitAppearance.emission':

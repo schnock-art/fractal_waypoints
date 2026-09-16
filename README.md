@@ -1,7 +1,7 @@
 # Fractal Explorer
 
 Fractal Explorer is a WebGPU-first browser laboratory for travelling through
-Mandelbrot, Julia, Burning Ship, and Tricorn landscapes. It pairs direct
+Mandelbrot, Julia, Burning Ship, Tricorn, Multibrot, Newton/Nova and Phoenix landscapes. It pairs direct
 navigation with focused tools for palettes, Waypoints, discovery, comparison,
 and keyframed journeys.
 
@@ -71,15 +71,22 @@ The same commands are also available through `npm run ...` where applicable.
 
 ## Product model
 
-The app is organized around five focused workspaces:
+Explore and Perform share the same Primary world. Explore retains its focused editing tools:
 
 - **Explore** keeps formula, camera, color, and navigation controls close to the canvas.
+- **Visual Lab and Palette** shape materials, lenses and palette curves.
 - **Waypoints** records complete serializable render configurations for reliable revisits and sharing.
 - **Discover** searches the active region for promising boundary structures.
 - **Compare** reads two configurations through shared or independent viewpoints.
 - **Journey** builds deterministic, keyframed movement through fractal space.
 
 Render configurations carry versioned viewport, formula, colouring, palette, and quality data. That common shape is reused by URLs, Waypoints, comparisons, animation frames, and exports.
+
+### Try the first Perform slice
+
+Choose a Phoenix view in Explore, open **Perform**, then **Add palette wave → Play internal motion**. Palette offset and Orbit memory are temporary live controls: **Return to modulation** releases a held value; **Stop and edit base** restores your authored world. Pause/Resume and workspace switches preserve logical time. Compare focus never changes the Primary target.
+
+While stopped, inspect the numbered mappings and their source/smoothing settings. Source edits affect every mapping that shares that source. Save a static live frame through Waypoints, or use **Save base configuration** to keep authored motion definitions. This slice has no macros, freeze, performance takes, promotion or saved pin layouts; see [the Perform findings](docs/PERFORM_FINDINGS.md) for remaining work and actual-use review questions.
 
 ## Development notes
 

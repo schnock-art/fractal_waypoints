@@ -4,6 +4,7 @@ This is architecture guidance, not an implemented external-control API. ADR-026 
 
 ## Current configuration and modulation flow
 
+- The first [Perform slice](PERFORM_FINDINGS.md) exposes Primary-only internal transport and an ordered editor without expanding targets. Two session-only continuous overrides use the existing semantic writers after modulation and before final validation. Diagnostic mapping statuses are not an event/state signal protocol. No take/export/setup contract is inferred from these controls.
 - `types/config.ts` defines serialisable domain configurations and a closed union of semantic modulation targets. It contains no DOM, React, or GPU addresses.
 - `animation/interpolation.ts` separates base interpolation from `evaluateConfiguration`, which applies internal modulation once and performs final typed-frame validation. Frame generation and `animation/export.ts` share that path. Ordinary Explore remains stopped; Journey preview has independent logical time and does not overwrite authored `mainConfig` or its URL mirror.
 - `visuals/modulation/runtime.ts` evaluates internal sources, ordered transforms and add/replace mappings through the six existing targets. Legacy entries adapt into the same path once. List order is priority; target-local clamping remains observable. Seeded held noise and bounded trailing smoothing do not depend on frame history. This is not a general signal/event bus; Phoenix is not added to the waveform target union.

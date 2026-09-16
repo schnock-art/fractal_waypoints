@@ -1,5 +1,7 @@
 # Phase 10.2 — Internal evaluation, without a graph
 
+Implementation update: the [first 10.3 Perform slice](PERFORM_FINDINGS.md) now exposes these mechanisms directly. Runtime results additionally carry ordered mapping diagnostics; the six target IDs, waveform/transform evaluation, ordered application and validation policies remain unchanged. The original 10.2 report below is historical.
+
 Implemented from main. This extends existing internal modulation and Journey; it does not implement Perform, external control, discrete events, persistent signal state, or Patch. The six existing `ModulationTarget` IDs are unchanged. Phoenix Orbit memory remains a semantic/keyframe target, not a new waveform target.
 
 ## Ownership and evaluation

@@ -30,7 +30,9 @@ interface RenderViewProps {
   onRequestReset?: () => void;
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
   interactionEnabled?: boolean;
+  interactionDisabledLabel?: string;
   renderingEnabled?: boolean;
+  presentationAspectRatio?: boolean;
   placeholder?: RenderViewPlaceholder | null;
   onNavigationActionEvent?: (event: { action: NavigationActionId; phase: 'start' | 'end' }) => void;
   onDiscreteNavigationAction?: (action: NavigationActionId, precisionMode: boolean) => void;
@@ -64,7 +66,9 @@ export function RenderView({
   onRequestReset,
   onCanvasReady,
   interactionEnabled = true,
+  interactionDisabledLabel = 'Preview layer',
   renderingEnabled = true,
+  presentationAspectRatio = false,
   placeholder = null,
   onNavigationActionEvent,
   onDiscreteNavigationAction,
@@ -93,7 +97,8 @@ export function RenderView({
   const [isInteractive, setIsInteractive] = useState(true);
   const [hasKeyboardFocus, setHasKeyboardFocus] = useState(false);
 
-  configRef.current = config;
+  configRef.current = presentationAspectRatio && sizeRef.current.width > 1 && sizeRef.current.height > 1
+    ? { ...config, viewport: updateAspectRatio(config.viewport, sizeRef.current.width / sizeRef.current.height) } : config;
   navigationSettingsRef.current = navigationSettings;
   navigationCallbacksRef.current = {
     onRequestReset,
@@ -235,10 +240,10 @@ export function RenderView({
       return;
     }
 
-    void surfaceRef.current.render(interactionEnabled ? config : {
+    void surfaceRef.current.render(interactionEnabled && !presentationAspectRatio ? config : {
       ...config, viewport: updateAspectRatio(config.viewport, sizeRef.current.width / Math.max(sizeRef.current.height, 1)),
     });
-  }, [config, renderingEnabled, interactionEnabled]);
+  }, [config, renderingEnabled, interactionEnabled, presentationAspectRatio]);
 
   useEffect(() => {
     if (!canvasRef.current) {
@@ -264,6 +269,7 @@ export function RenderView({
     }
 
     const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return; // Hidden views retain their surface and last valid size.
     const pixelRatio = window.devicePixelRatio * configRef.current.quality.pixelDensity;
     const deviceWidth = rect.width * pixelRatio;
     const deviceHeight = rect.height * pixelRatio;
@@ -275,9 +281,10 @@ export function RenderView({
     surface.resize(deviceWidth, deviceHeight);
 
     const nextAspectRatio = rect.width / Math.max(rect.height, 1);
-    if (!interactionEnabled) {
+    if (!interactionEnabled || presentationAspectRatio) {
       // Presentation geometry must not write an evaluated frame back into authored state.
-      void surface.render({ ...configRef.current, viewport: updateAspectRatio(configRef.current.viewport, nextAspectRatio) });
+      configRef.current = { ...configRef.current, viewport: updateAspectRatio(configRef.current.viewport, nextAspectRatio) };
+      void surface.render(configRef.current);
       return;
     }
     if (Math.abs(configRef.current.viewport.aspectRatio - nextAspectRatio) > 1e-6) {
@@ -510,7 +517,7 @@ export function RenderView({
           )
         ) : null}
         {isInteractive && !interactionEnabled ? (
-          <div className="render-view__focus-chip">Preview layer</div>
+          <div className="render-view__focus-chip">{interactionDisabledLabel}</div>
         ) : null}
         {renderError ? <div className="render-view__overlay render-view__overlay--error">{renderError}</div> : null}
         {diagnostics && !diagnostics.interactive ? (

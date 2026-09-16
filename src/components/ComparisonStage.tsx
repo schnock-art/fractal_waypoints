@@ -3,6 +3,7 @@ import type { ComparisonConfig, ComparisonSide, NavigationSettings, RenderConfig
 import { RenderView } from './RenderView';
 
 interface ComparisonStageProps {
+  interactionEnabled?: boolean;
   comparison: ComparisonConfig;
   navigationSettings: NavigationSettings;
   onLeftConfigChange: (config: RenderConfig) => void;
@@ -12,6 +13,7 @@ interface ComparisonStageProps {
 }
 
 export function ComparisonStage({
+  interactionEnabled = true,
   comparison,
   navigationSettings,
   onLeftConfigChange,
@@ -39,7 +41,7 @@ export function ComparisonStage({
           onDiagnosticsChange={onDiagnosticsChange}
           navigationSettings={navigationSettings}
           onRequestReset={() => onResetSide('left')}
-          interactionEnabled={!overlayMode || comparison.activeSide === 'left'}
+          interactionEnabled={interactionEnabled && (!overlayMode || comparison.activeSide === 'left')}
         />
       </div>
 
@@ -56,7 +58,7 @@ export function ComparisonStage({
           onDiagnosticsChange={onDiagnosticsChange}
           navigationSettings={navigationSettings}
           onRequestReset={() => onResetSide('right')}
-          interactionEnabled={!overlayMode || comparison.activeSide === 'right'}
+          interactionEnabled={interactionEnabled && (!overlayMode || comparison.activeSide === 'right')}
         />
       </div>
     </section>

@@ -8,6 +8,30 @@
   overflow: hidden;
 }
 
+.control-panel.control-panel--perform { grid-template-rows: minmax(0, 1fr); }
+.workspace-transport { margin-top: .65rem; }
+.workspace-transport.control-panel__section { gap: .4rem; }
+.workspace-transport .perform-actions button { padding: .45rem .7rem; }
+.workspace-transport nav { max-width: 32rem; }
+.workspace-transport .primary-transport { gap: .3rem; }
+.perform-panel, .perform-card, .perform-control, .perform-mapping, .primary-transport { display: grid; gap: 0.6rem; min-width: 0; }
+.perform-card, .perform-mapping { padding: 0.85rem; border: 1px solid rgba(158,208,255,.2); border-radius: 16px; background: rgba(10,24,40,.62); }
+.perform-card h2, .perform-card h3, .perform-card p, .perform-warning p { margin: 0; }
+.perform-card h2 { font-size: 1.15rem; }
+.perform-card h3 { font-size: 1rem; color: #90d5ff; }
+.perform-card small, .perform-card p { color: #b9cde4; line-height: 1.4; }
+.perform-control { padding: .7rem 0; border-top: 1px solid rgba(158,208,255,.16); }
+.perform-control input[type=range] { min-height: 2.5rem; }
+.perform-panel input[type=checkbox] { width: auto; }
+.perform-mapping fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: .6rem; min-width: 0; }
+.perform-mapping details > * { margin-top: .5rem; }
+.perform-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.perform-actions button { width: auto; flex: 1; }
+.perform-actions button[aria-pressed=true] { border-color: #90d5ff; background: #24445d; }
+.perform-warning { color: #ffd39a !important; border-left: 3px solid #ffc777; padding-left: .5rem; overflow-wrap: anywhere; }
+.primary-transport { font-variant-numeric: tabular-nums; }
+.primary-transport details { max-height: 6rem; overflow-y: auto; }
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(240px, 0.8fr);

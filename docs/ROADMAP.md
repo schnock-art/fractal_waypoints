@@ -2,14 +2,14 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices. Internal explicit-time evaluation and authored/preview separation now run through Journey. Next is **10.3 — Perform**, with the [evaluation findings](MODULATION_EVALUATION.md) to review first. Perform itself is not implemented. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices. **10.3 now has a first playable Perform slice**, not its full planned feature set. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
 | Phases 1–7 | Core explorer: navigation, Waypoints, Discover, Compare, Journey | Delivered foundation; historical follow-ups remain |
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
-| Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; Perform next |
+| Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; first 10.3 slice delivered |
 | Phases 11–12 | Connections, then Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -389,7 +389,7 @@ Goal: make Fractal Waypoints playable before making it externally connected. Pre
 
 **One world, different benches.** Explore investigates and configures; Perform plays selected controls; future Patch configures relationships. They share the mathematical world, domain parameters, formula/metric/material/lens model, Waypoints, Journey, modulation, rendering, persistence, and analysis outputs. Switching benches must preserve that world, not clone configurations or create workspace-specific backends. Explicit user-created Compare views remain valid independent views.
 
-The existing sidebar modes are focused workflows, not an already implemented Explore/Perform/Patch shell. Keep ordinary exploration usable without performance or external-control jargon. See [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches), ADR-028, and [the interoperability audit](INTEROPERABILITY.md) for current limitations; ADR-026 governs semantic boundaries.
+The six sidebar modes remain focused workflows inside Explore. Perform now has a deliberately small peer workspace; Patch is not exposed. Keep ordinary exploration usable without performance or external-control jargon. See [workspace architecture](ARCHITECTURE.md#workspace-direction--one-world-different-benches), ADR-028, and [the interoperability audit](INTEROPERABILITY.md) for current limitations; ADR-026 governs semantic boundaries.
 
 ### Phase 10.0 — UX and workspace architecture
 
@@ -439,13 +439,19 @@ Status: complete through the existing Journey workflow, not a new modulation edi
 
 ### Phase 10.3 — Perform workspace
 
-- [ ] Review 10.2's ordered clamping, lens enable-on-write, bounded smoothing feel, optional-program forward-version policy, and export/skipped-mapping warning presentation before exposing Perform controls. Keep the first editor grounded in actual targets.
+Status: **first playable slice delivered; broader 10.3 remains open** at the user's explicit request to favour a small usable implementation. [PERFORM_FINDINGS.md](PERFORM_FINDINGS.md) records shipped mechanisms, verification, hypotheses and remaining work.
 
-- [ ] Build a focused playing surface over the shared world: selected/pinned large immediate controls, clear active/effective values, modulation visibility, and purposeful triggers.
+- [x] Add Explore/Perform peer navigation, persistent Primary scope and global transport/settings; preserve Explore tool selection, Compare layout/side and the Primary canvas across workspace switches.
+- [x] Expose the two proven semantic controls as fixed selected live controls, base/effective readouts, bounded absolute temporary overrides, explicit release, Pause/Resume and Stop restoration. No Phoenix waveform target.
+- [x] Expose six existing modulation targets through an ordered add/replace editor, explicit legacy conversion, shared source inspection/editing, final smoothing, per-step results and disabled/inactive/invalid reasons. Disable-all retains definitions.
+- [x] Browser-test the usable subset: playback, keyboard gestures, override/capture/restoration, workspace/Compare scope, stopped formula replacement, legacy conversion and Journey continuity. Keep source edits stopped; keep motion out of authored URL updates.
+- [ ] Actual-use review: smoothing lag/aliasing, ordered clamping comprehension, lens enable-on-write, warning prominence and short-screen density. Existing semantics are exposed, not permanently endorsed by a UI trial. Review optional-program forward-version recovery and export warning aggregation before promising broader portability/export UX.
+
+- [ ] Extend fixed selected controls to user-selectable/persisted pins and ordering only after the first surface is reviewed.
 - [ ] Support macros with explicit inspectable mappings. Form, Energy, Glow, Surface, Colour, Chaos, and Motion are design hypotheses to test, not hardcoded universal mathematical meanings.
-- [ ] Define and expose freeze, pause/resume, manual override, record, restore, and mapping reset behaviour, including what each action affects and how users recover their base settings.
+- [ ] Add freeze, reproducible recording/takes and keep-frame-as-base with undo; pause/resume, two-target overrides, Stop restoration and disable-all are implemented, not a complete take lifecycle.
 - [ ] Verify workspace switching, keyboard/accessibility behaviour, incompatible formula targets, recording/replay, and the Phoenix acceptance flow from 10.0.
-- [ ] Implement explicit Primary scope and Compare/Julia promotion, global activity/Stop visibility, and versioned setup/take save/load; do not claim reproducible performance recording from navigation capture alone. Follow [the design acceptance specifications](WORKSPACE_DESIGN.md#6-design-walkthrough-and-acceptance-specifications).
+- [ ] Add Compare/Julia promotion with undo and versioned setup/take save/load; Primary scope and global activity/Stop are implemented. Do not claim reproducible performance recording from navigation capture alone. Follow [the design acceptance specifications](WORKSPACE_DESIGN.md#6-design-walkthrough-and-acceptance-specifications).
 
 Definition of done: Perform feels like playing selected relationships, not Visual Lab with more sliders. Users need neither a graph nor knowledge of external protocols to play or return to Explore safely.
 
@@ -508,7 +514,7 @@ These preserve the former Phase 10 requirements; they are not cancelled and are 
 
 ### Polish backlog — Not instrument prerequisites
 
-- [ ] Refine the temporary Journey preview status area into Perform's compact global transport; verify tool-selector visibility on shorter screens, and distinguish Play-from-start from Resume after completion. (10.2 live UX review; no separate cleanup phase.)
+- [x] Replace the temporary Journey status area with global Perform/Journey transport; distinguish completed Journeys from paused ones. Short-screen and warning-density actual-use review remains in 10.3, without a separate cleanup phase.
 
 - [ ] Let Palette editing accurately represent imported/modulated offsets outside its −1…1 slider window (for example, a numeric input); preserve unbounded domain values and test repeat/mirror/clamp behaviour. (Phase 10.1 UX review.)
 
