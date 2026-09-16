@@ -1,5 +1,15 @@
 # Architecture Decision Records
 
+## ADR-032: Preserve double-single rounding boundaries on the GPU
+
+**Status:** Accepted
+
+Deep Phoenix exploration on NVIDIA Jetson AGX Orin first exposed visibly blocky detail around centre (0.3638938365, 0.3575870542) at scale 9.44e-6. A fixed Mandelbrot reproduction at centre (-0.5442458244970588, 0.6175806704263324), scale 9.441642655589697e-6, and 512 iterations isolated the fault on NVIDIA Tegra Orin (driver 595.78, Vulkan): the original `two_prod` returned zero instead of a -1.22147696401953e-8 residual. SwiftShader passed the same operation, so software WebGPU and coordinate-only tests were insufficient.
+
+Protect the error-free transforms with a runtime integer XOR between f32 bit patterns and an uploaded zero mask. `render.detail.w` is reserved as positive zero. The integer dependency prevents the observed floating-point reassociation/fusion across rounding steps without changing the high/low representation or saved configurations. Uniform packing separately converts JavaScript f64 components into canonical f32 pairs.
+
+This is a tested driver mitigation, not IEEE binary64 or a universal WebGPU precision guarantee. WGSL permits relaxed floating-point evaluation; future adapters need numerical regression checks. Integer-controlled arithmetic remains an alternative if another backend fails. Tests cover the primitive product residual, 64-step orbit accuracy, and 512-iteration neighbouring-pixel escape results with tolerance for chaotic boundary divergence. Hardware runs assert adapter vendor explicitly.
+
 ## ADR-031: One explicit-time internal evaluator, separate from authored state
 
 **Status:** Accepted — Phase 10.2, existing internal targets only.
@@ -32,7 +42,7 @@ Workspace switching preserves domain state and transport. The first Perform work
 
 Static visible-frame captures bake evaluated values and exclude their already-applied modulation; authored-base saves retain behaviour definitions. Performance setup is separate from the mathematical view and references one canonical set of domain mappings. New setup/take/project formats require versioned persistence and compatibility tests when implemented; no schema changes are made by this ADR. Reload/import starts stopped, not with automatically resumed motion or recording.
 
-The consequence is an app-level ownership/evaluation change before live modulation ships, not another renderer or a required state-management framework. Navigation, action semantics, persistence responsibilities, acceptance specifications, alternatives to implicit multi-view targeting, and staged implementation are recorded in [WORKSPACE_DESIGN.md](WORKSPACE_DESIGN.md). ADR-026's external-source and feedback constraints remain unchanged; Phase 11/12 are still unscheduled.
+The consequence is an app-level ownership/evaluation change before live modulation ships, not another renderer or a required state-management framework. Navigation, action semantics, persistence responsibilities, acceptance specifications, alternatives to implicit multi-view targeting, and staged implementation are recorded in [WORKSPACE_DESIGN.md](WORKSPACE_DESIGN.md). ADR-026's external-source and feedback constraints remain unchanged; the Real Synth slice is now the scheduled first Phase 11 integration, while Patch Bay remains unscheduled.
 
 ## ADR-028: Workspaces share one mathematical world
 
@@ -68,7 +78,7 @@ Mathematical metrics may later be outputs with no knowledge of consumers. Iterat
 
 Do not assume flow is permanently one-way. Feedback requires explicit event ordering, clocks/update rates, state ownership, deterministic replay/export rules, and delayed/bounded scheduling that prevents unstable synchronous recursion. These semantics must be designed before feedback is enabled, not inferred from React renders or GPU frame completion.
 
-No MIDI, audio, OSC, synth, DAW, node-editor, graph-runtime, or feedback-scheduler dependencies are authorised by this decision. Phase 9.3 continued through the existing formula → metrics → material architecture. The post-Phase-9 roadmap now develops internal instrument capabilities in Phase 10; Connections (11) and Patch Bay (12) remain unscheduled until deliberately started. Revisit concrete integration contracts before the first hardware integration; do not build a framework in anticipation.
+No MIDI, audio, OSC, synth, DAW, node-editor, graph-runtime, or feedback-scheduler dependencies are authorised by this decision. Phase 9.3 continued through the existing formula → metrics → material architecture. The post-Phase-9 roadmap develops internal instrument capabilities in Phase 10; Real Synth is the deliberately scheduled first Phase 11 integration, while Patch Bay (12) remains unscheduled. Revisit concrete integration contracts for that single device; do not build a framework in anticipation.
 
 ## ADR-025: Convergence formulas use explicit status and verified root identity
 

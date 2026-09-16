@@ -50,7 +50,7 @@ The [Phase 10.0 design](WORKSPACE_DESIGN.md) is complete; these decisions descri
 
 Acceptance walkthrough: discover Phoenix, save a Waypoint, enter Perform on the same world, pin Orbit memory and palette controls, modulate and record. A future Patch change can replace the internal source with hardware without reconstructing the fractal. Hardware and graph portions are future design checks, not Phase 10 runtime scope.
 
-Phase 10.1 incrementally supplies semantic metadata; 10.2 evolves internal modulation and final domain validation; 10.3 delivers Perform; 10.4 establishes capability-aware analysis snapshots. Existing metadata, validation, trap-slot addressing, and metric-output limitations are detailed in [INTEROPERABILITY.md](INTEROPERABILITY.md), not solved by this document. Connections (11) and Patch Bay (12) remain unscheduled until deliberately started. Deep zoom, 3D, and specialist mathematical models are independent research tracks in [ROADMAP.md](ROADMAP.md#optional-parallel-research-tracks), not hidden workspace backends.
+Phase 10.1 incrementally supplies semantic metadata; 10.2 evolves internal modulation and final domain validation; 10.3 delivers Perform; 10.4 establishes capability-aware analysis snapshots. Existing metadata, validation, trap-slot addressing, and metric-output limitations are detailed in [INTEROPERABILITY.md](INTEROPERABILITY.md), not solved by this document. Real Synth integration is the next scheduled Phase 11 slice: one physical device will validate the shared input-adapter boundary without embedding synth knowledge in formulas, materials, or renderers. Patch Bay (12) remains unscheduled. Deep zoom, 3D, and specialist mathematical models are independent research tracks in [ROADMAP.md](ROADMAP.md#optional-parallel-research-tracks), not hidden workspace backends.
 
 ## Suggested source layout
 
@@ -128,6 +128,8 @@ pixel → viewport-relative offset → double-single complex coordinate
 ```
 
 Use ordinary `f32` for local pixel offsets and colours where appropriate, but viewport centres and accumulated complex coordinates must use the double-single path.
+
+The uniform packer re-splits JavaScript pairs into two `f32` components. WGSL error-free transforms retain intermediate rounding through a runtime integer XOR with the positive-zero mask in `render.detail.w`; this slot must not be reused. This addresses observed NVIDIA Orin/Vulkan residual elimination (ADR-032). Numerical browser regressions must record the adapter: SwiftShader passing does not validate hardware arithmetic. Run `NATIVE_WEBGPU=1 REQUIRE_GPU_VENDOR=nvidia npx playwright test tests/e2e/gpu-arithmetic.spec.ts --headed` on Linux to check full orbit evolution, primitive residuals, and visible rendering. Headless runs check arithmetic only because Linux WebGPU compositing can produce blank screenshots.
 
 ## Navigation and input
 

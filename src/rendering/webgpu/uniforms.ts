@@ -7,7 +7,7 @@ import { getLensEffectAmount } from '../../visuals/lenses/model';
 import { getMaterialCode, getMaterialDensity, getOrbitTrapAppearance, getOrbitTrapScale, getOrbitTrapSet } from '../../visuals/materials/runtime';
 import { getOrbitTrapMetricCode, getOrbitTrapPaletteMappingCode } from '../../visuals/traps/orbitMaterial';
 import { getOrbitTrapCompositionCode, getOrbitTrapShapeCode } from '../../visuals/traps/orbitTraps';
-import type { RenderConfig } from '../../types/config';
+import type { DoubleSingle, RenderConfig } from '../../types/config';
 
 /** Matches RenderUniforms in mandelbrotShader.ts: 20 vec4 values, 16-byte aligned. */
 export const RENDER_UNIFORM_FLOAT_COUNT = 20 * 4;
@@ -38,6 +38,8 @@ export function buildRenderUniformData(config: RenderConfig, width: number, heig
     parameters.contourLevels ?? 18, parameters.contourWidth ?? 0.13, parameters.relief ?? 0.72, 0,
     parameters.height ?? 3.4, parameters.lightAngle ?? 0.7, parameters.specular ?? 0.32, parameters.ambient ?? 0.28,
     parameters.phaseScale ?? 1, parameters.magnitudeScale ?? 0.38, 0, 0,
+    // detail.w MUST remain positive zero: its bits are the runtime XOR mask
+    // used to preserve rounding boundaries in the double-single shader.
     parameters.roughness ?? 0.55, config.fractal.formulaId === 'multibrot' ? normalizeMultibrotPower(config.fractal.parameters.power) : 2, polynomial.rootRotation, 0,
     getLensEffectAmount(config.lens, 'exposure'), getLensEffectAmount(config.lens, 'vignette'), getLensEffectAmount(config.lens, 'toneMapping'), getLensEffectAmount(config.lens, 'bloom'),
     getLensEffectParameter(config, 'bloom', 'threshold', 1.1), getLensEffectAmount(config.lens, 'grain'), getLensEffectAmount(config.lens, 'colourGrade'), getLensEffectAmount(config.lens, 'sharpen'),
@@ -54,8 +56,24 @@ function getLensEffectParameter(config: RenderConfig, id: import('../../types/co
 }
 
 function buildViewportUniformData(config: RenderConfig): number[] {
+  const centreRe = splitForGpu(config.viewport.centre.re);
+  const centreIm = splitForGpu(config.viewport.centre.im);
+  const scale = splitForGpu(config.viewport.scale);
+
   return [
-    config.viewport.centre.re.hi, config.viewport.centre.re.lo, config.viewport.centre.im.hi, config.viewport.centre.im.lo,
-    config.viewport.scale.hi, config.viewport.scale.lo, Math.cos(config.viewport.rotation), Math.sin(config.viewport.rotation),
+    ...centreRe, ...centreIm,
+    ...scale, Math.cos(config.viewport.rotation), Math.sin(config.viewport.rotation),
   ];
+}
+
+/**
+ * JavaScript calculations keep their intermediate components as f64, while
+ * WGSL uniforms are f32. Re-split the represented value at this boundary so
+ * the GPU receives a canonical high/low f32 pair rather than losing the
+ * residual when Float32Array performs its conversion.
+ */
+function splitForGpu(value: DoubleSingle): [number, number] {
+  const represented = value.hi + value.lo;
+  const high = Math.fround(represented);
+  return [high, Math.fround(represented - high)];
 }

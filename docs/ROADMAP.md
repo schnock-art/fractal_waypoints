@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices. Internal explicit-time evaluation and authored/preview separation now run through Journey. Next is **10.3 — Perform**, with the [evaluation findings](MODULATION_EVALUATION.md) to review first. Perform itself is not implemented. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices. Internal explicit-time evaluation and authored/preview separation now run through Journey. **Real Synth integration is the next scheduled implementation slice**: it will validate live physical input through the existing modulation/control boundaries. Phase 10.3 — Perform remains the next dedicated workspace milestone, with the [evaluation findings](MODULATION_EVALUATION.md) to review first. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -10,9 +10,10 @@ Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within thei
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
 | Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; Perform next |
-| Phases 11–12 | Connections, then Patch Bay | Unscheduled until deliberately started |
+| Phase 11 | Connections | Real Synth is the next scheduled physical-integration slice; broader connections remain deliberately scoped |
+| Phase 12 | Patch Bay | Unscheduled until deliberately started |
 
-Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
+Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post–Real Synth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Real Synth slice. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
 
 ## Phase 1 — Rendering foundation
 
@@ -460,7 +461,24 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 ## Phase 11 — Connections
 
-**UNSCHEDULED until deliberately started.** Phase 10 must stand alone. Goal: validate semantic boundaries with a concrete physical device, not a speculative protocol framework.
+**Real Synth integration is the next scheduled implementation slice.** Its purpose is to validate the existing semantic and modulation boundaries with one real physical device, not to introduce a speculative protocol framework or synth-specific renderer coupling. Broader device, audio, and software-adapter work remains deliberately scoped after this slice.
+
+### Phase 11.1 — Real Synth integration
+
+Goal: let the physical Real Synth provide live control and modulation to the existing VideoSynth / Fractal Waypoints world through a reusable input boundary.
+
+- [ ] Select a small, musically and visually useful Real Synth interaction and name the semantic targets it affects.
+- [ ] Introduce an adapter boundary that turns device input into the same source/transform/mapping model used by internal modulation; formulas, materials, lenses, and renderers remain unaware of the synth.
+- [ ] Define live-input permissions, connection loss/reconnection, input ordering and timestamps, bounded update rates, and explicit disabled/armed state.
+- [ ] Define recording and replay behaviour so Journey/export use recorded or otherwise reproducible input rather than opportunistic live hardware samples.
+- [ ] Keep physical and future software adapters interchangeable where that improves the proven interaction model; do not require a Patch editor or broad external-control framework.
+- [ ] Demonstrate the first mapping in Fractal Waypoints / VideoSynth and verify that disconnecting the synth leaves an understandable, recoverable world state.
+
+Definition of done: one intentionally chosen Real Synth interaction is useful, recoverable, inspectable, and reproducible through the shared modulation/control architecture. It does not add synth/device details to fractal mathematics or rendering.
+
+After this slice, the runtime precision probe, reproducible Jetson benchmark harness, and perturbation rendering investigation proceed in that order. They must not delay the Real Synth work.
+
+### Subsequent connection work
 
 - [ ] Select a physical synth/controller and a small useful interaction; evaluate Web MIDI if appropriate to that device and browser environment. Keep device/protocol knowledge outside formulas, materials, and rendering.
 - [ ] Adapt external continuous signals, events, and state through the validated domain model; define permissions, connection loss, ordering, timestamps, recording, and reproducible replay/export.
@@ -483,11 +501,35 @@ Definition of done: the editor composes already proven mechanisms; graph layout 
 
 ## Optional parallel research tracks
 
-These preserve the former Phase 10 requirements; they are not cancelled and are not the next mandatory sequence. Schedule bounded experiments independently of Phases 10–12. Older Phase 7 deep-zoom/3D follow-ups route here; capability-gated distance estimation remains research rather than a promise made by Phase 9.
+These preserve the former Phase 10 requirements; they are not cancelled and are not the next mandatory sequence. The Real Synth slice is the next implementation priority. Its follow-on hardware/deep-zoom work is ordered below: runtime precision probe, Jetson benchmark harness, then perturbation rendering. Older Phase 7 deep-zoom/3D follow-ups route here; capability-gated distance estimation remains research rather than a promise made by Phase 9.
+
+### Runtime WebGPU double-single precision probe — after Real Synth
+
+Goal: measure whether the active browser, GPU, driver, and compiler preserve the numerical invariants required by the double-single path. Feature detection or an adapter allowlist is insufficient.
+
+- [ ] Run a compact behavioural probe at startup or on demand: known inputs → the production WGSL double-single primitive → active device execution → GPU readback → expected residual/correction comparison.
+- [ ] Report `Verified`, `Degraded`, or `Failed` based on the invariants Fractal Waypoints actually relies on, including the correction/rounding behaviour that failed on NVIDIA Orin before ADR-032's mitigation.
+- [ ] Surface adapter, browser/backend, precision-path, probe result, and deep-zoom support in Settings/Diagnostics where practical.
+- [ ] Prefer clear warning/degradation reporting first. Do not silently select an unproven fallback; only introduce automatic fallback once its numerical behaviour is itself verified.
+- [ ] Define an explicit unsafe-deep-zoom warning/limit policy for a failed probe so incorrect geometry is never presented as trustworthy.
+
+### Reproducible Jetson/WebGPU benchmark harness — after the precision probe
+
+Goal: measure representative rendering cost, thermal behaviour, power use, and eventually energy per rendered frame—not only FPS.
+
+- [ ] Use fixed Waypoints for an easy broad region, a medium boundary-detail region, and a difficult deep Phoenix region that includes the Orin precision incident where practical.
+- [ ] Start with representative combinations rather than an exhaustive matrix: supported Jetson power modes, 1×/2× pixel density, and 512/1024/2048 iterations where meaningful.
+- [ ] Keep viewport, resolution, saved Waypoint, material/render path, and probe result explicit for every run.
+- [ ] Record power mode; render/frame time and useful FPS; GPU/CPU utilisation; RAM; GPU/CPU power telemetry; and temperature. Use `tegrastats` or equivalent Jetson telemetry where available.
+- [ ] Derive approximate energy per rendered frame or work unit once the baseline harness is trustworthy.
 
 ### Deep Space — Perturbation-assisted deep zoom
 
-- [ ] Prototype reference-orbit perturbation rendering behind the existing diagnostics and renderer coordinator.
+**After Real Synth integration, the runtime precision probe, and the Jetson benchmark harness.** Double-single remains the normal high-precision viewport and rendering path; perturbation is a hybrid route for extreme zoom, not its replacement.
+
+- [ ] Design reference-orbit perturbation rendering behind the existing diagnostics and renderer coordinator: normal/deep navigation uses double-single, while extreme zoom uses a high-precision reference orbit plus GPU deviations for nearby pixels.
+- [ ] Decide CPU/GPU responsibilities, reference-point selection/rebasing, reference-orbit precision and storage, perturbation failure detection, and the transition back to double-single.
+- [ ] Establish compatibility rules for Mandelbrot, Phoenix, Julia, and later formula families, and for the material/surface pipeline and browser/WebGPU portability.
 - [ ] Define precision/error thresholds, fallback behaviour, and Waypoint compatibility before exposing it as a quality mode.
 - [ ] Test known deep-zoom reference views against deterministic images or metric fixtures.
 
@@ -506,7 +548,17 @@ These preserve the former Phase 10 requirements; they are not cancelled and are 
 - [ ] Explore free root placement/arbitrary polynomial coefficients and a separate Nova Julia view, with root-tracking rules before enabling continuous root-identity animation. (From Phase 9.2.)
 - [ ] Apply the [formula admission checklist](FORMULA_ADMISSION.md) to future specialists: metric fit, interactive performance, Discover value, visual distinction, and testability. A new abstraction is appropriate when the mathematical contract requires it.
 
+### Future Workshop — RealSense / Sensory Bench
+
+Exploratory research only; it does not enter the current Fractal Waypoints implementation sequence or precede Real Synth, precision validation, benchmarks, or perturbation work.
+
+- [ ] Explore RealSense RGB/depth-derived signals—depth, silhouette, motion, spatial regions, gradients, camera distance, gestures, or tracked objects—as future VideoSynth / Fractal Waypoints sources. Reuse the Real Synth input/modulation boundary rather than creating a camera-specific control path.
+- [ ] Separately assess a Workshop Sensory Bench: lightweight continuous perception/world-model inference on Jetson, selective experience storage, novelty/prediction-error capture, and periodic offline consolidation/training on the RTX laptop (Forge) before deployment back to Jetson (Workshop).
+- [ ] Keep camera capture, world-model inference, storage policy, and any model-training pipeline outside Fractal Waypoints until a separately scoped experiment establishes their value and operating constraints.
+
 ### Polish backlog — Not instrument prerequisites
+
+- [ ] Add an adaptive deep-zoom render scale that can lower internal GPU resolution automatically while retaining an explicit user override. (Jetson/WebGPU deep-zoom review.)
 
 - [ ] Refine the temporary Journey preview status area into Perform's compact global transport; verify tool-selector visibility on shorter screens, and distinguish Play-from-start from Resume after completion. (10.2 live UX review; no separate cleanup phase.)
 

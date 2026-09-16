@@ -22,6 +22,7 @@ describe('deep zoom diagnostics', () => {
     expect(diagnostics.severity).toBe('info');
     expect(diagnostics.summary).toContain('Deep zoom');
     expect(diagnostics.hints.some((hint) => hint.includes('iterations'))).toBe(true);
+    expect(diagnostics.hints.some((hint) => hint.includes('Pixel density'))).toBe(true);
   });
 
   it('warns when the viewport reaches extreme zoom territory', () => {
@@ -34,5 +35,6 @@ describe('deep zoom diagnostics', () => {
     expect(diagnostics.severity).toBe('warning');
     expect(diagnostics.summary).toContain('Extreme zoom');
     expect(diagnostics.hints.some((hint) => hint.includes('perturbation'))).toBe(true);
+    expect(diagnostics.hints.some((hint) => hint.includes('Pixel density'))).toBe(true);
   });
 });
