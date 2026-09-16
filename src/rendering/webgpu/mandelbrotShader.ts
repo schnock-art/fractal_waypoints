@@ -55,30 +55,41 @@ struct OrbitMetrics {
 
 const doubleSingleCoordinateKernel = /* wgsl */ `
 
+// detail.w is an uploaded +0.0 bit mask. Crossing a runtime integer XOR
+// forces each error-free-transform intermediate to be a rounded f32 value.
+// Plain lets/parentheses (and identity bitcasts) allow driver reassociation
+// to erase the residual, observed on NVIDIA Orin's Vulkan compiler.
+fn ds_round(value: f32) -> f32 {
+  return bitcast<f32>(bitcast<u32>(value) ^ bitcast<u32>(render.detail.w));
+}
+
 fn quick_two_sum(a: f32, b: f32) -> vec2f {
-  let s = a + b;
-  return vec2f(s, b - (s - a));
+  let s = ds_round(a + b);
+  return vec2f(s, ds_round(b - ds_round(s - a)));
 }
 
 fn two_sum(a: f32, b: f32) -> vec2f {
-  let s = a + b;
-  let bb = s - a;
-  let err = (a - (s - bb)) + (b - bb);
+  let s = ds_round(a + b);
+  let bb = ds_round(s - a);
+  let err = ds_round(ds_round(a - ds_round(s - bb)) + ds_round(b - bb));
   return vec2f(s, err);
 }
 
 fn split(a: f32) -> vec2f {
-  let c = 4097.0 * a;
-  let hi = c - (c - a);
-  let lo = a - hi;
+  let c = ds_round(4097.0 * a);
+  let hi = ds_round(c - ds_round(c - a));
+  let lo = ds_round(a - hi);
   return vec2f(hi, lo);
 }
 
 fn two_prod(a: f32, b: f32) -> vec2f {
-  let p = a * b;
+  let p = ds_round(a * b);
   let a_parts = split(a);
   let b_parts = split(b);
-  let err = ((a_parts.x * b_parts.x - p) + (a_parts.x * b_parts.y) + (a_parts.y * b_parts.x)) + (a_parts.y * b_parts.y);
+  let first = ds_round(ds_round(a_parts.x * b_parts.x) - p);
+  let second = ds_round(first + ds_round(a_parts.x * b_parts.y));
+  let third = ds_round(second + ds_round(a_parts.y * b_parts.x));
+  let err = ds_round(third + ds_round(a_parts.y * b_parts.y));
   return vec2f(p, err);
 }
 

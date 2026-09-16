@@ -29,6 +29,7 @@ export function analyzeDeepZoom(config: RenderConfig): DeepZoomDiagnostics {
         iterationGap > 0
           ? `Increase iterations toward ${recommendedIterations} to recover fine boundary detail.`
           : `Iterations are already in a good range for this zoom, but precision limits may still appear.`,
+        'Lower Pixel density in Settings can improve responsiveness, but does not repair arithmetic precision loss.',
         'Expect deeper zoom work to benefit from future perturbation rendering rather than only higher iteration counts.',
         'If the image starts to smear or lose structure, save a Waypoint so this region can be revisited after deeper-zoom rendering upgrades.',
       ],
@@ -46,6 +47,7 @@ export function analyzeDeepZoom(config: RenderConfig): DeepZoomDiagnostics {
         iterationGap > 0
           ? `Consider increasing iterations toward ${recommendedIterations} for cleaner boundary structure.`
           : 'Iteration count is roughly aligned with this zoom depth.',
+        'Lower Pixel density in Settings can improve responsiveness, but does not repair arithmetic precision loss.',
         'Compare this region against a nearby Waypoint if you want to judge whether more iterations are revealing new structure or just noise.',
       ],
     };

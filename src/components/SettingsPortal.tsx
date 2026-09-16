@@ -61,7 +61,7 @@ export function SettingsPortal({
               <span>Pixel density</span>
               <input
                 type="range"
-                min="0.75"
+                min="0.25"
                 max="2"
                 step="0.25"
                 value={pixelDensity}
@@ -69,6 +69,7 @@ export function SettingsPortal({
                 onChange={(event) => onPixelDensityChange(Number(event.target.value))}
               />
               <strong>{pixelDensity.toFixed(2)}x</strong>
+              <small>Lower this to improve responsiveness at the cost of image resolution.</small>
               {qualityLocked ? <small>Stop the Journey preview to edit authored quality.</small> : null}
             </label>
           </section>
