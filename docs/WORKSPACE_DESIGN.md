@@ -10,7 +10,7 @@ Choose two navigation levels. The top-level workspaces are **Explore** and **Per
 
 Explore retains the current formula/navigation essentials, canvas, and focused tool selector: Visual Lab, Palette, Waypoints, Discover, Compare, Journey. These are tools within Explore, not six peers of Perform. Preserve their familiar names and capabilities. Remember the last Explore tool when returning from Perform; do not automatically send users to Journey when they press a transport button.
 
-Perform presents the same primary world with a compact set of pinned controls, explicit macros, active-value/modulation indicators, and transport/recording controls. It does not duplicate formula editors or the palette curve editor. An “Edit in Explore” action returns to the relevant tool on that same world. Future Patch edits the same source/mapping model; graph layout remains local editor state.
+Perform presents the same primary world with a compact set of pinned controls, explicit macros, active-value/modulation indicators, and transport/recording controls. It does not duplicate formula editors or the palette curve editor. A future Controller view answers “what does my instrument do?” through a physical device surface; Perform answers “what do I want to play now?” without exposing all wiring; Patch answers “how is the machine wired?” All three read or edit one canonical relationship where meaningful. An “Edit in Explore” action returns to the relevant tool on that same world. Patch graph layout remains local editor state.
 
 Keep the canvas and renderer ownership above workspace panels. Switching tools can mount/unmount editors but must not create a second world, reset time, or reset the renderer merely because the panel changed. On narrower screens, use a compact workspace selector and one scrollable tool surface; do not stack two full inspectors. This specifies hierarchy, not colours, typography, or pixel layout.
 
@@ -33,9 +33,12 @@ These are conceptual responsibilities, not a mandate for a particular state libr
 | Primary base `RenderConfig` | Shared application/domain state; edited by explicit domain actions | Preserve; never replace from an evaluated frame |
 | Compare left/right, layout and Julia seed/preview | Shared view composition; explicit independent/linked views | Preserve while not displayed; no automatic promotion |
 | Journey clip and keyframes | Shared authored document data, independent of visible Journey panel | Preserve; editing the clip never rewrites base implicitly |
-| Sources, transforms and mappings | Serializable domain behaviour, not Perform widgets | One canonical owner; reuse in Journey and future Patch |
-| Performance setup | Serializable pins/order, macro definitions and mapping references | Preserve; no copied formula or palette state |
-| Transport, clock, overrides, held frame, recording draft | Shared session runtime, above workspace panels | Preserve while switching; keep a global activity indicator |
+| Sources, transforms and mappings | Serializable domain behaviour, not Perform, Controller, or Patch widgets | One canonical owner; reuse in Journey and future Patch |
+| Performance/control setup | Serializable pins/order, macro definitions, assignments and mapping references | Preserve; no copied formula/palette state or browser connection IDs |
+| Device profiles | Hardware/UI knowledge: physical control identity, protocol address, label and placement | Referenced by setup; neither a Waypoint requirement nor renderer/domain state |
+| Transport, clock, overrides, held frame, live connection, armed state, recording draft | Shared session runtime, above workspace panels | Preserve while switching; keep a global activity indicator; never auto-reconnect/re-arm on load |
+| Recorded input/take data | Ordered, reproducible performance input distinct from controller setup | Replay without original hardware; use for deterministic export once implemented |
+| Patch graph layout/editor selection | Presentation-local view state | Never authoritative mapping behaviour or a Waypoint field |
 | Effective configuration | Derived output of evaluation for a named view/time | Recompute or hold explicitly; never autosave into base |
 | Selected Explore tool, expanded editors, scroll, focus | Workspace-local UI state | Restore last tool/expansion; cancel stale pointer/key gestures |
 | Settings, navigation bindings | Global user preferences | Unchanged; not part of a Waypoint |
@@ -76,10 +79,10 @@ Today URL state serialises one `RenderConfig`; local storage persists Waypoints 
 | --- | --- |
 | Address bar | Primary authored base only; update on explicit base changes, not clock ticks, workspace selection, Compare focus, or effective modulation values |
 | Copy view link | Default to a labelled static snapshot of the visible named view; if live/frozen, bake its effective values and remove modulations from the snapshot only. Do not mutate the current base/setup |
-| Waypoint | Default “Save current view” captures a reproducible static visible view, with matching thumbnail; offer explicitly labelled “Save base configuration” to preserve authored modulation definitions. Neither includes pins, transport, or an entire performance setup |
-| Journey | Authoritative keyframes and deterministic behaviour; performance takes need initial state, ordered timed gestures, seeds and mapping revisions, not raw UI recordings or merely approximate keyframes |
-| Project document | Future versioned envelope for base, explicit view composition, palettes/Waypoints, Journey clips/takes and performance setup; workspace preference can be an optional hint, not mathematical state |
-| Session recovery | Future best-effort draft recovery for authored world/setup/clip and UI selection; reopen stopped, clear transient overrides, never resume recording or hardware automatically |
+| Waypoint | Default “Save current view” captures a reproducible static visible view, with matching thumbnail; offer explicitly labelled “Save base configuration” to preserve authored modulation definitions. It never includes a device profile, controller assignment, live connection, pins, transport, or entire performance setup |
+| Journey | Authoritative keyframes and deterministic behaviour; recorded hardware takes need initial state, ordered logical-time input, mapping revision and defined coalescing—not raw UI recordings or a connected device |
+| Project document | Future versioned envelope for base, explicit view composition, palettes/Waypoints, Journey clips/takes, performance setup and referenced profiles; workspace preference and Patch layout are optional presentation hints, not mathematical state |
+| Session recovery | Future best-effort draft recovery for authored world/setup/clip and UI selection; reopen stopped, clear transient overrides, never resume recording, reconnect, or arm hardware automatically |
 | User preferences | Existing local navigation/settings remain independent of project and URL data |
 | Image/video export | Static export uses the chosen effective/held view. Time-based export uses a frozen input document and deterministic evaluator, never a live screen or mutable setup |
 

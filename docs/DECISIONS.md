@@ -12,6 +12,8 @@ While armed and playing, the value updates a temporary Primary viewport. It neve
 
 The slice is not a claim of a complete external-source runtime: no MIDI control data is persisted, recorded, replayed, exported, or used as a generic graph source yet. The next Phase 11 work must decide timestamp ordering, rate bounds, arming/reconnection policy, and how a recorded external source enters the same serialisable source/transform/mapping model without teaching formulas, materials, or renderers about MIDI.
 
+**2026-09-24 extension:** Direct selection uses the documented Explorer CC catalogue and channel, while a per-input decoder also admits complete absolute NRPN values for profiled Macro/Filter controls. Transport CCs are never independently learnable; unknown packed NRPNs are diagnostic-only until their sub-parameter semantics are defined. Documented ranges normalise input: the default continuous mode maps position to signed speed and accumulates frame time into existing navigation intents; optional turn mode differences values from a fresh arming baseline. Hold clears speed without releasing the viewport; Pause/focus loss require fresh input to restart continuous motion. Browser lifecycle is isolated from the editor; losing the selected device clears the assignment and never silently switches to another device. This extends protocol coverage within the same one-source, session-only zoom boundary, with no persistence schema change. See [Hydrasynth coverage](HYDRASYNTH_CONTROLS.md).
+
 ## ADR-032: Preserve double-single rounding boundaries on the GPU
 
 **Status:** Accepted

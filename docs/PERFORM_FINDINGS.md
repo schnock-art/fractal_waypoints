@@ -38,10 +38,34 @@ User-selectable/persisted pins and ordering; macros; freeze/unfreeze; reproducib
 
 The full Phoenix discover → save → pin → record → replay acceptance flow is therefore **not claimed complete**. The first playable subset covers entering the same Primary, semantic controls, modulation, workspace continuity, static capture and safe restoration. Keep the remaining roadmap boxes open.
 
+## Hydrasynth first-slice conclusion
+
+The delivered Hydrasynth Explorer CC-learn panel is a sound narrow integration: explicit browser permission/input selection, raw-message diagnostics, learned relative zoom, and safe temporary-viewport release prove the device lifecycle without contaminating authored `RenderConfig`. Actual use should treat its `connect → select → watch CC → identify → assign → arm` flow as a diagnostic/implementation slice, not the permanent instrument interaction.
+
+The next UX should let a player recognise and select a physical Explorer control, see it react when touched, and inspect protocol details only when useful. The resulting physical control → optional transforms → semantic target relationship must remain the same canonical relationship that Perform eventually presents and Patch later visualises. A visual control surface is therefore neither a second mapping store nor an early graph editor. The raw MIDI monitor remains valuable as an advanced/debugging surface.
+
+### Phase 11.2 update
+
+Perform now keeps a compact Hydrasynth status-and-launch card near the top of the workspace. Opening it presents the schematic Explorer Macro 1–8 map and current zoom assignment in a focused, full-window editor; closing it leaves the session connected and returns keyboard focus to the launcher. This progressive disclosure replaces the cramped inline surface found during live review while keeping Perform's authored controls readable.
+
+The map is backed by a small device profile. A mapped Macro pulse identifies live CC 16–23 traffic and shows its name, channel, value, and inspectable address; a user can select any visible Macro without learning CC numbering. Traffic outside this intentionally small profile is labelled unmapped and remains available in the collapsible raw monitor, rather than being guessed. The current map selection is inspection-only: using it to create visual semantic assignments is explicitly Phase 11.3 work. Existing input selection, raw CC learning, temporary zoom, and release-on-disarm/disconnect/workspace-exit/Stop behaviour remain unchanged.
+
 ## Verification
 
-- 162 unit tests pass, including five new bounded-Perform tests for post-modulation overrides, domain validation, inactive Phoenix controls, canonical conversion, ordered diagnostics and mapping movement.
-- Full 29-test browser suite passes, including six Perform scenarios alongside existing Explore/Julia/Waypoints/Compare/Journey and GPU material/formula regressions. The Perform suite was additionally rerun after the final focus/label refinement.
+### Continuous zoom after bounded-knob feedback
+
+Absolute MIDI parameters stop changing at their endpoints, so zoom-while-turning cannot continue indefinitely. The default now interprets the knob as signed zoom speed, with a centre dead zone and gentler speeds near centre. Frame-time accumulation continues navigation without new MIDI messages. The original turn mode remains selectable. UX review identified the need to stop without restoring the authored camera: Hold zoom is therefore available outside the modal and retains the current temporary view. Pause and browser focus/visibility loss hold motion until fresh input; Release/Stop still restore the base. The live editor layout, focused unit tests, simulated MIDI browser regressions, type check and production build passed. Actual hardware feel and the renderer's existing precision limits remain separate concerns.
+
+### First semantic target beyond navigation
+
+Palette offset is now the first controller-driven numeric target because it already has a validated, formula-independent semantic contract. The assignment card makes its finite control range and optional inversion explicit, while the actual palette offset remains finite but unbounded. Incoming controller values become a separate session-only override after evaluated motion; they do not edit the authored `RenderConfig`, URL or Waypoint. Release, Stop, input loss and leaving Perform restore the evaluated value. This proves a second useful target while preserving the one-control limit; shared mappings, transforms, setup persistence and replay remain later work.
+
+### Controller correction after actual use
+
+The clickable Macro surface initially exposed selection without assignment and only understood CC packets. The corrected editor uses a grouped/searchable Explorer CC catalogue with direct assignment and observed-channel selection, supported Macro/Filter NRPN decoding, and an incoming-activity readout. Hardware page/Param TX instructions are visible through setup help. Selection and last-touched values are shown separately so incoming data no longer masks the selected control. New input/arming baselines prevent stale-value jumps. Unprofiled packed NRPNs remain diagnostic-only. See [Hydrasynth controls](HYDRASYNTH_CONTROLS.md) for exact coverage and physical-hardware verification limits.
+
+- 173 unit tests across 36 files pass, including controller catalogue, NRPN framing, channel separation and range conversion.
+- All eight Perform browser scenarios pass, including simulated CC/NRPN assignment and movement, fresh arming baseline, wrong-channel rejection, connection continuity after editor close, and disconnect restoration. The current build and live editor layout were checked. Physical Explorer transmission remains to be verified by actual use.
 - Browser checks cover keyboard control and focus return, base/URL stability through resize and workspace switches, static captures, Stop/reload, shared source/smoothing editing, explicit legacy conversion, disabled/inactive/invalid statuses, lens restoration, and Compare Right isolation. The visibility handler is exercised by a browser document event; native OS focus switching and subjective smoothing feel still require actual-use review.
 - Visible-pixel assertions verify live and warning-scene GPU output. Inspected the live controls, mapping-warning/lens scene and 1280×720 screenshot; short screens retain global Stop and a scrollable control area.
 - TypeScript check, production build and diff whitespace checks pass. No dependencies, persisted target IDs or GPU kernels changed. Work remains on main, uncommitted and ready for review.

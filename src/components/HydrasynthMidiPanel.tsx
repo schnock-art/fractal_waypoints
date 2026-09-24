@@ -1,154 +1,156 @@
 import { useEffect, useRef, useState } from 'react';
-import { isHydrasynthInput, parseControlChange } from '../integrations/midi/controlChange';
+import { createPortal } from 'react-dom';
+import { addressLabel, inputKey, type ControlAddress } from '../integrations/midi/controlInput';
+import { explorerManualUrl, findHydrasynthExplorerControl, hydrasynthControlGroups, hydrasynthExplorerControls } from '../integrations/midi/hydrasynthExplorerProfile';
+import { useMidiControls, type MidiAssignmentTarget } from '../integrations/midi/useMidiControls';
 
-interface BrowserMidiInput {
-  id: string;
-  name: string | null;
-  state: 'connected' | 'disconnected';
-  onmidimessage: ((event: { data: Uint8Array; timeStamp: number }) => void) | null;
-}
-interface BrowserMidiAccess {
-  inputs: Map<string, BrowserMidiInput>;
-  onstatechange: (() => void) | null;
-}
-type MidiNavigator = Navigator & { requestMIDIAccess?: () => Promise<BrowserMidiAccess> };
-
-interface Props {
-  active: boolean;
-  onZoomDelta: (delta: number) => void;
-  onRelease: () => void;
-}
-
-interface SeenControlChange {
-  channel: number;
-  controller: number;
-  value: number;
-}
-
-export function HydrasynthMidiPanel({ active, onZoomDelta, onRelease }: Props) {
-  const accessRef = useRef<BrowserMidiAccess | null>(null);
-  const previousValueRef = useRef<number | null>(null);
-  const callbacksRef = useRef({ onZoomDelta, onRelease, active, armed: false, learning: false, controller: null as number | null });
-  callbacksRef.current = { onZoomDelta, onRelease, active, armed: callbacksRef.current.armed, learning: callbacksRef.current.learning, controller: callbacksRef.current.controller };
-  const [inputs, setInputs] = useState<BrowserMidiInput[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('');
-  const [channel, setChannel] = useState<number | null>(null);
-  const [controller, setController] = useState<number | null>(null);
-  const [learning, setLearning] = useState(false);
-  const [armed, setArmed] = useState(false);
-  const [status, setStatus] = useState('Not connected. Browser permission is required before MIDI input is visible.');
-  const [lastValue, setLastValue] = useState<number | null>(null);
-  const [messages, setMessages] = useState<SeenControlChange[]>([]);
-
-  callbacksRef.current = { onZoomDelta, onRelease, active, armed, learning, controller };
-  const refreshInputs = () => {
-    const next = [...(accessRef.current?.inputs.values() ?? [])].filter((input) => input.state === 'connected');
-    setInputs(next);
-    setSelectedId((current) => {
-      if (current && next.some((input) => input.id === current)) return current;
-      const preferred = next.find((input) => isHydrasynthInput(input.name ?? '')) ?? next[0];
-      if (!preferred) {
-        callbacksRef.current.onRelease();
-        setArmed(false);
-        setLearning(false);
-        setChannel(null);
-        setController(null);
-        setMessages([]);
-        setStatus('MIDI input disconnected. Temporary zoom was released safely.');
-        return '';
-      }
-      return preferred.id;
-    });
-  };
-
-  useEffect(() => () => {
-    for (const input of accessRef.current?.inputs.values() ?? []) input.onmidimessage = null;
-    if (accessRef.current) accessRef.current.onstatechange = null;
-    callbacksRef.current.onRelease();
-  }, []);
-
+interface Props { active: boolean; running: boolean; onZoomDelta: (delta: number) => void; onPaletteOffset: (value: number) => void; onRelease: () => void }
+export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOffset, onRelease }: Props) {
+  const midi = useMidiControls(active, running, onZoomDelta, onPaletteOffset, onRelease);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [group, setGroup] = useState('Macros');
+  const [search, setSearch] = useState('');
+  const [selectedControlId, setSelectedControlId] = useState('macro.1');
+  const [channel, setChannel] = useState(0);
+  const [format, setFormat] = useState<'midi-cc' | 'midi-nrpn'>('midi-cc');
+  const [target, setTarget] = useState<MidiAssignmentTarget>('zoom');
+  const [minimum, setMinimum] = useState(-1);
+  const [maximum, setMaximum] = useState(1);
+  const [inverted, setInverted] = useState(false);
+  const selectedControl = hydrasynthExplorerControls.find((control) => control.id === selectedControlId)!;
+  const selectedAddress: ControlAddress | null = format === 'midi-cc' ? selectedControl.protocol
+    : selectedControl.nrpn ? { protocol: 'midi-nrpn', parameter: selectedControl.nrpn.parameter } : null;
+  const selected = midi.inputs.find((input) => input.id === midi.selectedId);
+  const connectionLabel = selected?.name ?? (midi.connected ? 'Choose an input' : 'Not connected');
+  const mappedControl = midi.assignment ? findHydrasynthExplorerControl(midi.assignment.address) : undefined;
+  const lastControl = midi.lastInput ? findHydrasynthExplorerControl(midi.lastInput.address) : undefined;
+  const visible = hydrasynthExplorerControls.filter((control) => search
+    ? `${control.label} ${control.group} ${control.protocol.controller}`.toLowerCase().includes(search.toLowerCase())
+    : control.group === group);
+  const close = () => { setExpanded(false); requestAnimationFrame(() => launcherRef.current?.focus()); };
   useEffect(() => {
-    const access = accessRef.current;
-    if (!access) return;
-    for (const input of access.inputs.values()) input.onmidimessage = null;
-    const selected = access.inputs.get(selectedId);
-    if (!selected) return;
-    selected.onmidimessage = (event) => {
-      const message = parseControlChange(event.data, event.timeStamp);
-      if (!message) return;
-      const current = callbacksRef.current;
-      setLastValue(message.value);
-      setMessages((previous) => [{ channel: message.channel, controller: message.controller, value: message.value }, ...previous].slice(0, 8));
-      if (current.learning) {
-        setStatus(`CC #${message.controller} on channel ${message.channel + 1} received. Choose its Assign button below.`);
-        return;
-      }
-      if (current.armed && current.active && current.controller === message.controller && channel === message.channel) {
-        const previous = previousValueRef.current;
-        previousValueRef.current = message.value;
-        if (previous !== null) current.onZoomDelta(message.value - previous);
+    if (!expanded) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); close(); }
+      if (event.key === 'Tab') {
+        const elements = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input, select, summary, a[href]') ?? [])].filter((element) => element.getClientRects().length > 0);
+        const first = elements[0], last = elements.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     };
-    return () => { selected.onmidimessage = null; };
-  }, [selectedId, channel, controller, learning, armed, active]);
-
-  async function connect() {
-    const request = (navigator as MidiNavigator).requestMIDIAccess;
-    if (!request) {
-      setStatus('Web MIDI is unavailable in this browser. Use a Chromium-based browser over HTTPS or localhost.');
-      return;
-    }
-    try {
-      accessRef.current = await request.call(navigator);
-      accessRef.current.onstatechange = refreshInputs;
-      refreshInputs();
-      setStatus('MIDI access granted. Select the Focusrite input, then move a Hydrasynth knob to monitor its messages.');
-    } catch {
-      setStatus('MIDI permission was not granted. Connect the Explorer and allow MIDI access to try again.');
-    }
-  }
-
-  const selected = inputs.find((input) => input.id === selectedId);
-  const assigned = controller !== null && channel !== null;
-  const assign = (message: SeenControlChange) => {
-    setChannel(message.channel);
-    setController(message.controller);
-    previousValueRef.current = message.value;
-    setLearning(false);
-    setArmed(false);
-    setStatus(`Zoom assigned to CC #${message.controller} · channel ${message.channel + 1}. Press Play, then Arm zoom control.`);
+    document.addEventListener('keydown', keys);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', keys); };
+  }, [expanded]);
+  const selectLast = () => {
+    if (!midi.lastInput || !lastControl) return;
+    setSelectedControlId(lastControl.id); setGroup(lastControl.group); setSearch('');
+    setChannel(midi.lastInput.channel); setFormat(midi.lastInput.address.protocol);
   };
-  return <section aria-label="Hydrasynth Explorer MIDI" className="perform-card">
-    <h3>Hydrasynth Explorer MIDI</h3>
-    <p>Assign a Hydrasynth control to relative Primary zoom using the existing double-single navigation path. It never changes the authored configuration.</p>
-    {!accessRef.current ? <button type="button" onClick={connect}>Connect Hydrasynth Explorer</button> : <label>Input
-      <select aria-label="MIDI input" value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setChannel(null); setController(null); setMessages([]); setArmed(false); onRelease(); }}>
-        <option value="">Select an input</option>
-        {inputs.map((input) => <option key={input.id} value={input.id}>{input.name ?? 'Unnamed MIDI input'}</option>)}
-      </select>
-    </label>}
-    {selected && !isHydrasynthInput(selected.name ?? '') ? <small>Selected input is not named Hydrasynth. You may still learn it deliberately.</small> : null}
-    {accessRef.current && !inputs.length ? <small>No MIDI inputs are currently connected. Plug in the Explorer, then wait for it to appear.</small> : null}
-    <div className="midi-assignment" data-testid="hydrasynth-assignment">
-      <span className="control-panel__label">Zoom mapping</span>
-      <strong>{assigned ? `CC #${controller} · Channel ${(channel ?? 0) + 1}` : 'Unassigned'}</strong>
-      <small>{armed ? 'Armed · turning the assigned control navigates Primary.' : assigned ? 'Ready · press Play, then arm it.' : 'Move a knob, then assign one observed CC below.'}</small>
-    </div>
-    <section className="midi-monitor" aria-label="Live MIDI monitor">
-      <div><span className="control-panel__label">Live MIDI monitor</span><small>{learning ? 'Listening: move a knob, then choose its CC.' : 'Turn a knob to confirm the Focusrite is receiving MIDI.'}</small></div>
-      {!messages.length ? <p className="midi-monitor__empty">No control-change messages yet. On the Explorer, ensure Global/System MIDI parameter transmit is set to CC rather than Off or NRPN.</p> : <div className="midi-monitor__messages">
-        {messages.map((message, index) => <button key={`${message.channel}-${message.controller}-${message.value}-${index}`} type="button" className={message.controller === controller && message.channel === channel ? 'is-assigned' : undefined} onClick={() => assign(message)}>
-          <span>CC #{message.controller}</span><span>Ch {message.channel + 1}</span><strong>{message.value}/127</strong><small>{message.controller === controller && message.channel === channel ? 'Assigned to zoom' : 'Assign to zoom'}</small>
-        </button>)}
-      </div>}
+  return <>
+    <section aria-label="Hydrasynth Explorer controller" className="perform-card hydrasynth-launcher">
+      <div className="hydrasynth-launcher__heading">
+        <div><span className="control-panel__label">Controller</span><h3>Hydrasynth Explorer</h3></div>
+        <span className={`hydrasynth-launcher__state${midi.selectedId ? ' is-connected' : ''}`}>{midi.selectedId ? 'Connected' : 'Setup required'}</span>
+      </div>
+      <div className="hydrasynth-launcher__summary">
+        <span><small>Input</small><strong>{connectionLabel}</strong></span>
+        <span><small>{midi.assignment?.target === 'palette.offset' ? 'Palette offset' : 'Zoom'}</small><strong>{mappedControl?.label ?? (midi.assignment ? addressLabel(midi.assignment.address) : 'Unassigned')}{midi.armed ? ' · Armed' : ''}</strong></span>
+      </div>
+      <button ref={launcherRef} type="button" aria-haspopup="dialog" aria-expanded={expanded} onClick={() => setExpanded(true)}>Open Hydrasynth controls</button>
+      {midi.armed ? <>
+        {midi.assignment?.target === 'zoom' && midi.zoomMode === 'continuous' ? <><small>{midi.zoomRate === 0 ? 'Zoom held · turn the knob to move' : `Zooming ${midi.zoomRate > 0 ? 'in' : 'out'} · ${Math.round(Math.abs(midi.zoomRate) * 100)}% speed`}</small><button type="button" onClick={midi.holdZoom}>Hold zoom</button></> : null}
+        <button type="button" onClick={midi.release}>Release MIDI control</button>
+      </> : null}
     </section>
-    <div className="perform-actions">
-      <button type="button" disabled={!selectedId} aria-pressed={learning} onClick={() => { setLearning((current) => !current); setArmed(false); onRelease(); setStatus(learning ? 'CC learn paused. Pick a message from the monitor when ready.' : 'Listening for a control change. Turn a Hydrasynth knob.'); }}>{learning ? 'Stop CC learn' : 'Listen for a control'}</button>
-      <button type="button" disabled={!assigned || !active} aria-pressed={armed} onClick={() => { setArmed((current) => !current); setStatus(armed ? 'Zoom control disarmed and released.' : `CC #${controller} · channel ${(channel ?? 0) + 1} armed for relative Primary zoom.`); if (armed) onRelease(); }}>{armed ? 'Disarm zoom control' : 'Arm zoom control'}</button>
-      <button type="button" disabled={!armed && lastValue === null} onClick={() => { setArmed(false); onRelease(); setStatus('Zoom control released; authored view and internal motion remain unchanged.'); }}>Release zoom control</button>
-    </div>
-    <small role="status">{status}</small>
-    <small>{controller === null ? 'No CC assigned yet.' : `Assigned CC #${controller}${lastValue === null ? '' : ` · latest input ${lastValue}/127`}.`} {armed && !active ? 'Press Play before MIDI can affect the view.' : ''}</small>
-    <small>Live MIDI zoom is session-only in this first slice: it is not recorded into Journeys or exported. Disconnecting releases the temporary view.</small>
-  </section>;
+    {expanded ? createPortal(<div className="hydrasynth-dialog-layer">
+      <button type="button" tabIndex={-1} className="hydrasynth-dialog__backdrop" aria-label="Close Hydrasynth controls" onClick={close} />
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="hydrasynth-dialog-title" className="hydrasynth-dialog">
+        <header className="hydrasynth-dialog__header">
+          <div><span className="control-panel__label">Physical controller</span><h2 id="hydrasynth-dialog-title">Hydrasynth Explorer controls</h2><p>Select a control, assign it to a live target, then arm it while Perform is playing.</p></div>
+          <button ref={closeRef} type="button" onClick={close}>Close</button>
+        </header>
+        <div className="hydrasynth-dialog__connection">
+          {!midi.connected ? <button type="button" disabled={midi.connecting} onClick={midi.connect}>{midi.connecting ? 'Connecting…' : 'Connect Hydrasynth Explorer'}</button> : <label>Input
+            <select aria-label="MIDI input" value={midi.selectedId} onChange={(event) => midi.selectInput(event.target.value)}>
+              <option value="">Select an input</option>
+              {midi.inputs.map((input) => <option key={input.id} value={input.id}>{input.name ?? 'Unnamed MIDI input'}</option>)}
+            </select>
+          </label>}
+          <div><span className="control-panel__label">Incoming activity</span><small data-testid="hydrasynth-traffic">{midi.traffic}</small></div>
+        </div>
+        <details className="hydrasynth-setup">
+          <summary>Hardware setup · macros not responding?</summary>
+          <p>On the Explorer, open System Setup → MIDI page 10 → Param TX. Choose CC for the full named catalogue, or NRPN for the supported high-resolution Macros and Filters. Off sends no parameter edits.</p>
+          <p>Press HOME for Macros 1–4; use PAGE for 5–8. The four encoders change function on other module pages. Check that the Macro has a value rather than a dash and its Macro button is not engaged. Select the Explorer USB input, or your interface input when using a MIDI cable.</p>
+          <p>This catalogue describes transmitted parameters, not an independent MIDI address for every physical knob. Controls without a documented CC and unprofiled NRPN parameters remain diagnostic-only. Notes, pitch bend, pressure and clock are not zoom sources.</p>
+          <a href={explorerManualUrl} target="_blank" rel="noreferrer">Open ASM Explorer manual (setup p. 83; MIDI chart pp. 94–96)</a>
+        </details>
+        <div className="hydrasynth-dialog__body">
+          <section className="hydrasynth-map" aria-label="Hydrasynth Explorer control map">
+            <div className="hydrasynth-map__heading"><span className="control-panel__label">Explorer parameter controls</span><small>Choose a module or search all {hydrasynthExplorerControls.length} documented CC entries. Turning a knob highlights the received parameter.</small></div>
+            <label>Find a control<input type="search" aria-label="Find a Hydrasynth control" placeholder="Cutoff, envelope, Macro…" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+            <label>Module<select aria-label="Hydrasynth module" value={group} onChange={(event) => { setGroup(event.target.value); setSearch(''); }}>{hydrasynthControlGroups.map((name) => <option key={name}>{name}</option>)}</select></label>
+            <div className="hydrasynth-catalogue" aria-label="Explorer controls">
+              {visible.map((control) => <button key={control.id} type="button" aria-pressed={selectedControlId === control.id}
+                className={`hydrasynth-catalogue__control${lastControl?.id === control.id ? ' is-identified' : ''}`}
+                aria-label={`${control.label}, MIDI CC ${control.protocol.controller}`}
+                onClick={() => setSelectedControlId(control.id)}>
+                <strong>{control.label}</strong><small>CC {control.protocol.controller}{control.nrpn ? ' · NRPN' : ''}{control.kind !== 'knob' ? ' · diagnostic only' : ''}</small>
+              </button>)}
+              {!visible.length ? <p>No matching controls.</p> : null}
+            </div>
+            <div className="hydrasynth-map__inspection" data-testid="hydrasynth-control-inspection">
+              <strong>Selected: {selectedControl.label}</strong>
+              <small>{selectedControl.group} · CC {selectedControl.protocol.controller}{selectedControl.nrpn ? ` · NRPN ${selectedControl.nrpn.parameter}` : ''}</small>
+              <small>Last touched: {lastControl?.label ?? (midi.lastInput ? addressLabel(midi.lastInput.address) : 'None yet')}</small>
+              <button type="button" disabled={!lastControl} onClick={selectLast}>Select last touched control</button>
+            </div>
+          </section>
+          <aside className="hydrasynth-dialog__assignment">
+            <div className="midi-assignment">
+              <span className="control-panel__label">Assign selected control</span><strong>{selectedControl.label} → {target === 'zoom' ? 'Relative zoom' : 'Palette offset'}</strong>
+              <label>Target<select aria-label="Controller target" value={target} onChange={(event) => setTarget(event.target.value as MidiAssignmentTarget)}><option value="zoom">Zoom</option><option value="palette.offset">Palette offset</option></select></label>
+              <label>Transmission<select aria-label="Control transmission" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="midi-cc">CC</option><option value="midi-nrpn">NRPN</option></select></label>
+              <label>MIDI channel<select aria-label="Control MIDI channel" value={channel} onChange={(event) => setChannel(Number(event.target.value))}>{Array.from({ length: 16 }, (_, i) => <option key={i} value={i}>{i + 1}</option>)}</select></label>
+              {target === 'palette.offset' ? <div className="midi-assignment__range"><label>Offset minimum<input aria-label="Palette offset minimum" type="number" step="0.01" value={minimum} onChange={(event) => setMinimum(event.target.valueAsNumber)} /></label><label>Offset maximum<input aria-label="Palette offset maximum" type="number" step="0.01" value={maximum} onChange={(event) => setMaximum(event.target.valueAsNumber)} /></label><label><input aria-label="Invert Palette offset" type="checkbox" checked={inverted} onChange={(event) => setInverted(event.target.checked)} /> Invert</label></div> : null}
+              <button type="button" disabled={!midi.selectedId || !selectedAddress || selectedControl.kind !== 'knob' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum))} onClick={() => { if (selectedAddress) midi.assign({ address: selectedAddress, channel, target, minimum, maximum, inverted }); }}>Assign {selectedControl.label} to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
+              {!selectedAddress ? <small>Use Param TX = CC for this named control. Its NRPN address is not profiled yet.</small> : null}
+              {selectedControl.kind !== 'knob' ? <small>Switch and system messages can be inspected but cannot drive a live target.</small> : null}
+              <small>Match Param TX and MIDI TX on the Explorer. “Select last touched” fills these from incoming data. This replaces the current session-only assignment.</small>
+            </div>
+            <div className="midi-assignment" data-testid="hydrasynth-assignment">
+              <span className="control-panel__label">Current {midi.assignment?.target === 'palette.offset' ? 'Palette offset' : 'zoom'} mapping</span>
+              {midi.assignment?.target !== 'palette.offset' ? <><label>Zoom behaviour<select aria-label="Zoom behaviour" value={midi.zoomMode} onChange={(event) => midi.changeZoomMode(event.target.value as 'continuous' | 'turn')}><option value="continuous">Continuous — knob controls speed</option><option value="turn">Zoom while turning</option></select></label>
+              {midi.zoomMode === 'continuous' ? <><small>Above centre: keep zooming in. Below centre: keep zooming out. Centre stops. Further from centre means faster. Motion continues at the knob limit.</small><button type="button" disabled={!midi.armed} onClick={midi.holdZoom}>Hold zoom</button><small>Hold keeps this view; turn the knob to move again. Pause or leaving the browser stops motion until a fresh knob message.</small></> : null}</> : <small>Maps the knob's full range to {midi.assignment.minimum ?? -1}…{midi.assignment.maximum ?? 1}{midi.assignment.inverted ? ', inverted' : ''}. This is a temporary effective value; it does not alter the saved palette.</small>}
+              <strong>{mappedControl?.label ?? (midi.assignment ? addressLabel(midi.assignment.address) : 'Unassigned')}</strong>
+              <small>{midi.assignment ? `${addressLabel(midi.assignment.address)} · Channel ${midi.assignment.channel + 1}` : 'Choose any supported parameter above.'}</small>
+              <button type="button" disabled={!midi.assignment || !active || !midi.selectedId} aria-pressed={midi.armed} onClick={midi.toggleArm}>{midi.armed ? 'Disarm control' : 'Arm control'}</button>
+              <button type="button" disabled={!midi.armed} onClick={midi.release}>Release</button>
+              {!active ? <small>Close the editor and press Play in Perform, then return to arm.</small> : null}
+            </div>
+            <small role="status" className="hydrasynth-dialog__status">{midi.status}</small>
+            <details className="midi-monitor">
+              <summary>Advanced MIDI monitor ({midi.messages.length} controls)</summary>
+              <small>Complete CC / NRPN values. Unknown NRPNs may encode several parameters in their value bytes and remain diagnostic-only.</small>
+              <div className="midi-monitor__messages">{midi.messages.map((message) => {
+                const profile = findHydrasynthExplorerControl(message.address);
+                const canAssign = profile?.kind === 'knob' || (!profile && message.address.protocol === 'midi-cc');
+                return <button key={inputKey(message)} type="button" disabled={!canAssign} onClick={() => midi.assign({ ...message, target, minimum, maximum, inverted })}>
+                  <span>{profile?.label ?? addressLabel(message.address)}</span><span>Ch {message.channel + 1}</span><strong>{message.value}</strong><small>{addressLabel(message.address)} · {canAssign ? `Assign to ${target === 'zoom' ? 'zoom' : 'Palette offset'}` : 'Diagnostic only'}</small>
+                </button>;
+              })}</div>
+            </details>
+            <small>Closing keeps the connection and armed mapping. Stop, Release, input loss or leaving Perform restores the prior effective value. Assignments are session-only; one control source is active at a time.</small>
+          </aside>
+        </div>
+      </section>
+    </div>, document.body) : null}
+  </>;
 }

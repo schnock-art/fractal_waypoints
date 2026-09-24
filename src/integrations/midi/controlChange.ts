@@ -9,7 +9,7 @@ export interface MidiControlChange {
 export function parseControlChange(data: ArrayLike<number>, timestamp: number): MidiControlChange | null {
   if (data.length < 3 || !Number.isFinite(timestamp)) return null;
   const [status, controller, value] = [data[0], data[1], data[2]];
-  if (status === undefined || controller === undefined || value === undefined
+  if (![status, controller, value].every(Number.isInteger) || status === undefined || controller === undefined || value === undefined
     || status < 0xb0 || status > 0xbf || controller < 0 || controller > 127 || value < 0 || value > 127) return null;
   return { channel: status & 0x0f, controller, value, timestamp };
 }

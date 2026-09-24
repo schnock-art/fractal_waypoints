@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 now has a first playable Perform slice**, not its full planned feature set. **Real Synth integration is the next scheduled implementation slice**: it will validate live physical input through the existing modulation/control boundaries. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.2 are delivered; 11.3 is partially delivered and is the next implementation step.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, direct zoom assignment, and continuous zoom with Hold. A second semantic target, mapping transforms and the broader shared external-source boundary remain unfinished. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -10,10 +10,10 @@ Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within thei
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
 | Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; first 10.3 slice delivered |
-| Phase 11 | Connections | Real Synth is the next scheduled physical-integration slice; broader connections remain deliberately scoped |
+| Phase 11 | Connections | 11.1–11.2 delivered; 11.3 visual semantic assignment is next; setup persistence and replay remain later |
 | Phase 12 | Patch Bay | Unscheduled until deliberately started |
 
-Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post–Real Synth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Real Synth slice. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
+Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post-Hydrasynth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Hydrasynth sequence. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
 
 ## Phase 1 — Rendering foundation
 
@@ -467,34 +467,89 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 ## Phase 11 — Connections
 
-**Real Synth integration is the next scheduled implementation slice.** Its purpose is to validate the existing semantic and modulation boundaries with one real physical device, not to introduce a speculative protocol framework or synth-specific renderer coupling. Broader device, audio, and software-adapter work remains deliberately scoped after this slice.
+**Hydrasynth Explorer is the active implementation sequence; continue with Phase 11.3.** It makes one physical controller understandable before pressure-testing the shared external-source boundary. Its purpose is to validate existing semantic and modulation boundaries with real use, not to introduce a speculative protocol framework, synth-specific renderer coupling, or a premature node editor. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
 
-### Phase 11.1 — Real Synth integration
+Goal: evolve the working initial Hydrasynth slice into an intuitive instrument surface, then validate only the smallest shared external-control model that real use demands. The control surface and future Patch are different benches looking at the same wiring.
 
-Goal: let the physical Real Synth provide live control and modulation to the existing VideoSynth / Fractal Waypoints world through a reusable input boundary.
+### Phase 11.1 — Initial Hydrasynth vertical slice
 
-Initial Hydrasynth Explorer vertical slice: **delivered as a deliberately session-only starting point.** Browser Web MIDI permission, input selection, CC learn, armed relative zoom through the existing double-single navigation path, and safe release on input loss/disarm/workspace exit are implemented and tested. This is not yet a persisted or recorded/replayable external source; [ADR-033](DECISIONS.md#adr-033-first-hydrasynth-input-is-an-explicit-session-override) records the constraint.
+**Delivered as a deliberately session-only starting point.** Browser Web MIDI permission, explicit input selection, CC parsing/learning, armed relative zoom through the existing double-single navigation path, and safe release on input loss, disarm, workspace exit, or Stop are implemented and tested. It proved that browser MIDI and explicit device lifecycle work, that relative physical zoom is useful, and that recoverable temporary navigation can use the existing path. It also proved that raw CC monitor/learn is a diagnostic workflow, not the intended instrument UX. This is not persisted or recorded/replayable; [ADR-033](DECISIONS.md#adr-033-first-hydrasynth-input-is-an-explicit-session-override) records the constraint.
 
-- [ ] Select a small, musically and visually useful Real Synth interaction and name the semantic targets it affects.
-- [ ] Introduce an adapter boundary that turns device input into the same source/transform/mapping model used by internal modulation; formulas, materials, lenses, and renderers remain unaware of the synth.
-- [ ] Define live-input permissions, connection loss/reconnection, input ordering and timestamps, bounded update rates, and explicit disabled/armed state.
-- [ ] Define recording and replay behaviour so Journey/export use recorded or otherwise reproducible input rather than opportunistic live hardware samples.
-- [ ] Keep physical and future software adapters interchangeable where that improves the proven interaction model; do not require a Patch editor or broad external-control framework.
-- [ ] Demonstrate the first mapping in Fractal Waypoints / VideoSynth and verify that disconnecting the synth leaves an understandable, recoverable world state.
+### Phase 11.2 — Hydrasynth device profile and visual control map
 
-Definition of done: one intentionally chosen Real Synth interaction is useful, recoverable, inspectable, and reproducible through the shared modulation/control architecture. It does not add synth/device details to fractal mathematics or rendering.
+Goal: create the first recognisable, selectable Hydrasynth Explorer surface in Perform.
 
-After this slice, the runtime precision probe, reproducible Jetson benchmark harness, and perturbation rendering investigation proceed in that order. They must not delay the Real Synth work.
+- [x] Define a deliberately minimal device-profile representation: stable device-local physical-control identity, readable label/kind, protocol-neutral `ControlAddress`, and visual position. Position belongs to the profile/UI; protocol knowledge belongs to the profile/adapter.
+- [x] Map the verified Explorer Macro 1–8 subset (CC 16–23) and render a schematic control surface, not a photorealistic synthesizer or controller registry.
+- [x] Implement touch-to-identify: a supported physical gesture visibly highlights its matching control and exposes its label, value, and inspectable protocol/channel/address.
+- [x] Make controls selectable from the map. Retain the generic raw MIDI monitor as an advanced diagnostic, not the primary assignment surface.
+- [x] Preserve safe disconnect/release behaviour and make unsupported or unmapped input understandable rather than silently guessed.
+
+Definition of done: a user can connect the Explorer, move a supported control, see the matching visual control react, select it without knowing CC numbering, and inspect its address when needed. No graph, broad persistence redesign, or duplicate mapping model is introduced.
+
+Status: delivered and extended after hardware-use feedback. A compact status launcher opens a grouped/searchable catalogue covering all 117 Explorer CC-chart entries and direct zoom assignment. Closing preserves the live session and restores focus. Supported Macro/Filter NRPN aliases are decoded as complete values; unprofiled NRPNs remain diagnostic-only. Multiple mappings, additional semantic targets, transforms and persistence remain Phase 11.3 onward. See [setup and coverage](HYDRASYNTH_CONTROLS.md).
+
+### Phase 11.3 — Visual semantic assignment
+
+User-requested controller correction: direct source-to-zoom assignment and documented Macro/Filter NRPN decoding are delivered. See [hardware setup and coverage](HYDRASYNTH_CONTROLS.md). One zoom source remains active at a time; the broader semantic parameter/transforms work below is still open.
+
+Bounded-knob follow-up delivered: Continuous zoom (default) uses knob position as signed speed, sustaining motion at MIDI endpoints. Centre/Hold stops without resetting the view; Pause and focus loss require fresh input to restart. Zoom while turning remains available. This removes the controller-range limit, not renderer precision limits.
+
+First non-navigation target delivered: Palette offset maps a selected controller's documented range to an explicit finite session range with optional inversion. It is applied as a temporary effective override, never as an authored/URL/Waypoint change; release lifecycle restores the evaluated value. Mapping transforms, multiple simultaneous sources, physical NRPN verification and the external-source boundary remain open.
+
+- [ ] Verify Macro/Filter NRPN aliases on the physical Explorer, then extend named NRPN coverage with explicit packed-subparameter identities and ranges; never treat shared NRPN addresses as independent scalar knobs.
+- [ ] Review actual-use needs for simultaneous controller mappings and keeping performance transport reachable from the expanded editor.
+
+Goal: let a selected physical control drive a small, meaningful set of application behaviours through an ordinary inspector/card before Patch exists.
+
+- [x] Support Zoom through the proven navigation-intent path, including continuous speed and zoom-while-turning modes.
+- [x] Add one existing, genuinely useful continuous semantic parameter: Palette offset, selected from the existing semantic contract rather than an arbitrary object path.
+- [ ] Present the relationship as physical control → optional validated transforms → semantic target, with visible assignment, availability, arm/disarm/release, and safe target-inactivity states.
+- [ ] Reuse validated transform semantics where appropriate (range/scale, offset, invert, clamp, response curve, smoothing); add no transform solely for theoretical completeness.
+- [ ] Keep navigation/control intents distinct from continuous numeric parameters; defer discrete state and events rather than flattening every relationship to `number`.
+
+Definition of done: a user can create and understand a useful mapping without raw CC monitor knowledge. The visual controller does not write React parameter state, GPU uniforms, arbitrary object paths, or authored `RenderConfig` directly.
+
+**Next implementation slice (2026-09-24):** review actual use of the delivered Zoom and Palette offset mappings, especially whether one active source is sufficient and whether the explicit palette range/inversion is expressive without becoming clutter. If another target is justified, add only a validated transform or semantic target required by that use—not a generic object-path mapper. Decide simultaneous-mapping behaviour before extending the one-source UI. Do not claim setup persistence or replay as part of this slice. Physical Explorer NRPN verification remains an outstanding hardware check, not something simulated tests establish.
+
+### Phase 11.4 — External-source boundary
+
+Goal: pressure-test the existing source → transforms → mapping direction with the real Hydrasynth.
+
+- [ ] Generalise only the source side of today's internal waveform model as far as the first live external source requires; preserve internal-source behaviour and backwards compatibility.
+- [ ] Keep the layers explicit: physical device/profile → external input adapter → source → transforms → mapping → semantic target → validated effective world. Use a protocol/device-neutral term such as `ControlAddress`, never a domain abstraction named `MidiCC`.
+- [ ] Define serialisable source identity separately from live adapter/connection state; specify timestamps, bounded update/coalescing behaviour, diagnostics, reconnect behaviour, absolute values, and relative intents.
+- [ ] Prove the design with both a navigation intent and one continuous semantic parameter. Formulas, materials, lenses, renderers, and GPU uniforms remain unaware of Hydrasynth, MIDI, CC, NRPN, and browser MIDI APIs.
+
+Definition of done: a real hardware source participates in the shared relationship model where semantics match, without a universal event bus, giant source schema, feedback loop, or Patch editor.
+
+### Phase 11.5 — Performance setup persistence
+
+Goal: retain useful controller setup without making a Waypoint depend on hardware.
+
+- [ ] Version and define performance/control setup, device-profile references, generic/learned-controller representation, equivalent-control rebinding, import/export, forward compatibility, and absent-device behaviour.
+- [ ] Keep fractal world/document state (including Waypoints), device profiles, performance setup, session runtime, recorded input/take data, and future graph layout as separate ownership domains.
+- [ ] Never persist browser connection IDs as durable semantic state, put hardware requirements into Waypoints, or silently commit a temporary controller value into authored configuration.
+
+Definition of done: mappings can survive an appropriate setup/session boundary while a Waypoint remains a meaningful fractal/world snapshot without the original Explorer present.
+
+### Phase 11.6 — Recording and replay
+
+Goal: make a live hardware performance reproducible without the original hardware.
+
+- [ ] Define logical-clock ownership, timestamp ordering, rate limits/coalescing, armed/disarmed lifecycle, recording start/stop, reconnect/lost-device behaviour, input-capture representation, and recovery after Stop.
+- [ ] Record/replay a take deterministically, integrate it with Journey where justified, and require export to use recorded or otherwise reproducible input rather than opportunistic live samples.
+- [ ] Verify a short Explorer performance can be recorded, disconnected, replayed, and produce the defined logical control sequence/effective behaviour.
+
+Definition of done: controller setup and recorded performance are distinct; deterministic replay/export does not require the physical synthesizer.
+
+After Phase 11.6, the runtime precision probe, reproducible Jetson benchmark harness, and perturbation rendering investigation proceed in that order. They must not delay the Hydrasynth sequence.
 
 ### Subsequent connection work
 
-- [ ] Select a physical synth/controller and a small useful interaction; evaluate Web MIDI if appropriate to that device and browser environment. Keep device/protocol knowledge outside formulas, materials, and rendering.
-- [ ] Adapt external continuous signals, events, and state through the validated domain model; define permissions, connection loss, ordering, timestamps, recording, and reproducible replay/export.
-- [ ] Let hardware and later software adapters be interchangeable consumers where practical, informed by the real first integration rather than hypothetical universality.
+- [ ] Extend from the proven boundary to additional physical/software adapters only when real interactions justify it. Candidate sources include other MIDI signals, audio analysis, fractal metrics, and sensors; they are not Phase 11 commitments.
 - [ ] Keep music generation separate from synthesis. An external generator may interpret fractal statistics as notes or rhythm; a synth consumes musical events. Neither interpretation belongs in fractal metrics.
-- [ ] Consider guitar/audio experiments later: envelope, onset, pitch, spectral brightness, and possibly note/chord analysis as independent sources. Fractal code must not become guitar-aware; no audio implementation belongs in Phase 10.
-
-Definition of done for the first slice: one intentionally selected hardware connection is useful, recoverable, and replayable through semantic boundaries. Additional protocols, synthesis, and audio analysis are not automatic scope.
+- [ ] Consider guitar/audio experiments later as independent adapter sources; fractal code must not become guitar-aware.
 
 ## Phase 12 — Patch Bay
 
@@ -509,9 +564,9 @@ Definition of done: the editor composes already proven mechanisms; graph layout 
 
 ## Optional parallel research tracks
 
-These preserve the former Phase 10 requirements; they are not cancelled and are not the next mandatory sequence. The Real Synth slice is the next implementation priority. Its follow-on hardware/deep-zoom work is ordered below: runtime precision probe, Jetson benchmark harness, then perturbation rendering. Older Phase 7 deep-zoom/3D follow-ups route here; capability-gated distance estimation remains research rather than a promise made by Phase 9.
+These preserve the former Phase 10 requirements; they are not cancelled and are not the next mandatory sequence. The Hydrasynth sequence is the next implementation priority. Its follow-on hardware/deep-zoom work is ordered below: runtime precision probe, Jetson benchmark harness, then perturbation rendering. Older Phase 7 deep-zoom/3D follow-ups route here; capability-gated distance estimation remains research rather than a promise made by Phase 9.
 
-### Runtime WebGPU double-single precision probe — after Real Synth
+### Runtime WebGPU double-single precision probe — after Hydrasynth
 
 Goal: measure whether the active browser, GPU, driver, and compiler preserve the numerical invariants required by the double-single path. Feature detection or an adapter allowlist is insufficient.
 
@@ -533,7 +588,7 @@ Goal: measure representative rendering cost, thermal behaviour, power use, and e
 
 ### Deep Space — Perturbation-assisted deep zoom
 
-**After Real Synth integration, the runtime precision probe, and the Jetson benchmark harness.** Double-single remains the normal high-precision viewport and rendering path; perturbation is a hybrid route for extreme zoom, not its replacement.
+**After the Hydrasynth sequence, the runtime precision probe, and the Jetson benchmark harness.** Double-single remains the normal high-precision viewport and rendering path; perturbation is a hybrid route for extreme zoom, not its replacement.
 
 - [ ] Design reference-orbit perturbation rendering behind the existing diagnostics and renderer coordinator: normal/deep navigation uses double-single, while extreme zoom uses a high-precision reference orbit plus GPU deviations for nearby pixels.
 - [ ] Decide CPU/GPU responsibilities, reference-point selection/rebasing, reference-orbit precision and storage, perturbation failure detection, and the transition back to double-single.
@@ -558,9 +613,9 @@ Goal: measure representative rendering cost, thermal behaviour, power use, and e
 
 ### Future Workshop — RealSense / Sensory Bench
 
-Exploratory research only; it does not enter the current Fractal Waypoints implementation sequence or precede Real Synth, precision validation, benchmarks, or perturbation work.
+Exploratory research only; it does not enter the current Fractal Waypoints implementation sequence or precede Hydrasynth, precision validation, benchmarks, or perturbation work.
 
-- [ ] Explore RealSense RGB/depth-derived signals—depth, silhouette, motion, spatial regions, gradients, camera distance, gestures, or tracked objects—as future VideoSynth / Fractal Waypoints sources. Reuse the Real Synth input/modulation boundary rather than creating a camera-specific control path.
+- [ ] Explore RealSense RGB/depth-derived signals—depth, silhouette, motion, spatial regions, gradients, camera distance, gestures, or tracked objects—as future VideoSynth / Fractal Waypoints sources. Reuse the proven Hydrasynth input/modulation boundary rather than creating a camera-specific control path.
 - [ ] Separately assess a Workshop Sensory Bench: lightweight continuous perception/world-model inference on Jetson, selective experience storage, novelty/prediction-error capture, and periodic offline consolidation/training on the RTX laptop (Forge) before deployment back to Jetson (Workshop).
 - [ ] Keep camera capture, world-model inference, storage policy, and any model-training pipeline outside Fractal Waypoints until a separately scoped experiment establishes their value and operating constraints.
 

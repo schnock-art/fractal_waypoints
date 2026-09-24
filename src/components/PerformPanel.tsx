@@ -32,17 +32,19 @@ interface Props {
   base: RenderConfig;
   effective: RenderConfig;
   active: boolean;
+  running: boolean;
   journey: boolean;
   mappings: MappingEvaluation[];
   overrides: PerformanceOverrides;
   onOverride: (id: SemanticParameterId, value?: number) => void;
   onMidiZoom: (delta: number) => void;
+  onMidiPaletteOffset: (value: number) => void;
   onMidiRelease: () => void;
   onChange: (config: RenderConfig) => void;
   onEdit: () => void;
 }
 
-export function PerformPanel({ base, effective, active, journey, mappings, overrides, onOverride, onMidiZoom, onMidiRelease, onChange, onEdit }: Props) {
+export function PerformPanel({ base, effective, active, running, journey, mappings, overrides, onOverride, onMidiZoom, onMidiPaletteOffset, onMidiRelease, onChange, onEdit }: Props) {
   const [error, setError] = useState<string | null>(null);
   const program = base.modulationProgram ?? adaptLegacyModulations(base.modulations);
   const legacy = !base.modulationProgram && base.modulations.length > 0;
@@ -58,6 +60,7 @@ export function PerformPanel({ base, effective, active, journey, mappings, overr
       <button type="button" onClick={onEdit}>Edit in Explore</button>
       <small>Primary only · no takes are being recorded.</small>
     </div>
+    <HydrasynthMidiPanel active={active} running={running} onZoomDelta={onMidiZoom} onPaletteOffset={onMidiPaletteOffset} onRelease={onMidiRelease} />
     <section aria-label="Selected controls" className="perform-card">
       <h3>Selected controls</h3>
       <p>{active ? 'Knobs temporarily replace the evaluated value until Return to modulation or Stop.' : 'Press Play to use temporary live controls. Edit authored values in Explore.'}</p>
@@ -81,7 +84,6 @@ export function PerformPanel({ base, effective, active, journey, mappings, overr
         </div>;
       })}
     </section>
-    <HydrasynthMidiPanel active={active} onZoomDelta={onMidiZoom} onRelease={onMidiRelease} />
     <section aria-label="Ordered mappings" className="perform-card">
       <h3>Ordered mappings</h3>
       <p>Top to bottom. Add uses the preceding result; Replace overwrites it. Each write applies its target limits before the next mapping.</p>
