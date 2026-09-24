@@ -5,6 +5,7 @@ import { commitPerformanceProgram, movePerformanceMapping, type PerformanceOverr
 import { adaptLegacyModulations, modulationTargets, type InternalModulationProgram, type InternalSource, type SignalTransform } from '../visuals/modulation/program';
 import { readModulationTarget, type MappingEvaluation } from '../visuals/modulation/runtime';
 import { getLensEffect } from '../visuals/lenses/model';
+import { HydrasynthMidiPanel } from './HydrasynthMidiPanel';
 
 const labels: Record<ModulationTarget, string> = {
   'palette.offset': 'Palette offset',
@@ -35,11 +36,13 @@ interface Props {
   mappings: MappingEvaluation[];
   overrides: PerformanceOverrides;
   onOverride: (id: SemanticParameterId, value?: number) => void;
+  onMidiZoom: (delta: number) => void;
+  onMidiRelease: () => void;
   onChange: (config: RenderConfig) => void;
   onEdit: () => void;
 }
 
-export function PerformPanel({ base, effective, active, journey, mappings, overrides, onOverride, onChange, onEdit }: Props) {
+export function PerformPanel({ base, effective, active, journey, mappings, overrides, onOverride, onMidiZoom, onMidiRelease, onChange, onEdit }: Props) {
   const [error, setError] = useState<string | null>(null);
   const program = base.modulationProgram ?? adaptLegacyModulations(base.modulations);
   const legacy = !base.modulationProgram && base.modulations.length > 0;
@@ -78,6 +81,7 @@ export function PerformPanel({ base, effective, active, journey, mappings, overr
         </div>;
       })}
     </section>
+    <HydrasynthMidiPanel active={active} onZoomDelta={onMidiZoom} onRelease={onMidiRelease} />
     <section aria-label="Ordered mappings" className="perform-card">
       <h3>Ordered mappings</h3>
       <p>Top to bottom. Add uses the preceding result; Replace overwrites it. Each write applies its target limits before the next mapping.</p>

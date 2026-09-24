@@ -28,6 +28,8 @@ Preserve the order: persisted/base configuration → Journey/keyframes → modul
 
 Formula metrics can later feed independent statistical analysis and export without colour or musical interpretation. The GPU metric-field texture is a lossy material intermediate, not a public metric contract. See [ADR-026](DECISIONS.md#adr-026-external-control-and-generative-interoperability) and [the interoperability audit](INTEROPERABILITY.md) for semantic addressing conventions, output boundaries, current limitations, and post-9.3 decisions. No external integration dependencies are introduced.
 
+The initial Phase 11.1 Hydrasynth Explorer slice is deliberately narrower than the future source/transform/mapping adapter: browser Web MIDI permission exposes a selected input, learns one CC, and turns 7-bit changes into small relative `zoomIn`/`zoomOut` intents through the existing double-single navigation path. The temporary viewport is released on disarm, input loss, workspace exit, or Stop. It is neither persisted nor recorded/exported, and it does not add MIDI state to `RenderConfig`; [ADR-033](DECISIONS.md#adr-033-first-hydrasynth-input-is-an-explicit-session-override) records the boundary.
+
 ## Workspace direction — One world, different benches
 
 Explore and the first Perform slice are workspaces over the same mathematical world (ADR-028); Patch remains future work. They share domain parameters and `RenderConfig`, formula/metric/material/lens evaluation, Waypoints, Journey, modulation, rendering and existing persistence. A workspace changes the tools presented, not the underlying model or backend. Explicit Compare views and Julia previews remain legitimate independent views; switching workspaces does not create another copy of Primary.

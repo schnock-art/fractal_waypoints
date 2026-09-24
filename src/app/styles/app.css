@@ -8,6 +8,27 @@
   overflow: hidden;
 }
 
+button {
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+button:not(:disabled) { cursor: pointer; }
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: rgba(144, 213, 255, 0.62);
+  background: rgba(31, 65, 98, 0.92);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(144, 213, 255, 0.12);
+}
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.985);
+  background: rgba(49, 96, 137, 0.96);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+button:focus-visible {
+  outline: 2px solid #90d5ff;
+  outline-offset: 2px;
+}
+
 .control-panel.control-panel--perform { grid-template-rows: minmax(0, 1fr); }
 .workspace-transport { margin-top: .65rem; }
 .workspace-transport.control-panel__section { gap: .4rem; }
@@ -28,6 +49,14 @@
 .perform-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .perform-actions button { width: auto; flex: 1; }
 .perform-actions button[aria-pressed=true] { border-color: #90d5ff; background: #24445d; }
+.midi-assignment, .midi-monitor { display: grid; gap: .45rem; padding: .7rem; border-radius: 12px; background: rgba(5, 15, 27, .48); border: 1px solid rgba(144, 213, 255, .18); }
+.midi-assignment strong { color: #e9f6ff; font-variant-numeric: tabular-nums; }
+.midi-monitor > div:first-child { display: grid; gap: .2rem; }
+.midi-monitor__empty { margin: 0; color: #ffd39a !important; }
+.midi-monitor__messages { display: grid; gap: .35rem; max-height: 12rem; overflow-y: auto; }
+.midi-monitor__messages button { display: grid; grid-template-columns: minmax(4.5rem, 1fr) minmax(3.5rem, .7fr) minmax(4.5rem, .8fr); gap: .35rem; align-items: center; padding: .5rem .6rem; text-align: left; }
+.midi-monitor__messages button small { grid-column: 1 / -1; color: #90d5ff; }
+.midi-monitor__messages button.is-assigned { border-color: rgba(118, 242, 192, .68); background: rgba(24, 93, 79, .45); }
 .perform-warning { color: #ffd39a !important; border-left: 3px solid #ffc777; padding-left: .5rem; overflow-wrap: anywhere; }
 .primary-transport { font-variant-numeric: tabular-nums; }
 .primary-transport details { max-height: 6rem; overflow-y: auto; }

@@ -2,6 +2,16 @@
 
 Implementation note after the first Phase 10.3 slice: ADR-028/029/031 now underpin a small Perform workspace, with Primary-only transport, two semantic overrides and the existing ordered mapping model. No new architectural abstraction is adopted for the UI. Primary resize is presentation-local while stopped as well as playing, to preserve base/URL ownership through workspace layout changes. The broader design remains incomplete; [PERFORM_FINDINGS.md](PERFORM_FINDINGS.md) separates implemented behaviour from actual-use hypotheses, take/persistence/promotion deferrals and review gates.
 
+## ADR-033: First Hydrasynth input is explicit session navigation
+
+**Status:** Accepted — initial Phase 11.1 vertical slice.
+
+The Hydrasynth Explorer connects through the browser's user-authorised Web MIDI API. The first physical interaction is intentionally one learned MIDI control-change message converted into a relative `zoomIn` or `zoomOut` gesture through the existing double-single navigation path. The device is selected explicitly; no fixed CC number, input name, or MIDI channel becomes a domain address. The small parser admits only valid CC messages and preserves their channel and timestamp for a later recorder.
+
+While armed and playing, the value updates a temporary Primary viewport. It never mutates the authored `RenderConfig`, does not join internal modulation evaluation, and is released on explicit disarm/release, lost input, workspace exit, or Stop. Permission denial, unsupported browsers, absent devices, and non-Hydrasynth input names remain visible states rather than fallback behaviour.
+
+The slice is not a claim of a complete external-source runtime: no MIDI control data is persisted, recorded, replayed, exported, or used as a generic graph source yet. The next Phase 11 work must decide timestamp ordering, rate bounds, arming/reconnection policy, and how a recorded external source enters the same serialisable source/transform/mapping model without teaching formulas, materials, or renderers about MIDI.
+
 ## ADR-032: Preserve double-single rounding boundaries on the GPU
 
 **Status:** Accepted

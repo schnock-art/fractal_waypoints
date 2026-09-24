@@ -42,6 +42,8 @@ import { normalizeKeyboardKey, updateNavigationBinding } from '../navigation/key
 import { createDefaultNavigationSettings } from '../navigation/settings';
 import { renderWaypointThumbnail } from '../navigation/thumbnails';
 import { resetJuliaViewport } from '../navigation/viewport';
+import { applyNavigationFrame } from '../navigation/motion';
+import { midiCcDeltaToZoom } from '../integrations/midi/controlChange';
 import { cloneRenderConfig, createWaypoint } from '../navigation/waypoints';
 import { loadNavigationSettings, loadWaypoints, saveNavigationSettings, saveWaypoints } from '../persistence/storage';
 import { encodeRenderConfigToUrlParam, readRenderConfigFromLocation, writeRenderConfigToHistory } from '../persistence/urlState';
@@ -54,6 +56,7 @@ import type {
   DoubleSingleComplex,
   FormulaId,
   RenderConfig,
+  ViewportConfig,
   Waypoint,
 } from '../types/config';
 import { createDefaultRenderConfig } from './defaultConfig';
@@ -87,6 +90,7 @@ export function App() {
   const [workspace, setWorkspace] = useState<'explore' | 'perform'>('explore');
   const [previewKind, setPreviewKind] = useState<'journey' | 'internal'>('journey');
   const [overrides, setOverrides] = useState<PerformanceOverrides>({});
+  const [midiViewport, setMidiViewport] = useState<ViewportConfig | null>(null);
   const [showSettingsPortal, setShowSettingsPortal] = useState(false);
   const [animationClip, setAnimationClip] = useState(() => createDefaultAnimationClip(mainConfig));
   const [isPlayingAnimation, setIsPlayingAnimation] = useState(false);
@@ -111,14 +115,15 @@ export function App() {
     try {
       const input = previewKind === 'internal' ? mainConfig : sampleAnimationBase(playbackClip ?? animationClip, previewTimeMs);
       const result = evaluateConfiguration(input, previewTimeMs / 1000);
-      return { ...result, config: applyPerformanceOverrides(result.config, overrides) };
+      const config = applyPerformanceOverrides(result.config, overrides);
+      return { ...result, config: midiViewport ? { ...config, viewport: midiViewport } : config };
     }
     catch (error) {
       let fallback = createDefaultRenderConfig('mandelbrot');
       try { fallback = normalizeEvaluatedConfig(mainConfig); } catch { /* Never render the invalid candidate. */ }
       return { config: fallback, issues: [error instanceof Error ? error.message : 'Invalid Journey frame.'], failed: true };
     }
-  }, [mainConfig, animationClip, playbackClip, previewTimeMs, previewKind, overrides]);
+  }, [mainConfig, animationClip, playbackClip, previewTimeMs, previewKind, overrides, midiViewport]);
   const effectiveConfig = preview.config;
   const previewActiveRef = useRef(previewActive);
   previewActiveRef.current = previewActive || workspace === 'perform' || showComparison;
@@ -511,6 +516,7 @@ export function App() {
 
     setPreviewKind('journey');
     setOverrides({});
+    setMidiViewport(null);
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPreviewTimeMs(0);
@@ -520,6 +526,7 @@ export function App() {
 
   function handleStopPlayback() {
     setOverrides({});
+    setMidiViewport(null);
     setIsPlayingAnimation(false);
     setPreviewTimeMs(null);
     setPlaybackClip(null);
@@ -532,6 +539,7 @@ export function App() {
     if (isRecordingNavigation) handleStopRecordingNavigation();
     setPreviewKind('internal');
     setOverrides({});
+    setMidiViewport(null);
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPlaybackClip(null);
@@ -1037,6 +1045,8 @@ export function App() {
             <div className="control-panel__workspace-body">
               {workspace === 'perform' ? <PerformPanel base={mainConfig} effective={effectiveConfig} active={previewActive} journey={previewKind === 'journey'} mappings={preview.mappings ?? []} overrides={overrides}
                 onOverride={(id, value) => { if (previewActive) setOverrides((current) => { const next = { ...current }; if (value === undefined) delete next[id]; else next[id] = value; return next; }); }}
+                onMidiZoom={(delta) => { if (previewActive) { const intent = midiCcDeltaToZoom(delta); if (intent) setMidiViewport((current) => applyNavigationFrame(current ?? effectiveConfig.viewport, [intent.action], navigationSettings, intent.deltaSeconds)); } }}
+                onMidiRelease={() => setMidiViewport(null)}
                 onChange={(config) => { if (!previewActive) setMainConfig(config); }} onEdit={() => { setWorkspace('explore'); exploreWorkspaceButtonRef.current?.focus(); }} /> : <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {renderActiveWorkspacePanel()}
               </fieldset>}

@@ -473,6 +473,8 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 Goal: let the physical Real Synth provide live control and modulation to the existing VideoSynth / Fractal Waypoints world through a reusable input boundary.
 
+Initial Hydrasynth Explorer vertical slice: **delivered as a deliberately session-only starting point.** Browser Web MIDI permission, input selection, CC learn, armed relative zoom through the existing double-single navigation path, and safe release on input loss/disarm/workspace exit are implemented and tested. This is not yet a persisted or recorded/replayable external source; [ADR-033](DECISIONS.md#adr-033-first-hydrasynth-input-is-an-explicit-session-override) records the constraint.
+
 - [ ] Select a small, musically and visually useful Real Synth interaction and name the semantic targets it affects.
 - [ ] Introduce an adapter boundary that turns device input into the same source/transform/mapping model used by internal modulation; formulas, materials, lenses, and renderers remain unaware of the synth.
 - [ ] Define live-input permissions, connection loss/reconnection, input ordering and timestamps, bounded update rates, and explicit disabled/armed state.
