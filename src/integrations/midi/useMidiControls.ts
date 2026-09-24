@@ -7,6 +7,8 @@ import { deriveRelativeNavigationIntent, ExternalControlFrameBuffer, rangeTransf
 import { clearPerformanceControlSetup, createPerformanceControlSetup, downloadPerformanceControlSetup,
   importPerformanceControlSetup, loadPerformanceControlSetup, savePerformanceControlSetup,
   type PerformanceControlBinding, type PerformanceSetupRead } from '../../connections/performanceSetup';
+import { clearPerformanceControlTake, createPerformanceControlTake, loadPerformanceControlTake, savePerformanceControlTake,
+  type PerformanceControlTake, type PerformanceTakeRead, type RecordedExternalControlEvent } from '../../connections/performanceTake';
 
 interface MidiInput { id: string; name: string | null; state: 'connected' | 'disconnected'; onmidimessage: ((event: { data: Uint8Array; timeStamp: number }) => void) | null }
 interface MidiAccess { inputs: Map<string, MidiInput>; onstatechange: (() => void) | null }
@@ -16,6 +18,8 @@ export type MidiAssignment = AssignmentInput & { relationship: ExternalControlRe
 type Assignment = MidiAssignment;
 type Assignments = Partial<Record<MidiAssignmentTarget, Assignment>>;
 type ArmedTargets = Record<MidiAssignmentTarget, boolean>;
+interface TakeRecording { startedAt: number; relationships: ExternalControlRelationship[]; events: RecordedExternalControlEvent[] }
+interface TakeReplay { take: PerformanceControlTake; startedAt: number | null; eventIndex: number }
 const targets: MidiAssignmentTarget[] = ['zoom', 'palette.offset'];
 const unarmed = (): ArmedTargets => ({ zoom: false, 'palette.offset': false });
 
@@ -48,12 +52,17 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   const initialAssignments = useRef<Assignments>(assignmentsFromSetup(initialSetup.current));
   const initialZoomMode = initialAssignments.current.zoom?.relationship.mapping.target.kind === 'navigation-intent'
     ? initialAssignments.current.zoom.relationship.mapping.target.mode : 'continuous';
+  const initialTake = useRef<PerformanceTakeRead | null>(null);
+  if (!initialTake.current) initialTake.current = loadPerformanceControlTake();
   const access = useRef<MidiAccess | null>(null);
   const callbacks = useRef({ active, running, onZoomDelta, onPaletteOffset, onRelease });
   callbacks.current = { active, running, onZoomDelta, onPaletteOffset, onRelease };
   const runtime = useRef({ selectedId: '', assignments: initialAssignments.current, armed: unarmed(), previous: null as number | null, mode: initialZoomMode, rate: 0, remainder: 0 });
   const frameBuffer = useRef(new ExternalControlFrameBuffer());
   const frameRequest = useRef<number | null>(null);
+  const takeFrameRequest = useRef<number | null>(null);
+  const recording = useRef<TakeRecording | null>(null);
+  const replay = useRef<TakeReplay | null>(null);
   const [zoomMode, setZoomMode] = useState<'continuous' | 'turn'>(initialZoomMode);
   const [zoomRate, setZoomRate] = useState(0);
   const [inputs, setInputs] = useState<MidiInput[]>([]);
@@ -73,7 +82,39 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     ? `Saved locally · ${initialSetup.current.setup.bindings.length} mapping${initialSetup.current.setup.bindings.length === 1 ? '' : 's'}`
     : initialSetup.current.message);
   const [diagnostics, setDiagnostics] = useState<ExternalControlDiagnostics>(frameBuffer.current.diagnostics());
+  const [isRecordingTake, setIsRecordingTake] = useState(false);
+  const [isReplayingTake, setIsReplayingTake] = useState(false);
+  const [take, setTake] = useState<PerformanceControlTake | null>(initialTake.current.status === 'loaded' ? initialTake.current.take : null);
+  const [takeStatus, setTakeStatus] = useState(initialTake.current.status === 'loaded'
+    ? `Saved take · ${initialTake.current.take.events.length} samples · ${(initialTake.current.take.durationMs / 1000).toFixed(2)} s`
+    : initialTake.current.message);
   const holdZoom = () => { runtime.current.rate = 0; runtime.current.remainder = 0; runtime.current.previous = null; setZoomRate(0); };
+  const applyRelationshipSample = (relationship: ExternalControlRelationship, sample: { sourceId: string; value: number; timestamp: number }) => {
+    const output = routeExternalControl(relationship, sample); if (!output) return;
+    if (output.kind === 'semantic-value') callbacks.current.onPaletteOffset(output.value);
+    else if (output.kind === 'navigation-rate') {
+      if (!callbacks.current.running || document.hidden) return;
+      if (Math.sign(output.value) !== Math.sign(runtime.current.rate)) runtime.current.remainder = 0;
+      runtime.current.rate = output.value; setZoomRate(output.value);
+    } else {
+      const previous = runtime.current.previous; runtime.current.previous = output.value;
+      const intent = deriveRelativeNavigationIntent(previous, output);
+      if (intent) callbacks.current.onZoomDelta(intent.delta);
+    }
+  };
+  const stopReplay = (message?: string) => {
+    if (takeFrameRequest.current !== null) cancelAnimationFrame(takeFrameRequest.current);
+    takeFrameRequest.current = null; replay.current = null; holdZoom(); setIsReplayingTake(false);
+    if (message) setTakeStatus(message);
+  };
+  const stopRecordingTake = (reason?: string) => {
+    const captured = recording.current; if (!captured) return;
+    recording.current = null; setIsRecordingTake(false);
+    const elapsed = Math.max(0, Math.round(performance.now() - captured.startedAt));
+    const next = createPerformanceControlTake(captured.relationships, captured.events, elapsed);
+    setTake(next); savePerformanceControlTake(next);
+    setTakeStatus(reason ?? `Saved take · ${next.events.length} samples · ${(next.durationMs / 1000).toFixed(2)} s`);
+  };
   const persistAssignments = (next: Assignments) => {
     const bindings = targets.flatMap((target) => next[target] ? [bindingFromAssignment(next[target]!)] : []);
     if (!bindings.length) { clearPerformanceControlSetup(); setSetupStatus('No controller setup saved yet.'); return; }
@@ -112,7 +153,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     setArmedTargets({ ...runtime.current.armed });
     callbacks.current.onRelease(target);
   };
-  const release = () => { holdZoom(); runtime.current.armed = unarmed(); frameBuffer.current.reset(); setArmedTargets(unarmed()); callbacks.current.onRelease(); };
+  const release = () => { stopReplay(); stopRecordingTake('Recording stopped because the live controller session ended.'); holdZoom(); runtime.current.armed = unarmed(); frameBuffer.current.reset(); setArmedTargets(unarmed()); callbacks.current.onRelease(); };
   const selectInput = (id: string) => {
     release(); runtime.current.selectedId = id;
     setSelectedId(id); setMessages([]); setLastInput(null); setTraffic('No MIDI received yet.');
@@ -120,7 +161,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   };
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; if (frameRequest.current !== null) cancelAnimationFrame(frameRequest.current); for (const input of access.current?.inputs.values() ?? []) input.onmidimessage = null; if (access.current) access.current.onstatechange = null; callbacks.current.onRelease(); };
+    return () => { mounted.current = false; if (frameRequest.current !== null) cancelAnimationFrame(frameRequest.current); stopReplay(); stopRecordingTake(); for (const input of access.current?.inputs.values() ?? []) input.onmidimessage = null; if (access.current) access.current.onstatechange = null; callbacks.current.onRelease(); };
   }, []);
   useEffect(() => { if (!active) release(); }, [active]);
   useEffect(() => {
@@ -149,17 +190,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
         for (const target of targets) {
           const assignment = runtime.current.assignments[target];
           if (!runtime.current.armed[target] || !assignment || assignment.relationship.source.id !== sample.sourceId) continue;
-          const output = routeExternalControl(assignment.relationship, sample); if (!output) continue;
-          if (output.kind === 'semantic-value') callbacks.current.onPaletteOffset(output.value);
-          else if (output.kind === 'navigation-rate') {
-            if (!callbacks.current.running || document.hidden) continue;
-            if (Math.sign(output.value) !== Math.sign(runtime.current.rate)) runtime.current.remainder = 0;
-            runtime.current.rate = output.value; setZoomRate(output.value);
-          } else {
-            const previous = runtime.current.previous; runtime.current.previous = output.value;
-            const intent = deriveRelativeNavigationIntent(previous, output);
-            if (intent) callbacks.current.onZoomDelta(intent.delta);
-          }
+          applyRelationshipSample(assignment.relationship, sample);
         }
       }
       setDiagnostics(frameBuffer.current.diagnostics());
@@ -173,6 +204,14 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
       const current = runtime.current; if (!callbacks.current.active) return;
       const matching = targets.map((target) => current.assignments[target]).filter((assignment): assignment is Assignment => !!assignment
         && current.armed[assignment.target] && inputKey(assignment) === inputKey(value));
+      const captured = recording.current;
+      if (captured) {
+        const atMs = Math.max(0, Math.round(value.timestamp - captured.startedAt));
+        for (const sourceId of new Set(matching.map((assignment) => assignment.relationship.source.id))) {
+          if (captured.events.length < 4096) captured.events.push({ atMs, sourceId, value: value.value });
+        }
+        if (captured.events.length >= 4096) stopRecordingTake('Saved take at the 4096-sample limit.');
+      }
       for (const sourceId of new Set(matching.map((assignment) => assignment.relationship.source.id))) {
         frameBuffer.current.push({ sourceId, value: value.value, timestamp: value.timestamp });
       }
@@ -213,6 +252,39 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     if (target === 'zoom') holdZoom(); runtime.current.armed[target] = true; setArmedTargets({ ...runtime.current.armed });
     setStatus(target === 'palette.offset' ? `Palette offset armed.${callbacks.current.active ? ' Turn the assigned control to set its temporary effective value.' : ' It will become live when you press Play.'}` : runtime.current.mode === 'continuous' ? `Zoom armed.${callbacks.current.active ? ' Turn above centre to keep zooming in, below centre to zoom out. Centre or Hold zoom stops motion.' : ' It will become live when you press Play.'}` : `Zoom armed.${callbacks.current.active ? ' First value establishes the position; further turns move Primary.' : ' It will become live when you press Play.'}`);
   };
+  const startRecordingTake = () => {
+    if (!callbacks.current.active || !callbacks.current.running) { setTakeStatus('Press Play, arm at least one mapping, then start recording.'); return false; }
+    const relationships = targets.flatMap((target) => {
+      const assignment = runtime.current.assignments[target];
+      return assignment && runtime.current.armed[target] ? [structuredClone(assignment.relationship)] : [];
+    });
+    if (!relationships.length) { setTakeStatus('Arm at least one mapping before recording a take.'); return false; }
+    stopReplay(); recording.current = { startedAt: performance.now(), relationships, events: [] }; setIsRecordingTake(true);
+    setTakeStatus(`Recording ${relationships.length} mapped source${relationships.length === 1 ? '' : 's'}…`); return true;
+  };
+  const replayTake = () => {
+    if (!take) { setTakeStatus('Record or import a take before replaying.'); return false; }
+    if (!callbacks.current.active || !callbacks.current.running) { setTakeStatus('Press Play before replaying the saved take.'); return false; }
+    stopRecordingTake(); releaseTarget('zoom'); releaseTarget('palette.offset');
+    const current: TakeReplay = { take: structuredClone(take), startedAt: null, eventIndex: 0 }; replay.current = current; setIsReplayingTake(true);
+    const bySource = new Map(current.take.relationships.map((relationship) => [relationship.source.id, relationship]));
+    const tick = (timestamp: number) => {
+      if (replay.current !== current) return;
+      current.startedAt ??= timestamp;
+      const elapsed = Math.min(current.take.durationMs, Math.max(0, Math.round(timestamp - current.startedAt)));
+      while (current.eventIndex < current.take.events.length && current.take.events[current.eventIndex].atMs <= elapsed) {
+        const event = current.take.events[current.eventIndex++]; const relationship = bySource.get(event.sourceId);
+        if (relationship) applyRelationshipSample(relationship, { sourceId: event.sourceId, value: event.value, timestamp: event.atMs });
+      }
+      if (elapsed >= current.take.durationMs) {
+        stopReplay(`Replay complete · ${current.take.events.length} samples · ${(current.take.durationMs / 1000).toFixed(2)} s`);
+        callbacks.current.onRelease(); return;
+      }
+      takeFrameRequest.current = requestAnimationFrame(tick);
+    };
+    takeFrameRequest.current = requestAnimationFrame(tick); setTakeStatus(`Replaying saved take · ${take.events.length} samples…`); return true;
+  };
+  const clearTake = () => { stopReplay(); stopRecordingTake(); setTake(null); clearPerformanceControlTake(); setTakeStatus('No recorded take saved yet.'); };
   const clearSetup = () => {
     release(); runtime.current.assignments = {}; setAssignments({}); clearPerformanceControlSetup();
     setSetupStatus('No controller setup saved yet.'); setStatus('Saved controller setup cleared. Connect an input to create a new one.');
@@ -231,5 +303,5 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     if (!bindings.length) return false;
     downloadPerformanceControlSetup(createPerformanceControlSetup(bindings)); setSetupStatus('Controller setup exported as JSON.'); return true;
   };
-  return { inputs, selectedId, connected: access.current !== null, connecting, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, setupStatus, clearSetup, importSetup, exportSetup, zoomMode, changeZoomMode, zoomRate, holdZoom };
+  return { inputs, selectedId, connected: access.current !== null, connecting, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, setupStatus, clearSetup, importSetup, exportSetup, zoomMode, changeZoomMode, zoomRate, holdZoom, take, takeStatus, isRecordingTake, isReplayingTake, startRecordingTake, stopRecordingTake, replayTake, clearTake };
 }

@@ -1,5 +1,13 @@
 # Architecture Decision Records
 
+## ADR-036: Recorded takes snapshot logical external input separately from setup and world state
+
+**Status:** Accepted — Phase 11.6.
+
+Represent a recorded controller performance as `PerformanceControlTake` schema 1: a bounded, ordered sequence of integer-millisecond relative-time absolute samples plus a snapshot of the armed external relationships that interpret them. The take contains no browser port, permissions, arming/live state, authored world, Waypoint, Journey, URL or Patch layout. This lets the same source sequence replay through validated transforms and semantic/navigation targets after physical hardware disconnects.
+
+Controller setup remains the editable relationship collection; a take is a historical relationship snapshot and stays separate in local storage. Setup import, export or clearing cannot alter a take, and take clearing cannot alter setup or world persistence. Capture begins only while Primary is playing with at least one armed mapping, ends safely on Stop/session release/input loss, and caps capture at 4,096 samples. Existing live frame coalescing remains load control. Take replay is a deterministic logical input sequence, not a promise of audio-rate or browser-frame-identical navigation integration. Journey export does not consume opportunistic live input; future export support must use a take or another defined reproducible source. See [PERFORMANCE_TAKES.md](PERFORMANCE_TAKES.md).
+
 Implementation note after the first Phase 10.3 slice: ADR-028/029/031 now underpin a small Perform workspace, with Primary-only transport, two semantic overrides and the existing ordered mapping model. No new architectural abstraction is adopted for the UI. Primary resize is presentation-local while stopped as well as playing, to preserve base/URL ownership through workspace layout changes. The broader design remains incomplete; [PERFORM_FINDINGS.md](PERFORM_FINDINGS.md) separates implemented behaviour from actual-use hypotheses, take/persistence/promotion deferrals and review gates.
 
 ## ADR-035: Controller setup is a separate versioned persistence domain

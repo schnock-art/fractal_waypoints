@@ -86,7 +86,7 @@ Render configurations carry versioned viewport, formula, colouring, palette, and
 
 Choose a Phoenix view in Explore, open **Perform**, then **Add palette wave → Play internal motion**. Palette offset and Orbit memory are temporary live controls: **Return to modulation** releases a held value; **Stop and edit base** restores your authored world. Pause/Resume and workspace switches preserve logical time. Compare focus never changes the Primary target.
 
-While stopped, inspect the numbered mappings and their source/smoothing settings. Source edits affect every mapping that shares that source. Save a static live frame through Waypoints, or use **Save base configuration** to keep authored motion definitions. This slice has no macros, freeze, performance takes, promotion or saved pin layouts; see [the Perform findings](docs/PERFORM_FINDINGS.md) for remaining work and actual-use review questions.
+While stopped, inspect the numbered mappings and their source/smoothing settings. Source edits affect every mapping that shares that source. Save a static live frame through Waypoints, or use **Save base configuration** to keep authored motion definitions. The Hydrasynth controls can also record and replay a separate local controller take; see [the take contract](docs/PERFORMANCE_TAKES.md). Macros, freeze, promotion and saved pin layouts remain future work; see [the Perform findings](docs/PERFORM_FINDINGS.md) for remaining work and actual-use review questions.
 
 ## Development notes
 

@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.5 are delivered; 11.6 deterministic recording/replay is next.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, shared transforms, bounded external updates, and an independently versioned local controller setup with JSON import/export. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.6 are delivered.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, shared transforms, bounded external updates, an independently versioned local controller setup with JSON import/export, and locally replayable logical performance takes. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within thei
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
 | Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; first 10.3 slice delivered |
-| Phase 11 | Connections | 11.1–11.5 delivered; deterministic take recording/replay is next |
+| Phase 11 | Connections | 11.1–11.6 delivered |
 | Phase 12 | Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post-Hydrasynth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Hydrasynth sequence. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -467,7 +467,7 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 ## Phase 11 — Connections
 
-**Hydrasynth Explorer is the active implementation sequence; continue with Phase 11.6.** One physical controller has pressure-tested the shared external-source boundary and its setup now survives reload/device absence independently from the fractal world. Its purpose is to validate existing semantic and modulation boundaries with real use, not to introduce a speculative protocol framework, synth-specific renderer coupling, or a premature node editor. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
+**Hydrasynth Explorer has completed its active implementation sequence through Phase 11.6.** One physical controller has pressure-tested the shared external-source boundary; setup and recorded takes now survive independently from the fractal world. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
 
 Goal: evolve the working initial Hydrasynth slice into an intuitive instrument surface, then validate only the smallest shared external-control model that real use demands. The control surface and future Patch are different benches looking at the same wiring.
 
@@ -547,11 +547,13 @@ The [performance preset and mapping recipe catalogue](PERFORMANCE_PRESET_IDEAS.m
 
 Goal: make a live hardware performance reproducible without the original hardware.
 
-- [ ] Define logical-clock ownership, timestamp ordering, rate limits/coalescing, armed/disarmed lifecycle, recording start/stop, reconnect/lost-device behaviour, input-capture representation, and recovery after Stop.
-- [ ] Record/replay a take deterministically, integrate it with Journey where justified, and require export to use recorded or otherwise reproducible input rather than opportunistic live samples.
-- [ ] Verify a short Explorer performance can be recorded, disconnected, replayed, and produce the defined logical control sequence/effective behaviour.
+- [x] Define logical-clock ownership, timestamp ordering, rate limits/coalescing, armed/disarmed lifecycle, recording start/stop, reconnect/lost-device behaviour, input-capture representation, and recovery after Stop.
+- [x] Record/replay a take through a snapshot of its mappings; Journey exports remain authored-only and never consume opportunistic live samples.
+- [x] Verify a short Explorer performance can be recorded, disconnected, replayed, and produce the defined logical control sequence/effective behaviour.
 
 Definition of done: controller setup and recorded performance are distinct; deterministic replay/export does not require the physical synthesizer.
+
+Status: complete for bounded local performance takes. A take stores an ordered, capped logical source sequence and snapshot of the armed relationships, replays without a browser MIDI input, and restores the authored view at completion. Take playback is deliberately scoped to logical controller sequence replay; authored Journey export remains its existing deterministic path until a future export feature explicitly consumes a recorded take. See [PERFORMANCE_TAKES.md](PERFORMANCE_TAKES.md) and ADR-036.
 
 After Phase 11.6, the runtime precision probe, reproducible Jetson benchmark harness, and perturbation rendering investigation proceed in that order. They must not delay the Hydrasynth sequence.
 

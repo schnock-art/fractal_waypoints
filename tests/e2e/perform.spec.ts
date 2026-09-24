@@ -316,6 +316,45 @@ test('Hydrasynth assigns a CC endpoint directly without misidentifying its prove
   expect(savedProfile).toBe('learned-midi-control');
 });
 
+test('Hydrasynth records and replays a mapped take after the input disconnects', async ({ page }) => {
+  await page.addInitScript(() => {
+    type Input = { id: string; name: string; state: string; onmidimessage: null | ((event: { data: Uint8Array; timeStamp: number }) => void) };
+    const input: Input = { id: 'explorer', name: 'Hydrasynth Explorer', state: 'connected', onmidimessage: null };
+    const access = { inputs: new Map([['explorer', input]]), onstatechange: null as null | (() => void) };
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => access });
+    Object.assign(window, {
+      sendMidi: (data: number[]) => input.onmidimessage?.({ data: new Uint8Array(data), timeStamp: performance.now() }),
+      disconnectMidi: () => { input.state = 'disconnected'; access.onstatechange?.(); },
+    });
+  });
+  const send = async (data: number[]) => page.evaluate((bytes) => (window as unknown as { sendMidi: (data: number[]) => void }).sendMidi(bytes), data);
+  await open(page);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
+  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
+  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  await dialog.getByRole('spinbutton', { name: 'Direct MIDI CC number' }).fill('126');
+  await dialog.getByRole('button', { name: 'Assign CC 126 directly to Palette offset' }).click();
+  await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
+  await dialog.getByText('Recorded performance take', { exact: true }).click();
+  await dialog.getByRole('button', { name: 'Record armed mappings' }).click();
+  await send([0xb0, 126, 0]);
+  await page.waitForTimeout(300);
+  await send([0xb0, 126, 127]);
+  await page.waitForTimeout(180);
+  await dialog.getByRole('button', { name: 'Stop recording take' }).click();
+  await expect(dialog.getByText(/Saved take · 2 samples/)).toBeVisible();
+  await page.evaluate(() => (window as unknown as { disconnectMidi: () => void }).disconnectMidi());
+  await dialog.getByRole('button', { name: 'Replay saved take' }).click();
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective -1');
+  await page.waitForTimeout(340);
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 1');
+  await expect(dialog.getByText(/Replay complete · 2 samples/)).toBeVisible();
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 0.375');
+});
+
 test('Hydrasynth runs Zoom and Palette offset mappings simultaneously and releases each independently', async ({ page }) => {
   await page.addInitScript(() => {
     type Input = { id: string; name: string; state: string; onmidimessage: null | ((event: { data: Uint8Array; timeStamp: number }) => void) };

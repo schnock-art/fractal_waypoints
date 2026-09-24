@@ -58,7 +58,7 @@ export function PerformPanel({ base, effective, active, running, journey, mappin
   return <div className="perform-panel control-panel__section">
     <div className="perform-card">
       <button type="button" onClick={onEdit}>Edit in Explore</button>
-      <small>Primary only · no takes are being recorded.</small>
+      <small>Primary only · controller take capture and replay are available in Hydrasynth controls.</small>
     </div>
     <HydrasynthMidiPanel active={active} running={running} onZoomDelta={onMidiZoom} onPaletteOffset={onMidiPaletteOffset} onRelease={onMidiRelease} />
     <section aria-label="Selected controls" className="perform-card">

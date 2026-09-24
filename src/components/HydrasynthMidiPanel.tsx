@@ -175,6 +175,18 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
                 <input ref={setupFileRef} className="midi-setup__file" aria-label="Import controller setup JSON" type="file" accept="application/json,.json" onChange={importSetupFile} />
                 <small>Mappings save automatically. Inputs reconnect by profile, control address and channel—never by a browser port ID. Arming and live values are not saved.</small>
               </details>
+              <details className="midi-setup">
+                <summary>Recorded performance take</summary>
+                <small role="status">{midi.takeStatus}</small>
+                <div className="midi-setup__actions">
+                  {midi.isRecordingTake
+                    ? <button type="button" onClick={() => midi.stopRecordingTake()}>Stop recording take</button>
+                    : <button type="button" disabled={!active || !running || !midi.selectedId || !midi.armedTargets.zoom && !midi.armedTargets['palette.offset']} onClick={midi.startRecordingTake}>Record armed mappings</button>}
+                  <button type="button" disabled={!midi.take || !active || !running || midi.isRecordingTake || midi.isReplayingTake} onClick={midi.replayTake}>Replay saved take</button>
+                  <button type="button" disabled={!midi.take && !midi.isRecordingTake} onClick={midi.clearTake}>Clear saved take</button>
+                </div>
+                <small>Recording stores timestamped logical controller samples with a snapshot of the armed mappings. Replay needs no MIDI input, but does need Primary playing. Stop, input loss and leaving Perform end a recording; replay finishes by restoring the authored view.</small>
+              </details>
               <small>Options for the target selected above:</small>
               {target === 'zoom' ? <><label>Zoom behaviour<select aria-label="Zoom behaviour" value={midi.zoomMode} onChange={(event) => midi.changeZoomMode(event.target.value as 'continuous' | 'turn')}><option value="continuous">Continuous — knob controls speed</option><option value="turn">Zoom while turning</option></select></label>
               {midi.zoomMode === 'continuous' ? <><small>Above centre: keep zooming in. Below centre: keep zooming out. Centre stops. Further from centre means faster. Motion continues at the knob limit.</small><button type="button" disabled={!midi.isArmed('zoom')} onClick={midi.holdZoom}>Hold zoom</button><small>Hold keeps this view; turn the knob to move again. Pause or leaving the browser stops motion until a fresh knob message.</small></> : null}</> : currentAssignment ? <small>Maps the knob's full range to {currentAssignment.minimum ?? -1}…{currentAssignment.maximum ?? 1}{currentAssignment.inverted ? ', inverted' : ''}. This is a temporary effective value; it does not alter the saved palette.</small> : null}
@@ -193,7 +205,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
                 </button>;
               })}</div>
             </details>
-            <small>Closing keeps the connection and armed mappings. Stop, input loss or leaving Perform releases both. Each target can be armed/released independently. Mapping definitions persist in the controller setup; arming and live values remain session-only.</small>
+            <small>Closing keeps the connection and armed mappings. Stop, input loss or leaving Perform releases both. Each target can be armed/released independently. Mapping definitions persist in the controller setup; arming and live values remain session-only. Recorded takes are separate local documents and replay through their recorded mapping snapshots.</small>
           </aside>
         </div>
       </section>

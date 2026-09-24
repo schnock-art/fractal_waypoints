@@ -25,6 +25,6 @@ Validation checks the setup version, unique binding/target IDs, declared profile
 
 JSON import is all-or-nothing. Invalid JSON or invalid version-1 data does not replace the current setup. A future schema version is reported as unsupported and left untouched in local storage; this build never guesses a downgrade. Export produces a portable JSON document named `fractal-waypoints-controller-setup.json`.
 
-This is setup persistence, not performance capture. Arming and live samples deliberately restart empty; deterministic recording/replay belongs to Phase 11.6.
+This is setup persistence, not performance capture. Arming and live samples deliberately restart empty. [PERFORMANCE_TAKES.md](PERFORMANCE_TAKES.md) describes the separate Phase 11.6 capture document.
 
 The [performance recipe catalogue](PERFORMANCE_PRESET_IDEAS.md) records possible future starter setups and pressure tests. It is creative research, not part of this persistence schema.
