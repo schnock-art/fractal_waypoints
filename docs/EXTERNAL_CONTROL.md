@@ -8,7 +8,9 @@ The layers are explicit:
 
 `physical profile → Web MIDI adapter → ExternalControlSourceIdentity → shared SignalTransform[] → ExternalControlMapping → semantic value or navigation intent → effective world`
 
-`ExternalControlSourceIdentity` is serialisable and contains a stable profile/control identity, protocol-neutral `ControlAddress`, channel, and documented absolute range. Browser MIDI input IDs, permission state, ports, callbacks, and connection status are runtime-only. An `ExternalControlRelationship` currently pairs one source with one mapping; Phase 11.5 may persist collections of these in a separately versioned performance setup, never in a Waypoint or `RenderConfig`.
+`ExternalControlSourceIdentity` is serialisable and contains a stable profile/control identity, protocol-neutral `ControlAddress`, channel, and documented absolute range. Browser MIDI input IDs, permission state, ports, callbacks, and connection status are runtime-only. An `ExternalControlRelationship` currently pairs one source with one mapping; Phase 11.5 persists collections of these in a separately versioned performance setup, never in a Waypoint or `RenderConfig`.
+
+The controller editor can assign a MIDI CC endpoint directly by number, without first receiving a sample. This supports Hydrasynth Mod Matrix routes such as PolyTouch or LFO → unused CC. A directly entered CC is represented as a learned endpoint even when its number overlaps a profiled control, because endpoint equality does not establish physical identity or upstream provenance. Raw polyphonic-aftertouch messages are not currently admitted as external sources.
 
 Internal modulation and external control share validated stateless transforms: scale, offset, invert, clamp, and signed power curve. Internal explicit-time smoothing remains internal because its deterministic trailing window is not equivalent to live frame history. The controller UI builds Palette range/inversion/curve behaviour from the shared transform list instead of a MIDI-specific range function.
 
@@ -24,8 +26,10 @@ Disconnect, input change, Stop, workspace exit, and disarm release effective val
 
 - One session relationship per proven target: Zoom and Palette offset.
 - Sources are absolute continuous controls only. Discrete events, switches, notes, pressure, clocks, mutable state, and feedback are not modelled.
-- Relationships are not persisted, recorded, replayed, exported, or added to `RenderConfig`.
+- Relationships can persist in a separate controller setup and export/import as JSON. They are not recorded, replayed, or added to `RenderConfig`.
 - Live smoothing is not implemented; frame coalescing is load control, not signal smoothing.
 - The renderer, formulas, materials, lenses, palette domain, and navigation engine do not import MIDI or Hydrasynth modules.
 
-These limits keep Phase 11.5 persistence and 11.6 take/replay semantics explicit rather than accidentally deriving them from React callbacks.
+These limits keep Phase 11.6 take/replay semantics explicit rather than accidentally deriving them from React callbacks. See [PERFORMANCE_SETUP.md](PERFORMANCE_SETUP.md) for setup ownership and compatibility.
+
+The documentation-only [performance recipe catalogue](PERFORMANCE_PRESET_IDEAS.md) preserves promising source/transform/target experiments without treating them as admitted source kinds, targets, runtime features, or a canonical preset schema.

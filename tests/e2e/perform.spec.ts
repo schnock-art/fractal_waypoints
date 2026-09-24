@@ -290,6 +290,32 @@ test('Hydrasynth accepts a custom received CC as a continuous Palette signal', a
   await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 1');
 });
 
+test('Hydrasynth assigns a CC endpoint directly without misidentifying its provenance', async ({ page }) => {
+  await page.addInitScript(() => {
+    type Input = { id: string; name: string; state: string; onmidimessage: null | ((event: { data: Uint8Array; timeStamp: number }) => void) };
+    const input: Input = { id: 'explorer', name: 'Hydrasynth Explorer', state: 'connected', onmidimessage: null };
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['explorer', input]]), onstatechange: null }) });
+    Object.assign(window, { sendMidi: (data: number[]) => input.onmidimessage?.({ data: new Uint8Array(data), timeStamp: performance.now() }) });
+  });
+  const send = async (data: number[]) => page.evaluate((bytes) => (window as unknown as { sendMidi: (data: number[]) => void }).sendMidi(bytes), data);
+  await open(page);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  await page.getByRole('button', { name: 'Play internal motion' }).click();
+  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
+  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
+  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  await dialog.getByRole('spinbutton', { name: 'Direct MIDI CC number' }).fill('16');
+  await dialog.getByRole('button', { name: 'Assign CC 16 directly to Palette offset' }).click();
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 16 → Palette offset');
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).not.toContainText('Macro 1');
+  await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
+  await send([0xb0, 16, 127]);
+  await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 1');
+  const savedProfile = await page.evaluate(() => JSON.parse(localStorage.getItem('fractal-explorer:performance-setup:v1')!).bindings[0].relationship.source.deviceProfileId);
+  expect(savedProfile).toBe('learned-midi-control');
+});
+
 test('Hydrasynth runs Zoom and Palette offset mappings simultaneously and releases each independently', async ({ page }) => {
   await page.addInitScript(() => {
     type Input = { id: string; name: string; state: string; onmidimessage: null | ((event: { data: Uint8Array; timeStamp: number }) => void) };
@@ -324,6 +350,35 @@ test('Hydrasynth runs Zoom and Palette offset mappings simultaneously and releas
   await expect(page.getByTestId('control-palette.offset')).toContainText('Effective -1');
   await page.getByRole('button', { name: 'Release MIDI Palette offset' }).click();
   await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 0.375');
+  const savedSetup = await page.evaluate(() => JSON.parse(localStorage.getItem('fractal-explorer:performance-setup:v1')!));
+  expect(savedSetup.schemaVersion).toBe(1);
+  expect(savedSetup.bindings).toHaveLength(2);
+  expect(JSON.stringify(savedSetup)).not.toContain('selectedId');
+  expect(JSON.stringify(savedSetup)).not.toContain('renderConfig');
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const restoredLauncher = page.getByRole('region', { name: 'Hydrasynth Explorer controller' });
+  await expect(restoredLauncher).toContainText('Macro 1');
+  await expect(restoredLauncher).toContainText('CC 126');
+  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
+  await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 126');
+  await page.getByText('Saved controller setup', { exact: true }).click();
+  await expect(page.getByText('Saved locally · 2 mappings')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Arm zoom', exact: true })).toBeDisabled();
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON' }).click();
+  const setupDownload = await downloadEvent;
+  expect(setupDownload.suggestedFilename()).toBe('fractal-waypoints-controller-setup.json');
+  const setupPath = await setupDownload.path();
+  expect(setupPath).toBeTruthy();
+  await page.getByRole('button', { name: 'Clear saved setup' }).click();
+  await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Unassigned');
+  await page.getByLabel('Import controller setup JSON').setInputFiles(setupPath!);
+  await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 126');
+  await expect(page.getByText('Imported and saved · 2 mappings')).toBeVisible();
 });
 
 test('noise smoothing is editable, time advances, and hidden-document handling holds the clock', async ({ page }, info) => {

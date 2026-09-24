@@ -86,7 +86,7 @@ export function rangeTransforms(sourceMinimum: number, sourceMaximum: number, ta
   if (![sourceMinimum, sourceMaximum, targetMinimum, targetMaximum, curve].every(Number.isFinite)
     || sourceMinimum >= sourceMaximum || targetMinimum === targetMaximum || curve <= 0 || curve > 8) throw new Error('Invalid control range.');
   const sourceSpan = sourceMaximum - sourceMinimum;
-  const transforms: SignalTransform[] = [{ kind: 'offset', value: -sourceMinimum }, { kind: 'scale', value: 1 / sourceSpan }];
+  const transforms: SignalTransform[] = [{ kind: 'offset', value: sourceMinimum === 0 ? 0 : -sourceMinimum }, { kind: 'scale', value: 1 / sourceSpan }];
   if (inverted) transforms.push({ kind: 'invert' }, { kind: 'offset', value: 1 });
   if (curve !== 1) transforms.push({ kind: 'curve', value: curve });
   transforms.push({ kind: 'scale', value: targetMaximum - targetMinimum }, { kind: 'offset', value: targetMinimum },

@@ -2,6 +2,16 @@
 
 Implementation note after the first Phase 10.3 slice: ADR-028/029/031 now underpin a small Perform workspace, with Primary-only transport, two semantic overrides and the existing ordered mapping model. No new architectural abstraction is adopted for the UI. Primary resize is presentation-local while stopped as well as playing, to preserve base/URL ownership through workspace layout changes. The broader design remains incomplete; [PERFORM_FINDINGS.md](PERFORM_FINDINGS.md) separates implemented behaviour from actual-use hypotheses, take/persistence/promotion deferrals and review gates.
 
+## ADR-035: Controller setup is a separate versioned persistence domain
+
+**Status:** Accepted — Phase 11.5.
+
+Persist controller relationships in `PerformanceControlSetup` schema 1, separate from `RenderConfig`, URLs, Waypoints, Journeys, runtime connection state, future recorded takes and future Patch layout. The setup contains a name, explicit device-profile references and validated bindings. A named Explorer control references the Explorer profile; an unprofiled received CC references `learned-midi-control`. Each binding includes its external relationship and editor settings, which validation cross-checks against the generated transforms.
+
+Never persist a browser MIDI input ID, permission/connection state, arming, live values or transport. Loaded mappings are visible but unarmed. An equivalent input rebinds through profile/control address/channel and requires explicit arm, so reload or reconnect cannot silently move the world. Assignments save automatically in local storage; clearing them leaves all world/document storage untouched.
+
+JSON import is atomic and validated before replacement. Invalid version-1 content is rejected. Future schema versions are reported and retained untouched rather than guessed or downgraded. Export contains setup data only. This provides local portability without making a Waypoint require hardware and without claiming that setup is a recorded performance. Deterministic sample/take persistence remains Phase 11.6. See [PERFORMANCE_SETUP.md](PERFORMANCE_SETUP.md).
+
 ## ADR-034: External controls share transforms but keep runtime and target semantics explicit
 
 **Status:** Accepted — bounded Phase 11.4 Hydrasynth runtime.

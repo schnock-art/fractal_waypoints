@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.4 are delivered; 11.5 performance setup persistence is next.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, shared transforms, bounded external updates, and explicit navigation versus semantic outputs. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.5 are delivered; 11.6 deterministic recording/replay is next.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, shared transforms, bounded external updates, and an independently versioned local controller setup with JSON import/export. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within thei
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
 | Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; first 10.3 slice delivered |
-| Phase 11 | Connections | 11.1–11.4 delivered; setup persistence and replay remain next |
+| Phase 11 | Connections | 11.1–11.5 delivered; deterministic take recording/replay is next |
 | Phase 12 | Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post-Hydrasynth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Hydrasynth sequence. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -467,7 +467,7 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 ## Phase 11 — Connections
 
-**Hydrasynth Explorer is the active implementation sequence; continue with Phase 11.5.** One physical controller has now pressure-tested the shared external-source boundary. Its purpose is to validate existing semantic and modulation boundaries with real use, not to introduce a speculative protocol framework, synth-specific renderer coupling, or a premature node editor. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
+**Hydrasynth Explorer is the active implementation sequence; continue with Phase 11.6.** One physical controller has pressure-tested the shared external-source boundary and its setup now survives reload/device absence independently from the fractal world. Its purpose is to validate existing semantic and modulation boundaries with real use, not to introduce a speculative protocol framework, synth-specific renderer coupling, or a premature node editor. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
 
 Goal: evolve the working initial Hydrasynth slice into an intuitive instrument surface, then validate only the smallest shared external-control model that real use demands. The control surface and future Patch are different benches looking at the same wiring.
 
@@ -514,6 +514,8 @@ Definition of done: a user can create and understand a useful mapping without ra
 
 Hydrasynth LFO follow-up: direct LFO rate/gain messages are parameter edits, not a waveform stream. The current one-source Palette mapping can accept an explicit Mod Matrix LFO → unused MIDI CC route through **Assign last received CC**. Verify this path on physical Explorer hardware before deciding whether source-rate diagnostics, collision warnings, smoothing or simultaneous mappings are needed.
 
+Direct-CC follow-up delivered: a user can enter a CC number and channel without first transmitting a value, so Hydrasynth Mod Matrix routes such as PolyTouch or LFO → CC can be prepared directly. These mappings retain learned-endpoint identity rather than being mislabeled as a profiled knob when an address overlaps; raw polyphonic aftertouch remains a future source kind.
+
 ### Phase 11.4 — External-source boundary
 
 Goal: pressure-test the existing source → transforms → mapping direction with the real Hydrasynth.
@@ -531,11 +533,15 @@ Status: complete for the bounded Hydrasynth session runtime. See [the external-c
 
 Goal: retain useful controller setup without making a Waypoint depend on hardware.
 
-- [ ] Version and define performance/control setup, device-profile references, generic/learned-controller representation, equivalent-control rebinding, import/export, forward compatibility, and absent-device behaviour.
-- [ ] Keep fractal world/document state (including Waypoints), device profiles, performance setup, session runtime, recorded input/take data, and future graph layout as separate ownership domains.
-- [ ] Never persist browser connection IDs as durable semantic state, put hardware requirements into Waypoints, or silently commit a temporary controller value into authored configuration.
+- [x] Version and define performance/control setup, device-profile references, generic/learned-controller representation, equivalent-control rebinding, import/export, forward compatibility, and absent-device behaviour.
+- [x] Keep fractal world/document state (including Waypoints), device profiles, performance setup, session runtime, recorded input/take data, and future graph layout as separate ownership domains.
+- [x] Never persist browser connection IDs as durable semantic state, put hardware requirements into Waypoints, or silently commit a temporary controller value into authored configuration.
 
 Definition of done: mappings can survive an appropriate setup/session boundary while a Waypoint remains a meaningful fractal/world snapshot without the original Explorer present.
+
+Status: complete for the current two-target controller surface. Mappings save automatically to an independently versioned local setup, load visibly but unarmed when hardware is absent, rebind by profile/address/channel rather than port ID, and support validated JSON import/export. See [the setup contract](PERFORMANCE_SETUP.md) and ADR-035. Recorded input remains Phase 11.6.
+
+The [performance preset and mapping recipe catalogue](PERFORMANCE_PRESET_IDEAS.md) preserves actual-use ideas such as Pressure Bloom, Chromatic Drift and Macro Performance Bank. These are hypotheses for later testing, not a canonical preset schema or implementation commitments.
 
 ### Phase 11.6 — Recording and replay
 

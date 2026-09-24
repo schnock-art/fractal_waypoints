@@ -4,11 +4,14 @@ import { addressKey, addressLabel, createControlInputDecoder, inputKey, type Con
 import { controlMaximum, findHydrasynthExplorerControl } from './hydrasynthExplorerProfile';
 import { deriveRelativeNavigationIntent, ExternalControlFrameBuffer, rangeTransforms, routeExternalControl,
   type ExternalControlDiagnostics, type ExternalControlRelationship } from '../../connections/externalControl';
+import { clearPerformanceControlSetup, createPerformanceControlSetup, downloadPerformanceControlSetup,
+  importPerformanceControlSetup, loadPerformanceControlSetup, savePerformanceControlSetup,
+  type PerformanceControlBinding, type PerformanceSetupRead } from '../../connections/performanceSetup';
 
 interface MidiInput { id: string; name: string | null; state: 'connected' | 'disconnected'; onmidimessage: ((event: { data: Uint8Array; timeStamp: number }) => void) | null }
 interface MidiAccess { inputs: Map<string, MidiInput>; onstatechange: (() => void) | null }
 export type MidiAssignmentTarget = 'zoom' | 'palette.offset';
-type AssignmentInput = Pick<ControlInput, 'address' | 'channel'> & { target: MidiAssignmentTarget; minimum?: number; maximum?: number; inverted?: boolean; curve?: number };
+type AssignmentInput = Pick<ControlInput, 'address' | 'channel'> & { target: MidiAssignmentTarget; minimum?: number; maximum?: number; inverted?: boolean; curve?: number; learned?: boolean };
 export type MidiAssignment = AssignmentInput & { relationship: ExternalControlRelationship };
 type Assignment = MidiAssignment;
 type Assignments = Partial<Record<MidiAssignmentTarget, Assignment>>;
@@ -16,34 +19,74 @@ type ArmedTargets = Record<MidiAssignmentTarget, boolean>;
 const targets: MidiAssignmentTarget[] = ['zoom', 'palette.offset'];
 const unarmed = (): ArmedTargets => ({ zoom: false, 'palette.offset': false });
 
+function assignmentFromBinding(binding: PerformanceControlBinding): Assignment {
+  const source = binding.relationship.source;
+  return binding.settings.kind === 'zoom'
+    ? { address: source.address, channel: source.channel, target: 'zoom', learned: source.deviceProfileId === 'learned-midi-control', relationship: structuredClone(binding.relationship) }
+    : { address: source.address, channel: source.channel, target: 'palette.offset', minimum: binding.settings.minimum,
+      maximum: binding.settings.maximum, inverted: binding.settings.inverted, curve: binding.settings.curve,
+      learned: source.deviceProfileId === 'learned-midi-control',
+      relationship: structuredClone(binding.relationship) };
+}
+
+function assignmentsFromSetup(read: PerformanceSetupRead): Assignments {
+  if (read.status !== 'loaded') return {};
+  return Object.fromEntries(read.setup.bindings.map((binding) => [binding.target, assignmentFromBinding(binding)])) as Assignments;
+}
+
+function bindingFromAssignment(assignment: Assignment): PerformanceControlBinding {
+  return { id: assignment.target, target: assignment.target, relationship: structuredClone(assignment.relationship),
+    settings: assignment.target === 'zoom' ? { kind: 'zoom', mode: assignment.relationship.mapping.target.kind === 'navigation-intent'
+      ? assignment.relationship.mapping.target.mode : 'continuous' }
+      : { kind: 'range', minimum: assignment.minimum ?? -1, maximum: assignment.maximum ?? 1,
+        inverted: assignment.inverted ?? false, curve: assignment.curve ?? 1 } };
+}
+
 export function useMidiControls(active: boolean, running: boolean, onZoomDelta: (delta: number) => void, onPaletteOffset: (value: number) => void, onRelease: (target?: MidiAssignmentTarget) => void) {
+  const initialSetup = useRef<PerformanceSetupRead | null>(null);
+  if (!initialSetup.current) initialSetup.current = loadPerformanceControlSetup();
+  const initialAssignments = useRef<Assignments>(assignmentsFromSetup(initialSetup.current));
+  const initialZoomMode = initialAssignments.current.zoom?.relationship.mapping.target.kind === 'navigation-intent'
+    ? initialAssignments.current.zoom.relationship.mapping.target.mode : 'continuous';
   const access = useRef<MidiAccess | null>(null);
   const callbacks = useRef({ active, running, onZoomDelta, onPaletteOffset, onRelease });
   callbacks.current = { active, running, onZoomDelta, onPaletteOffset, onRelease };
-  const runtime = useRef({ selectedId: '', assignments: {} as Assignments, armed: unarmed(), previous: null as number | null, mode: 'continuous' as 'continuous' | 'turn', rate: 0, remainder: 0 });
+  const runtime = useRef({ selectedId: '', assignments: initialAssignments.current, armed: unarmed(), previous: null as number | null, mode: initialZoomMode, rate: 0, remainder: 0 });
   const frameBuffer = useRef(new ExternalControlFrameBuffer());
   const frameRequest = useRef<number | null>(null);
-  const [zoomMode, setZoomMode] = useState<'continuous' | 'turn'>('continuous');
+  const [zoomMode, setZoomMode] = useState<'continuous' | 'turn'>(initialZoomMode);
   const [zoomRate, setZoomRate] = useState(0);
   const [inputs, setInputs] = useState<MidiInput[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [revision, setRevision] = useState(0);
   const [connecting, setConnecting] = useState(false);
   const mounted = useRef(true);
-  const [assignments, setAssignments] = useState<Assignments>({});
+  const [assignments, setAssignments] = useState<Assignments>(initialAssignments.current);
   const [armedTargets, setArmedTargets] = useState<ArmedTargets>(unarmed());
   const [messages, setMessages] = useState<ControlInput[]>([]);
   const [lastInput, setLastInput] = useState<ControlInput | null>(null);
   const [traffic, setTraffic] = useState('No MIDI received yet.');
-  const [status, setStatus] = useState('Connect the Explorer or its MIDI interface to begin.');
+  const [status, setStatus] = useState(initialSetup.current.status === 'loaded'
+    ? `Loaded ${initialSetup.current.setup.bindings.length} saved mapping${initialSetup.current.setup.bindings.length === 1 ? '' : 's'}. Connect an input, then arm when ready.`
+    : initialSetup.current.status === 'unsupported' ? initialSetup.current.message : 'Connect the Explorer or its MIDI interface to begin.');
+  const [setupStatus, setSetupStatus] = useState(initialSetup.current.status === 'loaded'
+    ? `Saved locally · ${initialSetup.current.setup.bindings.length} mapping${initialSetup.current.setup.bindings.length === 1 ? '' : 's'}`
+    : initialSetup.current.message);
   const [diagnostics, setDiagnostics] = useState<ExternalControlDiagnostics>(frameBuffer.current.diagnostics());
   const holdZoom = () => { runtime.current.rate = 0; runtime.current.remainder = 0; runtime.current.previous = null; setZoomRate(0); };
+  const persistAssignments = (next: Assignments) => {
+    const bindings = targets.flatMap((target) => next[target] ? [bindingFromAssignment(next[target]!)] : []);
+    if (!bindings.length) { clearPerformanceControlSetup(); setSetupStatus('No controller setup saved yet.'); return; }
+    const setup = createPerformanceControlSetup(bindings);
+    setSetupStatus(savePerformanceControlSetup(setup)
+      ? `Saved locally · ${bindings.length} mapping${bindings.length === 1 ? '' : 's'}` : 'Controller setup could not be saved in this browser.');
+  };
   const createRelationship = (value: AssignmentInput, mode = runtime.current.mode): ExternalControlRelationship => {
-    const profile = findHydrasynthExplorerControl(value.address);
+    const profile = value.learned ? undefined : findHydrasynthExplorerControl(value.address);
     const maximum = controlMaximum(value.address);
     const sourceId = `hydrasynth-explorer:${profile?.id ?? 'learned'}:${addressKey(value.address)}:ch${value.channel + 1}`;
     return {
-      source: { schemaVersion: 1, id: sourceId, kind: 'absolute-control', deviceProfileId: 'asm-hydrasynth-explorer-2.2',
+      source: { schemaVersion: 1, id: sourceId, kind: 'absolute-control', deviceProfileId: profile ? 'asm-hydrasynth-explorer-2.2' : 'learned-midi-control',
         controlId: profile?.id ?? addressKey(value.address), address: value.address, channel: value.channel, minimum: 0, maximum },
       mapping: { schemaVersion: 1, id: `${value.target}:${sourceId}`, sourceId, enabled: true,
         target: value.target === 'palette.offset' ? { kind: 'semantic-parameter', id: value.target }
@@ -60,6 +103,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     if (assignment) {
       runtime.current.assignments = { ...runtime.current.assignments, zoom: { ...assignment, relationship: createRelationship(assignment, mode) } };
       setAssignments({ ...runtime.current.assignments });
+      persistAssignments(runtime.current.assignments);
     }
   };
   const releaseTarget = (target: MidiAssignmentTarget) => {
@@ -132,7 +176,12 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
       for (const sourceId of new Set(matching.map((assignment) => assignment.relationship.source.id))) {
         frameBuffer.current.push({ sourceId, value: value.value, timestamp: value.timestamp });
       }
-      if (matching.length && frameRequest.current === null) frameRequest.current = requestAnimationFrame(flush);
+      const establishesTurnBaseline = runtime.current.previous === null && matching.some((assignment) => assignment.target === 'zoom'
+        && assignment.relationship.mapping.target.kind === 'navigation-intent' && assignment.relationship.mapping.target.mode === 'turn');
+      if (establishesTurnBaseline) {
+        if (frameRequest.current !== null) cancelAnimationFrame(frameRequest.current);
+        flush();
+      } else if (matching.length && frameRequest.current === null) frameRequest.current = requestAnimationFrame(flush);
     };
     return () => { input.onmidimessage = null; };
   }, [selectedId, revision]);
@@ -143,7 +192,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     setConnecting(true);
     try {
       const next = await request.call(navigator); if (!mounted.current) return; access.current = next;
-      const refresh = () => { const connected = [...next.inputs.values()].filter((input) => input.state === 'connected'); setInputs(connected); const selected = runtime.current.selectedId; if (selected && !connected.some((input) => input.id === selected)) { selectInput(''); setStatus('Selected input disconnected. Live controls released; select an input and assign again.'); } setRevision((value) => value + 1); };
+      const refresh = () => { const connected = [...next.inputs.values()].filter((input) => input.state === 'connected'); setInputs(connected); const selected = runtime.current.selectedId; if (selected && !connected.some((input) => input.id === selected)) { selectInput(''); setStatus('Selected input disconnected. Live controls released; saved mappings remain available for explicit rebind and re-arm.'); } setRevision((value) => value + 1); };
       next.onstatechange = refresh; refresh();
       const connected = [...next.inputs.values()].filter((input) => input.state === 'connected'); const preferred = connected.find((input) => isHydrasynthInput(input.name ?? '')) ?? connected[0];
       if (preferred) selectInput(preferred.id); else setStatus('No MIDI inputs connected. Plug in the Explorer or its MIDI interface, then select the input.');
@@ -154,8 +203,9 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     releaseTarget(value.target);
     const assignment: Assignment = { ...value, relationship: createRelationship(value) };
     runtime.current.assignments = { ...runtime.current.assignments, [value.target]: assignment }; setAssignments({ ...runtime.current.assignments });
+    persistAssignments(runtime.current.assignments);
     const targetLabel = value.target === 'zoom' ? 'Zoom' : 'Palette offset';
-    setStatus(`${findHydrasynthExplorerControl(value.address)?.label ?? addressLabel(value.address)} assigned to ${targetLabel} on channel ${value.channel + 1}. Arm it now; if Perform is stopped, it will begin with Play.`);
+    setStatus(`${value.learned ? addressLabel(value.address) : findHydrasynthExplorerControl(value.address)?.label ?? addressLabel(value.address)} assigned to ${targetLabel} on channel ${value.channel + 1}. Arm it now; if Perform is stopped, it will begin with Play.`);
   };
   const toggleArm = (target: MidiAssignmentTarget) => {
     if (runtime.current.armed[target]) { releaseTarget(target); setStatus(`${target === 'zoom' ? 'Zoom' : 'Palette offset'} disarmed and released.`); return; }
@@ -163,5 +213,23 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     if (target === 'zoom') holdZoom(); runtime.current.armed[target] = true; setArmedTargets({ ...runtime.current.armed });
     setStatus(target === 'palette.offset' ? `Palette offset armed.${callbacks.current.active ? ' Turn the assigned control to set its temporary effective value.' : ' It will become live when you press Play.'}` : runtime.current.mode === 'continuous' ? `Zoom armed.${callbacks.current.active ? ' Turn above centre to keep zooming in, below centre to zoom out. Centre or Hold zoom stops motion.' : ' It will become live when you press Play.'}` : `Zoom armed.${callbacks.current.active ? ' First value establishes the position; further turns move Primary.' : ' It will become live when you press Play.'}`);
   };
-  return { inputs, selectedId, connected: access.current !== null, connecting, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, zoomMode, changeZoomMode, zoomRate, holdZoom };
+  const clearSetup = () => {
+    release(); runtime.current.assignments = {}; setAssignments({}); clearPerformanceControlSetup();
+    setSetupStatus('No controller setup saved yet.'); setStatus('Saved controller setup cleared. Connect an input to create a new one.');
+  };
+  const importSetup = (json: string) => {
+    const result = importPerformanceControlSetup(json);
+    if (result.status !== 'loaded') { setSetupStatus(result.message); return false; }
+    release(); const next = assignmentsFromSetup(result); runtime.current.assignments = next; setAssignments(next);
+    const mode = next.zoom?.relationship.mapping.target.kind === 'navigation-intent' ? next.zoom.relationship.mapping.target.mode : 'continuous';
+    runtime.current.mode = mode; setZoomMode(mode); savePerformanceControlSetup(result.setup);
+    setSetupStatus(`Imported and saved · ${result.setup.bindings.length} mapping${result.setup.bindings.length === 1 ? '' : 's'}`);
+    setStatus('Controller setup imported. Select an equivalent input and arm the mappings when ready.'); return true;
+  };
+  const exportSetup = () => {
+    const bindings = targets.flatMap((target) => runtime.current.assignments[target] ? [bindingFromAssignment(runtime.current.assignments[target]!)] : []);
+    if (!bindings.length) return false;
+    downloadPerformanceControlSetup(createPerformanceControlSetup(bindings)); setSetupStatus('Controller setup exported as JSON.'); return true;
+  };
+  return { inputs, selectedId, connected: access.current !== null, connecting, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, setupStatus, clearSetup, importSetup, exportSetup, zoomMode, changeZoomMode, zoomRate, holdZoom };
 }

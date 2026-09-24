@@ -95,3 +95,13 @@ WebGPU is the primary renderer and uses a double-single viewport coordinate path
 The committed screenshots and clips are generated only by the dedicated capture scripts, while browser regression tests verify the same entry flows without writing documentation assets. All of them begin from the same serialised demo render configuration. Regenerate README screenshots with `make demo`, then review the resulting images before committing. Capture the animated Explore, Julia, Palette, Waypoint, Compare, and Journey flows with `make demo-explore`, `make demo-video`, `make demo-palette`, `make demo-waypoint`, `make demo-compare`, and `make demo-journey` while the app is running; set `FRACTAL_DEMO_URL` if it is not using port 4173.
 
 See [the product brief](docs/PRODUCT_BRIEF.md), [architecture](docs/ARCHITECTURE.md), and [roadmap](docs/ROADMAP.md) for the fuller product and engineering direction.
+
+## License
+
+Fractal Waypoints is available under the GNU Affero General Public License v3.0 or later (`AGPL-3.0-or-later`). You may use it personally, academically, artistically, professionally or commercially, and study, modify and redistribute it, subject to the licence's terms. The AGPL is a strong copyleft licence and includes additional requirements relevant to modified software made available over a network; review the licence itself for details and seek independent legal advice for questions about a particular use.
+
+If you need different or proprietary terms, a separate commercial licence may be available by agreement with the project owner, Schnock Art. See [LICENSE](LICENSE) for the open-source licence, [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for that route, and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance. Third-party dependencies and materials remain governed by their respective licences. Repository-authored documentation, examples and project assets are covered by the AGPL unless identified otherwise.
+
+The software licence does not transfer ownership of the Fractal Waypoints project name, logos, or other project branding.
+
+Copyright © 2026 Schnock Art.

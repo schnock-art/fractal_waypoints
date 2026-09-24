@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { addressLabel, inputKey, type ControlAddress } from '../integrations/midi/controlInput';
 import { explorerManualUrl, findHydrasynthExplorerControl, hydrasynthControlGroups, hydrasynthExplorerControls } from '../integrations/midi/hydrasynthExplorerProfile';
@@ -10,11 +10,13 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
   const launcherRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const setupFileRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [group, setGroup] = useState('Macros');
   const [search, setSearch] = useState('');
   const [selectedControlId, setSelectedControlId] = useState('macro.1');
   const [channel, setChannel] = useState(0);
+  const [directCc, setDirectCc] = useState(24);
   const [format, setFormat] = useState<'midi-cc' | 'midi-nrpn'>('midi-cc');
   const [target, setTarget] = useState<MidiAssignmentTarget>('zoom');
   const [minimum, setMinimum] = useState(-1);
@@ -28,8 +30,8 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
   const connectionLabel = selected?.name ?? (midi.connected ? 'Choose an input' : 'Not connected');
   const zoomAssignment = midi.assignments.zoom;
   const paletteAssignment = midi.assignments['palette.offset'];
-  const zoomControl = zoomAssignment ? findHydrasynthExplorerControl(zoomAssignment.address) : undefined;
-  const paletteControl = paletteAssignment ? findHydrasynthExplorerControl(paletteAssignment.address) : undefined;
+  const zoomControl = zoomAssignment?.relationship.source.deviceProfileId === 'asm-hydrasynth-explorer-2.2' ? findHydrasynthExplorerControl(zoomAssignment.address) : undefined;
+  const paletteControl = paletteAssignment?.relationship.source.deviceProfileId === 'asm-hydrasynth-explorer-2.2' ? findHydrasynthExplorerControl(paletteAssignment.address) : undefined;
   const currentAssignment = midi.assignments[target];
   const lastControl = midi.lastInput ? findHydrasynthExplorerControl(midi.lastInput.address) : undefined;
   const visible = hydrasynthExplorerControls.filter((control) => search
@@ -61,6 +63,17 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
   const assignLastReceived = () => {
     if (!midi.lastInput || midi.lastInput.address.protocol !== 'midi-cc') return;
     midi.assign({ address: midi.lastInput.address, channel: midi.lastInput.channel, target, minimum, maximum, inverted, curve });
+  };
+  const directCcIsValid = Number.isInteger(directCc) && directCc >= 0 && directCc <= 127;
+  const assignmentRangeIsValid = target !== 'palette.offset' || (Number.isFinite(minimum) && Number.isFinite(maximum)
+    && minimum !== maximum && Number.isFinite(curve) && curve > 0 && curve <= 8);
+  const assignDirectCc = () => {
+    if (!directCcIsValid) return;
+    midi.assign({ address: { protocol: 'midi-cc', controller: directCc }, channel, target, minimum, maximum, inverted, curve, learned: true });
+  };
+  const importSetupFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]; event.target.value = '';
+    if (file) midi.importSetup(await file.text());
   };
   return <>
     <section aria-label="Hydrasynth Explorer controller" className="perform-card hydrasynth-launcher">
@@ -98,7 +111,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
           <p>On the Explorer, open System Setup → MIDI page 10 → Param TX. Choose CC for the full named catalogue, or NRPN for the supported high-resolution Macros and Filters. Off sends no parameter edits.</p>
           <p>Press HOME for Macros 1–4; use PAGE for 5–8. The four encoders change function on other module pages. Check that the Macro has a value rather than a dash and its Macro button is not engaged. Select the Explorer USB input, or your interface input when using a MIDI cable.</p>
           <p>This catalogue describes transmitted parameters, not an independent MIDI address for every physical knob. Controls without a documented CC and unprofiled NRPN parameters remain diagnostic-only. Notes, pitch bend, pressure and clock are not live control sources.</p>
-          <p>LFO rate and gain CCs report edits to those settings; they do not stream the LFO waveform. To use a Hydrasynth LFO as a continuous source, create a Mod Matrix route from that LFO to an unused MIDI CC, then use the received-CC assignment below.</p>
+          <p>LFO rate and gain CCs report edits to those settings; they do not stream the LFO waveform. To use an LFO, PolyTouch or another Mod Matrix source continuously, route it to an unused MIDI CC, then enter that CC directly below or learn it from incoming activity.</p>
           <a href={explorerManualUrl} target="_blank" rel="noreferrer">Open ASM Explorer manual (setup p. 83; MIDI chart pp. 94–96)</a>
         </details>
         <div className="hydrasynth-dialog__body">
@@ -130,10 +143,14 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
               <label>MIDI channel<select aria-label="Control MIDI channel" value={channel} onChange={(event) => setChannel(Number(event.target.value))}>{Array.from({ length: 16 }, (_, i) => <option key={i} value={i}>{i + 1}</option>)}</select></label>
               {target === 'palette.offset' ? <div className="midi-assignment__range"><label>Offset minimum<input aria-label="Palette offset minimum" type="number" step="0.01" value={minimum} onChange={(event) => setMinimum(event.target.valueAsNumber)} /></label><label>Offset maximum<input aria-label="Palette offset maximum" type="number" step="0.01" value={maximum} onChange={(event) => setMaximum(event.target.valueAsNumber)} /></label><label>Response curve<input aria-label="Palette response curve" type="number" min="0.1" max="8" step="0.1" value={curve} onChange={(event) => setCurve(event.target.valueAsNumber)} /></label><label><input aria-label="Invert Palette offset" type="checkbox" checked={inverted} onChange={(event) => setInverted(event.target.checked)} /> Invert</label></div> : null}
               <button type="button" disabled={!midi.selectedId || !selectedAddress || selectedControl.kind !== 'knob' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum || !Number.isFinite(curve) || curve <= 0 || curve > 8))} onClick={() => { if (selectedAddress) midi.assign({ address: selectedAddress, channel, target, minimum, maximum, inverted, curve }); }}>Assign {selectedControl.label} to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
-              <button type="button" disabled={!midi.selectedId || !midi.lastInput || midi.lastInput.address.protocol !== 'midi-cc' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum || !Number.isFinite(curve) || curve <= 0 || curve > 8))} onClick={assignLastReceived}>Assign last received CC to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
+              <div className="midi-assignment__range">
+                <label>Direct CC number<input aria-label="Direct MIDI CC number" type="number" min="0" max="127" step="1" value={directCc} onChange={(event) => setDirectCc(event.target.valueAsNumber)} /></label>
+                <button type="button" disabled={!midi.selectedId || !directCcIsValid || !assignmentRangeIsValid} onClick={assignDirectCc}>Assign CC {directCcIsValid ? directCc : '—'} directly to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
+              </div>
+              <button type="button" disabled={!midi.selectedId || !midi.lastInput || midi.lastInput.address.protocol !== 'midi-cc' || !assignmentRangeIsValid} onClick={assignLastReceived}>Assign last received CC to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
               {!selectedAddress ? <small>Use Param TX = CC for this named control. Its NRPN address is not profiled yet.</small> : null}
               {selectedControl.kind !== 'knob' ? <small>Switch and system messages can be inspected but cannot drive a live target.</small> : null}
-              <small>Match Param TX and MIDI TX on the Explorer. “Select last touched” fills the named-control picker. “Assign last received CC” also supports a custom Mod Matrix LFO signal. Each replaces only this target's session-only assignment.</small>
+              <small>Match Param TX and MIDI TX on the Explorer. For Mod Matrix sources such as PolyTouch or an LFO, route the source to an unused CC and enter that destination above. Direct CC assignments describe the received endpoint, not the source that produced it. Each replaces only this target's assignment.</small>
             </div>
             <div className="midi-assignment" data-testid="hydrasynth-assignment">
               <span className="control-panel__label">Configured mappings</span>
@@ -147,6 +164,17 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
                   <button type="button" disabled={!paletteAssignment || !midi.selectedId} aria-pressed={midi.isArmed('palette.offset')} onClick={() => midi.toggleArm('palette.offset')}>{midi.isArmed('palette.offset') ? 'Disarm Palette offset' : 'Arm Palette offset'}</button>
                 </div>
               </div>
+              <details className="midi-setup">
+                <summary>Saved controller setup</summary>
+                <small role="status">{midi.setupStatus}</small>
+                <div className="midi-setup__actions">
+                  <button type="button" disabled={!zoomAssignment && !paletteAssignment} onClick={midi.exportSetup}>Export JSON</button>
+                  <button type="button" onClick={() => setupFileRef.current?.click()}>Import JSON</button>
+                  <button type="button" disabled={!zoomAssignment && !paletteAssignment} onClick={midi.clearSetup}>Clear saved setup</button>
+                </div>
+                <input ref={setupFileRef} className="midi-setup__file" aria-label="Import controller setup JSON" type="file" accept="application/json,.json" onChange={importSetupFile} />
+                <small>Mappings save automatically. Inputs reconnect by profile, control address and channel—never by a browser port ID. Arming and live values are not saved.</small>
+              </details>
               <small>Options for the target selected above:</small>
               {target === 'zoom' ? <><label>Zoom behaviour<select aria-label="Zoom behaviour" value={midi.zoomMode} onChange={(event) => midi.changeZoomMode(event.target.value as 'continuous' | 'turn')}><option value="continuous">Continuous — knob controls speed</option><option value="turn">Zoom while turning</option></select></label>
               {midi.zoomMode === 'continuous' ? <><small>Above centre: keep zooming in. Below centre: keep zooming out. Centre stops. Further from centre means faster. Motion continues at the knob limit.</small><button type="button" disabled={!midi.isArmed('zoom')} onClick={midi.holdZoom}>Hold zoom</button><small>Hold keeps this view; turn the knob to move again. Pause or leaving the browser stops motion until a fresh knob message.</small></> : null}</> : currentAssignment ? <small>Maps the knob's full range to {currentAssignment.minimum ?? -1}…{currentAssignment.maximum ?? 1}{currentAssignment.inverted ? ', inverted' : ''}. This is a temporary effective value; it does not alter the saved palette.</small> : null}
@@ -165,7 +193,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
                 </button>;
               })}</div>
             </details>
-            <small>Closing keeps the connection and armed mappings. Stop, input loss or leaving Perform releases both. Each target can be armed/released independently. Assignments are session-only: one source for Zoom and one for Palette offset.</small>
+            <small>Closing keeps the connection and armed mappings. Stop, input loss or leaving Perform releases both. Each target can be armed/released independently. Mapping definitions persist in the controller setup; arming and live values remain session-only.</small>
           </aside>
         </div>
       </section>

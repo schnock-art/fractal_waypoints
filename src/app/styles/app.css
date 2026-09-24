@@ -89,6 +89,12 @@ button:focus-visible {
 .midi-mapping-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; align-items: center; padding: .55rem; border-radius: 9px; background: rgba(16, 37, 57, .62); }
 .midi-mapping-row > div { display: grid; gap: .15rem; min-width: 0; }
 .midi-mapping-row strong, .midi-mapping-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.midi-setup { padding: .55rem; border-radius: 9px; border: 1px solid rgba(144, 213, 255, .16); }
+.midi-setup summary { color: #90d5ff; cursor: pointer; font-weight: 700; }
+.midi-setup[open] { display: grid; gap: .5rem; }
+.midi-setup__actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.midi-setup__actions button { flex: 1 1 auto; }
+.midi-setup__file { display: none; }
 .hydrasynth-map { display: grid; gap: .55rem; padding: .7rem; border-radius: 12px; background: rgba(5, 15, 27, .48); border: 1px solid rgba(144, 213, 255, .18); }
 .hydrasynth-map__heading { display: grid; gap: .2rem; }
 .hydrasynth-map__heading small, .hydrasynth-map__inspection small { color: #b9cde4; }
