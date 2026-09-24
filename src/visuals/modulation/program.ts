@@ -1,4 +1,6 @@
 import type { ModulationTarget, ModulationWaveform, ParameterModulation } from '../../types/config';
+import { applySignalTransforms, isSignalTransform, type SignalTransform } from '../../connections/signalTransforms';
+export type { SignalTransform } from '../../connections/signalTransforms';
 
 export interface InternalSource {
   id: string;
@@ -9,10 +11,6 @@ export interface InternalSource {
   offset: number;
   seed?: number;
 }
-export type SignalTransform = { kind: 'scale' | 'offset' | 'curve'; value: number }
-  | { kind: 'invert' }
-  | { kind: 'clamp'; min: number; max: number }
-  | { kind: 'smooth'; windowSeconds: number };
 export interface InternalMapping {
   id: string;
   sourceId: string;
@@ -68,20 +66,7 @@ export function isInternalModulationProgram(value: unknown): value is InternalMo
       || !['add', 'replace'].includes(String(mapping.mode)) || typeof mapping.enabled !== 'boolean'
       || !Array.isArray(mapping.transforms) || mapping.transforms.length > 8) return false;
     mappingIds.add(mapping.id);
-    for (const [index, transform] of mapping.transforms.entries()) {
-      if (!record(transform)) return false;
-      switch (transform.kind) {
-        case 'scale': case 'offset': if (!finite(transform.value)) return false; break;
-        case 'curve': if (!finite(transform.value) || transform.value <= 0 || transform.value > 8) return false; break;
-        case 'invert': break;
-        case 'clamp': if (!finite(transform.min) || !finite(transform.max) || transform.min > transform.max) return false; break;
-        case 'smooth':
-          if (index !== mapping.transforms.length - 1 || !finite(transform.windowSeconds)
-            || transform.windowSeconds <= 0 || transform.windowSeconds > 10) return false;
-          break;
-        default: return false;
-      }
-    }
+    for (const [index, transform] of mapping.transforms.entries()) if (!isSignalTransform(transform, index, mapping.transforms.length)) return false;
   }
   return true;
 }
@@ -107,18 +92,7 @@ function noiseAt(index: number, seed: number): number {
 
 export function evaluateMappingSignal(source: InternalSource, transforms: SignalTransform[], timeSeconds: number): number {
   const point = (time: number) => {
-    let value = evaluateInternalSource(source, time);
-    for (const transform of transforms) {
-      switch (transform.kind) {
-        case 'scale': value *= transform.value; break;
-        case 'offset': value += transform.value; break;
-        case 'invert': value = -value; break;
-        case 'clamp': value = Math.min(transform.max, Math.max(transform.min, value)); break;
-        case 'curve': value = Math.sign(value) * Math.pow(Math.abs(value), transform.value); break;
-      }
-      if (!Number.isFinite(value)) throw new Error('Modulation signal overflow.');
-    }
-    return value;
+    return applySignalTransforms(evaluateInternalSource(source, time), transforms);
   };
   const last = transforms.at(-1);
   if (last?.kind !== 'smooth') return point(timeSeconds);

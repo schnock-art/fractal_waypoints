@@ -154,6 +154,7 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
     Object.assign(window, {
       sendMidi: (data: number[]) => input.onmidimessage?.({ data: new Uint8Array(data), timeStamp: performance.now() }),
       disconnectMidi: () => { input.state = 'disconnected'; access.onstatechange?.(); },
+      reconnectMidi: () => { input.state = 'connected'; access.onstatechange?.(); },
     });
   });
   const send = async (data: number[]) => page.evaluate((bytes) => (window as unknown as { sendMidi: (data: number[]) => void }).sendMidi(bytes), data);
@@ -202,6 +203,7 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   const continued = await numericScale();
   await expect.poll(numericScale).toBeLessThan(continued * 0.98);
   await nrpn(512); // centre holds the current view
+  await page.waitForTimeout(40); // External absolute samples coalesce to the next animation frame.
   const centred = await scale();
   await page.waitForTimeout(150);
   expect(await scale()).toBe(centred);
@@ -224,6 +226,14 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   await page.evaluate(() => (window as unknown as { disconnectMidi: () => void }).disconnectMidi());
   await expect.poll(scale).toBe(baseScale);
   await expect(page.getByRole('button', { name: 'Release MIDI zoom' })).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { reconnectMidi: () => void }).reconnectMidi());
+  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
+  await page.getByRole('combobox', { name: 'MIDI input' }).selectOption('explorer');
+  await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
+  await page.getByRole('button', { name: 'Arm zoom', exact: true }).click();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await nrpn(1024);
+  await expect.poll(scale).not.toBe(baseScale);
   expect(page.url()).toBe(authoredUrl);
 });
 

@@ -1,6 +1,7 @@
 import { parseControlChange } from './controlChange';
+import type { ControlAddress } from '../../connections/externalControl';
+export type { ControlAddress } from '../../connections/externalControl';
 
-export type ControlAddress = { protocol: 'midi-cc'; controller: number } | { protocol: 'midi-nrpn'; parameter: number };
 export interface ControlInput { address: ControlAddress; channel: number; value: number; timestamp: number }
 export const addressKey = (address: ControlAddress): string => address.protocol === 'midi-cc' ? `cc:${address.controller}` : `nrpn:${address.parameter}`;
 export const addressLabel = (address: ControlAddress): string => address.protocol === 'midi-cc' ? `CC ${address.controller}` : `NRPN ${address.parameter}`;

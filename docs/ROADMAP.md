@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.2 are delivered; 11.3 is partially delivered and is the next implementation step.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, direct zoom assignment, and continuous zoom with Hold. A second semantic target, mapping transforms and the broader shared external-source boundary remain unfinished. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.4 are delivered; 11.5 performance setup persistence is next.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, shared transforms, bounded external updates, and explicit navigation versus semantic outputs. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within thei
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
 | Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; first 10.3 slice delivered |
-| Phase 11 | Connections | 11.1–11.2 delivered; 11.3 visual semantic assignment is next; setup persistence and replay remain later |
+| Phase 11 | Connections | 11.1–11.4 delivered; setup persistence and replay remain next |
 | Phase 12 | Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post-Hydrasynth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Hydrasynth sequence. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -467,7 +467,7 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 ## Phase 11 — Connections
 
-**Hydrasynth Explorer is the active implementation sequence; continue with Phase 11.3.** It makes one physical controller understandable before pressure-testing the shared external-source boundary. Its purpose is to validate existing semantic and modulation boundaries with real use, not to introduce a speculative protocol framework, synth-specific renderer coupling, or a premature node editor. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
+**Hydrasynth Explorer is the active implementation sequence; continue with Phase 11.5.** One physical controller has now pressure-tested the shared external-source boundary. Its purpose is to validate existing semantic and modulation boundaries with real use, not to introduce a speculative protocol framework, synth-specific renderer coupling, or a premature node editor. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
 
 Goal: evolve the working initial Hydrasynth slice into an intuitive instrument surface, then validate only the smallest shared external-control model that real use demands. The control surface and future Patch are different benches looking at the same wiring.
 
@@ -487,7 +487,7 @@ Goal: create the first recognisable, selectable Hydrasynth Explorer surface in P
 
 Definition of done: a user can connect the Explorer, move a supported control, see the matching visual control react, select it without knowing CC numbering, and inspect its address when needed. No graph, broad persistence redesign, or duplicate mapping model is introduced.
 
-Status: delivered and extended after hardware-use feedback. A compact status launcher opens a grouped/searchable catalogue covering all 117 Explorer CC-chart entries and direct zoom assignment. Closing preserves the live session and restores focus. Supported Macro/Filter NRPN aliases are decoded as complete values; unprofiled NRPNs remain diagnostic-only. Multiple mappings, additional semantic targets, transforms and persistence remain Phase 11.3 onward. See [setup and coverage](HYDRASYNTH_CONTROLS.md).
+Status: delivered and extended after hardware-use feedback. A compact status launcher opens a grouped/searchable catalogue covering all 117 Explorer CC-chart entries and direct zoom assignment. Closing preserves the live session and restores focus. Supported Macro/Filter NRPN aliases are decoded as complete values; unprofiled NRPNs remain diagnostic-only. Phase 11.3 subsequently added simultaneous target relationships and Phase 11.4 shared transforms/runtime boundaries; persistence remains Phase 11.5. See [setup and coverage](HYDRASYNTH_CONTROLS.md).
 
 ### Phase 11.3 — Visual semantic assignment
 
@@ -504,13 +504,13 @@ Goal: let a selected physical control drive a small, meaningful set of applicati
 
 - [x] Support Zoom through the proven navigation-intent path, including continuous speed and zoom-while-turning modes.
 - [x] Add one existing, genuinely useful continuous semantic parameter: Palette offset, selected from the existing semantic contract rather than an arbitrary object path.
-- [ ] Present the relationship as physical control → optional validated transforms → semantic target, with visible assignment, availability, arm/disarm/release, and safe target-inactivity states.
-- [ ] Reuse validated transform semantics where appropriate (range/scale, offset, invert, clamp, response curve, smoothing); add no transform solely for theoretical completeness.
-- [ ] Keep navigation/control intents distinct from continuous numeric parameters; defer discrete state and events rather than flattening every relationship to `number`.
+- [x] Present the relationship as physical control → optional validated transforms → semantic target, with visible assignment, availability, arm/disarm/release, and safe target-inactivity states.
+- [x] Reuse validated transform semantics where appropriate (range/scale, offset, invert, clamp and response curve). Explicit-time smoothing is intentionally not treated as live history; add no transform solely for theoretical completeness.
+- [x] Keep navigation/control intents distinct from continuous numeric parameters; defer discrete state and events rather than flattening every relationship to `number`.
 
 Definition of done: a user can create and understand a useful mapping without raw CC monitor knowledge. The visual controller does not write React parameter state, GPU uniforms, arbitrary object paths, or authored `RenderConfig` directly.
 
-**Next implementation slice (2026-09-24):** review actual use of the delivered simultaneous Zoom and Palette offset mappings, especially whether the one-source-per-target limit and explicit palette range/inversion are expressive without becoming clutter. If another target is justified, add only a validated transform or semantic target required by that use—not a generic object-path mapper. Do not claim setup persistence or replay as part of this slice. Physical Explorer NRPN verification remains an outstanding hardware check, not something simulated tests establish.
+**Actual-use review (2026-09-24):** simultaneous Zoom and Palette offset mappings are useful, but hidden relationships and play-before-arm made setup confusing. Both mappings are now always visible, independently armed and pre-armable while stopped. Phase 11.4 adds the justified response curve and shared transform/runtime boundary without adding another target or generic object-path mapper. Setup persistence and replay remain separate. Physical Explorer NRPN verification remains an outstanding hardware check, not something simulated tests establish.
 
 Hydrasynth LFO follow-up: direct LFO rate/gain messages are parameter edits, not a waveform stream. The current one-source Palette mapping can accept an explicit Mod Matrix LFO → unused MIDI CC route through **Assign last received CC**. Verify this path on physical Explorer hardware before deciding whether source-rate diagnostics, collision warnings, smoothing or simultaneous mappings are needed.
 
@@ -518,12 +518,14 @@ Hydrasynth LFO follow-up: direct LFO rate/gain messages are parameter edits, not
 
 Goal: pressure-test the existing source → transforms → mapping direction with the real Hydrasynth.
 
-- [ ] Generalise only the source side of today's internal waveform model as far as the first live external source requires; preserve internal-source behaviour and backwards compatibility.
-- [ ] Keep the layers explicit: physical device/profile → external input adapter → source → transforms → mapping → semantic target → validated effective world. Use a protocol/device-neutral term such as `ControlAddress`, never a domain abstraction named `MidiCC`.
-- [ ] Define serialisable source identity separately from live adapter/connection state; specify timestamps, bounded update/coalescing behaviour, diagnostics, reconnect behaviour, absolute values, and relative intents.
-- [ ] Prove the design with both a navigation intent and one continuous semantic parameter. Formulas, materials, lenses, renderers, and GPU uniforms remain unaware of Hydrasynth, MIDI, CC, NRPN, and browser MIDI APIs.
+- [x] Generalise only the source side of today's internal waveform model as far as the first live external source requires; preserve internal-source behaviour and backwards compatibility.
+- [x] Keep the layers explicit: physical device/profile → external input adapter → source → transforms → mapping → semantic target → validated effective world. Use protocol/device-neutral `ControlAddress`, never a domain abstraction named `MidiCC`.
+- [x] Define serialisable source identity separately from live adapter/connection state; specify timestamps, bounded update/coalescing behaviour, diagnostics, reconnect behaviour, absolute values, and relative intents.
+- [x] Prove the design with both a navigation intent and one continuous semantic parameter. Formulas, materials, lenses, renderers, and GPU uniforms remain unaware of Hydrasynth, MIDI, CC, NRPN, and browser MIDI APIs.
 
 Definition of done: a real hardware source participates in the shared relationship model where semantics match, without a universal event bus, giant source schema, feedback loop, or Patch editor.
+
+Status: complete for the bounded Hydrasynth session runtime. See [the external-control contract](EXTERNAL_CONTROL.md) and ADR-034. Physical hardware remains the truth test for feel and Explorer-specific transmission; automated tests use simulated Web MIDI.
 
 ### Phase 11.5 — Performance setup persistence
 

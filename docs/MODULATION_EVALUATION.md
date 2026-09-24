@@ -26,6 +26,8 @@ Sources: constant, sine, triangle, saw, and seeded deterministic noise. Frequenc
 
 Transforms run in listed order: scale, offset, sign inversion, clamp, signed power curve, and optional smoothing. Curve exponent must be positive and at most 8. Smoothing must be last, with a window in (0, 10] seconds. It is a fixed 16-point trailing mean, holding the time-zero signal for samples before zero. It is deliberately not a frame-history low-pass filter: seek, pause, export and reload give the same value for the same explicit time. This bounded approximation can alias high-frequency sources; it is not an audio filter.
 
+Phase 11.4 moves the stateless transform definitions and evaluator to `connections/signalTransforms.ts` so external absolute controls use exactly the same scale/offset/invert/clamp/curve semantics. Internal smoothing stays in this explicit-time evaluator; it is intentionally not reinterpreted as live frame history. The external relationship/runtime contract is documented in [EXTERNAL_CONTROL.md](EXTERNAL_CONTROL.md).
+
 Mapping mode is **add** or **replace**, in array order. Later mappings observe previous writes, including target-local clamping. Array order is the only priority mechanism. Mapping values use the target's existing domain units, not normalized slider positions. Palette displacement remains finite/unbounded and unwrapped. Material-specific trap/emission mappings are inactive outside Orbit Trap; absent trap slots are inactive. Lens mappings retain the existing effect-by-ID access and enable-on-write policy. No generic parameter-path setter was added.
 
 ## Validation and persistence boundaries

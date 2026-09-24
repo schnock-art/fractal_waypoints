@@ -20,6 +20,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
   const [minimum, setMinimum] = useState(-1);
   const [maximum, setMaximum] = useState(1);
   const [inverted, setInverted] = useState(false);
+  const [curve, setCurve] = useState(1);
   const selectedControl = hydrasynthExplorerControls.find((control) => control.id === selectedControlId)!;
   const selectedAddress: ControlAddress | null = format === 'midi-cc' ? selectedControl.protocol
     : selectedControl.nrpn ? { protocol: 'midi-nrpn', parameter: selectedControl.nrpn.parameter } : null;
@@ -59,7 +60,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
   };
   const assignLastReceived = () => {
     if (!midi.lastInput || midi.lastInput.address.protocol !== 'midi-cc') return;
-    midi.assign({ address: midi.lastInput.address, channel: midi.lastInput.channel, target, minimum, maximum, inverted });
+    midi.assign({ address: midi.lastInput.address, channel: midi.lastInput.channel, target, minimum, maximum, inverted, curve });
   };
   return <>
     <section aria-label="Hydrasynth Explorer controller" className="perform-card hydrasynth-launcher">
@@ -127,9 +128,9 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
               <label>Target<select aria-label="Controller target" value={target} onChange={(event) => setTarget(event.target.value as MidiAssignmentTarget)}><option value="zoom">Zoom</option><option value="palette.offset">Palette offset</option></select></label>
               <label>Transmission<select aria-label="Control transmission" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="midi-cc">CC</option><option value="midi-nrpn">NRPN</option></select></label>
               <label>MIDI channel<select aria-label="Control MIDI channel" value={channel} onChange={(event) => setChannel(Number(event.target.value))}>{Array.from({ length: 16 }, (_, i) => <option key={i} value={i}>{i + 1}</option>)}</select></label>
-              {target === 'palette.offset' ? <div className="midi-assignment__range"><label>Offset minimum<input aria-label="Palette offset minimum" type="number" step="0.01" value={minimum} onChange={(event) => setMinimum(event.target.valueAsNumber)} /></label><label>Offset maximum<input aria-label="Palette offset maximum" type="number" step="0.01" value={maximum} onChange={(event) => setMaximum(event.target.valueAsNumber)} /></label><label><input aria-label="Invert Palette offset" type="checkbox" checked={inverted} onChange={(event) => setInverted(event.target.checked)} /> Invert</label></div> : null}
-              <button type="button" disabled={!midi.selectedId || !selectedAddress || selectedControl.kind !== 'knob' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum))} onClick={() => { if (selectedAddress) midi.assign({ address: selectedAddress, channel, target, minimum, maximum, inverted }); }}>Assign {selectedControl.label} to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
-              <button type="button" disabled={!midi.selectedId || !midi.lastInput || midi.lastInput.address.protocol !== 'midi-cc' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum))} onClick={assignLastReceived}>Assign last received CC to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
+              {target === 'palette.offset' ? <div className="midi-assignment__range"><label>Offset minimum<input aria-label="Palette offset minimum" type="number" step="0.01" value={minimum} onChange={(event) => setMinimum(event.target.valueAsNumber)} /></label><label>Offset maximum<input aria-label="Palette offset maximum" type="number" step="0.01" value={maximum} onChange={(event) => setMaximum(event.target.valueAsNumber)} /></label><label>Response curve<input aria-label="Palette response curve" type="number" min="0.1" max="8" step="0.1" value={curve} onChange={(event) => setCurve(event.target.valueAsNumber)} /></label><label><input aria-label="Invert Palette offset" type="checkbox" checked={inverted} onChange={(event) => setInverted(event.target.checked)} /> Invert</label></div> : null}
+              <button type="button" disabled={!midi.selectedId || !selectedAddress || selectedControl.kind !== 'knob' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum || !Number.isFinite(curve) || curve <= 0 || curve > 8))} onClick={() => { if (selectedAddress) midi.assign({ address: selectedAddress, channel, target, minimum, maximum, inverted, curve }); }}>Assign {selectedControl.label} to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
+              <button type="button" disabled={!midi.selectedId || !midi.lastInput || midi.lastInput.address.protocol !== 'midi-cc' || (target === 'palette.offset' && (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum === maximum || !Number.isFinite(curve) || curve <= 0 || curve > 8))} onClick={assignLastReceived}>Assign last received CC to {target === 'zoom' ? 'zoom' : 'Palette offset'}</button>
               {!selectedAddress ? <small>Use Param TX = CC for this named control. Its NRPN address is not profiled yet.</small> : null}
               {selectedControl.kind !== 'knob' ? <small>Switch and system messages can be inspected but cannot drive a live target.</small> : null}
               <small>Match Param TX and MIDI TX on the Explorer. “Select last touched” fills the named-control picker. “Assign last received CC” also supports a custom Mod Matrix LFO signal. Each replaces only this target's session-only assignment.</small>
@@ -138,11 +139,11 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
               <span className="control-panel__label">Configured mappings</span>
               <div className="midi-mapping-list">
                 <div className="midi-mapping-row" data-testid="hydrasynth-mapping-zoom">
-                  <div><strong>Zoom → {zoomControl?.label ?? (zoomAssignment ? addressLabel(zoomAssignment.address) : 'Unassigned')}</strong><small>{zoomAssignment ? `${addressLabel(zoomAssignment.address)} · Channel ${zoomAssignment.channel + 1}` : 'Choose Zoom above, then assign a control.'}</small></div>
+                  <div><strong>{zoomControl?.label ?? (zoomAssignment ? addressLabel(zoomAssignment.address) : 'Unassigned')} → Zoom</strong><small>{zoomAssignment ? `${addressLabel(zoomAssignment.address)} · Channel ${zoomAssignment.channel + 1} · absolute value → signed response → ${midi.zoomMode === 'continuous' ? 'zoom-rate intent' : 'relative zoom intent'}` : 'Choose Zoom above, then assign a control.'}</small></div>
                   <button type="button" disabled={!zoomAssignment || !midi.selectedId} aria-pressed={midi.isArmed('zoom')} onClick={() => midi.toggleArm('zoom')}>{midi.isArmed('zoom') ? 'Disarm zoom' : 'Arm zoom'}</button>
                 </div>
                 <div className="midi-mapping-row" data-testid="hydrasynth-mapping-palette">
-                  <div><strong>Palette offset → {paletteControl?.label ?? (paletteAssignment ? addressLabel(paletteAssignment.address) : 'Unassigned')}</strong><small>{paletteAssignment ? `${addressLabel(paletteAssignment.address)} · Channel ${paletteAssignment.channel + 1} · ${paletteAssignment.minimum ?? -1}…${paletteAssignment.maximum ?? 1}${paletteAssignment.inverted ? ' · Inverted' : ''}` : 'Choose Palette offset above, then assign a control or LFO CC.'}</small></div>
+                  <div><strong>{paletteControl?.label ?? (paletteAssignment ? addressLabel(paletteAssignment.address) : 'Unassigned')} → Palette offset</strong><small>{paletteAssignment ? `${addressLabel(paletteAssignment.address)} · Channel ${paletteAssignment.channel + 1} · absolute value → ${paletteAssignment.inverted ? 'invert → ' : ''}curve ${paletteAssignment.curve ?? 1} → range ${paletteAssignment.minimum ?? -1}…${paletteAssignment.maximum ?? 1} → semantic parameter` : 'Choose Palette offset above, then assign a control or LFO CC.'}</small></div>
                   <button type="button" disabled={!paletteAssignment || !midi.selectedId} aria-pressed={midi.isArmed('palette.offset')} onClick={() => midi.toggleArm('palette.offset')}>{midi.isArmed('palette.offset') ? 'Disarm Palette offset' : 'Arm Palette offset'}</button>
                 </div>
               </div>
@@ -155,10 +156,11 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
             <details className="midi-monitor">
               <summary>Advanced MIDI monitor ({midi.messages.length} controls)</summary>
               <small>Complete CC / NRPN values. Unknown CCs can be assigned as custom signals; unknown NRPNs may encode several parameters in their value bytes and remain diagnostic-only.</small>
+              <small>Runtime: {midi.diagnostics.received} received · {midi.diagnostics.emitted} applied frames · {midi.diagnostics.coalesced} coalesced · {midi.diagnostics.stale} stale · {midi.diagnostics.overflow} overflow</small>
               <div className="midi-monitor__messages">{midi.messages.map((message) => {
                 const profile = findHydrasynthExplorerControl(message.address);
                 const canAssign = profile?.kind === 'knob' || (!profile && message.address.protocol === 'midi-cc');
-                return <button key={inputKey(message)} type="button" disabled={!canAssign} onClick={() => midi.assign({ ...message, target, minimum, maximum, inverted })}>
+                return <button key={inputKey(message)} type="button" disabled={!canAssign} onClick={() => midi.assign({ ...message, target, minimum, maximum, inverted, curve })}>
                   <span>{profile?.label ?? addressLabel(message.address)}</span><span>Ch {message.channel + 1}</span><strong>{message.value}</strong><small>{addressLabel(message.address)} · {canAssign ? `Assign to ${target === 'zoom' ? 'zoom' : 'Palette offset'}` : 'Diagnostic only'}</small>
                 </button>;
               })}</div>
