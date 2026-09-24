@@ -39,7 +39,7 @@ interface Props {
   onOverride: (id: SemanticParameterId, value?: number) => void;
   onMidiZoom: (delta: number) => void;
   onMidiPaletteOffset: (value: number) => void;
-  onMidiRelease: () => void;
+  onMidiRelease: (target?: 'zoom' | 'palette.offset') => void;
   onChange: (config: RenderConfig) => void;
   onEdit: () => void;
 }

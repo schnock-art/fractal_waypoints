@@ -1048,7 +1048,10 @@ export function App() {
                 onOverride={(id, value) => { if (previewActive) setOverrides((current) => { const next = { ...current }; if (value === undefined) delete next[id]; else next[id] = value; return next; }); }}
                 onMidiZoom={(delta) => { if (previewActive) { const intent = midiCcDeltaToZoom(delta); if (intent) setMidiViewport((current) => applyNavigationFrame(current ?? effectiveConfig.viewport, [intent.action], navigationSettings, intent.deltaSeconds)); } }}
                 onMidiPaletteOffset={(value) => { if (previewActive) setMidiOverrides({ 'palette.offset': value }); }}
-                onMidiRelease={() => { setMidiViewport(null); setMidiOverrides({}); }}
+                onMidiRelease={(target) => {
+                  if (!target || target === 'zoom') setMidiViewport(null);
+                  if (!target || target === 'palette.offset') setMidiOverrides({});
+                }}
                 onChange={(config) => { if (!previewActive) setMainConfig(config); }} onEdit={() => { setWorkspace('explore'); exploreWorkspaceButtonRef.current?.focus(); }} /> : <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {renderActiveWorkspacePanel()}
               </fieldset>}

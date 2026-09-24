@@ -495,10 +495,10 @@ User-requested controller correction: direct source-to-zoom assignment and docum
 
 Bounded-knob follow-up delivered: Continuous zoom (default) uses knob position as signed speed, sustaining motion at MIDI endpoints. Centre/Hold stops without resetting the view; Pause and focus loss require fresh input to restart. Zoom while turning remains available. This removes the controller-range limit, not renderer precision limits.
 
-First non-navigation target delivered: Palette offset maps a selected controller's documented range to an explicit finite session range with optional inversion. It is applied as a temporary effective override, never as an authored/URL/Waypoint change; release lifecycle restores the evaluated value. Mapping transforms, multiple simultaneous sources, physical NRPN verification and the external-source boundary remain open.
+First non-navigation target delivered: Palette offset maps a selected controller's documented range to an explicit finite session range with optional inversion. It is applied as a temporary effective override, never as an authored/URL/Waypoint change; release lifecycle restores the evaluated value. The next actual-use follow-up is delivered too: one Zoom source and one Palette offset source can run simultaneously, with independent arm/release. This is intentionally not a general mapping matrix: mapping transforms, more targets/sources, physical NRPN verification and the external-source boundary remain open.
 
 - [ ] Verify Macro/Filter NRPN aliases on the physical Explorer, then extend named NRPN coverage with explicit packed-subparameter identities and ranges; never treat shared NRPN addresses as independent scalar knobs.
-- [ ] Review actual-use needs for simultaneous controller mappings and keeping performance transport reachable from the expanded editor.
+- [x] Review actual-use needs for simultaneous controller mappings and expanded-editor transport. Deliver one independently armed source per proven target, an always-visible two-mapping summary, and pre-arming while stopped so setup no longer requires close → Play → reopen → Arm.
 
 Goal: let a selected physical control drive a small, meaningful set of application behaviours through an ordinary inspector/card before Patch exists.
 
@@ -510,7 +510,9 @@ Goal: let a selected physical control drive a small, meaningful set of applicati
 
 Definition of done: a user can create and understand a useful mapping without raw CC monitor knowledge. The visual controller does not write React parameter state, GPU uniforms, arbitrary object paths, or authored `RenderConfig` directly.
 
-**Next implementation slice (2026-09-24):** review actual use of the delivered Zoom and Palette offset mappings, especially whether one active source is sufficient and whether the explicit palette range/inversion is expressive without becoming clutter. If another target is justified, add only a validated transform or semantic target required by that use—not a generic object-path mapper. Decide simultaneous-mapping behaviour before extending the one-source UI. Do not claim setup persistence or replay as part of this slice. Physical Explorer NRPN verification remains an outstanding hardware check, not something simulated tests establish.
+**Next implementation slice (2026-09-24):** review actual use of the delivered simultaneous Zoom and Palette offset mappings, especially whether the one-source-per-target limit and explicit palette range/inversion are expressive without becoming clutter. If another target is justified, add only a validated transform or semantic target required by that use—not a generic object-path mapper. Do not claim setup persistence or replay as part of this slice. Physical Explorer NRPN verification remains an outstanding hardware check, not something simulated tests establish.
+
+Hydrasynth LFO follow-up: direct LFO rate/gain messages are parameter edits, not a waveform stream. The current one-source Palette mapping can accept an explicit Mod Matrix LFO → unused MIDI CC route through **Assign last received CC**. Verify this path on physical Explorer hardware before deciding whether source-rate diagnostics, collision warnings, smoothing or simultaneous mappings are needed.
 
 ### Phase 11.4 — External-source boundary
 

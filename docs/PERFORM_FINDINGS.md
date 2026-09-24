@@ -58,7 +58,9 @@ Absolute MIDI parameters stop changing at their endpoints, so zoom-while-turning
 
 ### First semantic target beyond navigation
 
-Palette offset is now the first controller-driven numeric target because it already has a validated, formula-independent semantic contract. The assignment card makes its finite control range and optional inversion explicit, while the actual palette offset remains finite but unbounded. Incoming controller values become a separate session-only override after evaluated motion; they do not edit the authored `RenderConfig`, URL or Waypoint. Release, Stop, input loss and leaving Perform restore the evaluated value. This proves a second useful target while preserving the one-control limit; shared mappings, transforms, setup persistence and replay remain later work.
+Palette offset is now the first controller-driven numeric target because it already has a validated, formula-independent semantic contract. The assignment card makes its finite control range and optional inversion explicit, while the actual palette offset remains finite but unbounded. Incoming controller values become a separate session-only override after evaluated motion; they do not edit the authored `RenderConfig`, URL or Waypoint. Release, Stop, input loss and leaving Perform restore the evaluated value. This proves a second useful target within the one-source-per-target limit; general mappings, transforms, setup persistence and replay remain later work.
+
+Actual use exposed two related comprehension problems: selecting a target hid the other target's mapping, and requiring active playback before arming forced a close → Play → reopen → Arm loop. The controller editor now keeps Zoom and Palette offset relationships visible together, preserves one independently armed source per target, and permits pre-arming while stopped. Play activates both without reopening the modal. This remains a small session setup rather than the complete connection view: Phase 11.4 establishes the shared source/transform/mapping boundary, Phase 11.5 persists setups, and Phase 12 Patch visualises the proven relationships.
 
 ### Controller correction after actual use
 
