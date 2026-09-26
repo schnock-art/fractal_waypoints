@@ -1,5 +1,13 @@
 # Architecture Decision Records
 
+## ADR-038: Linked Julia coordinates are closed, availability-gated controller targets
+
+**Status:** Accepted — initial Phase 11.8 slice.
+
+Admit `formula.julia.cReal` and `formula.julia.cImag` as explicit continuous semantic IDs alongside the existing Palette target. They are not configuration paths: their owner is the Julia formula, their normal response range is `-2…2`, and they may be bound in the same schema-1 setup and take relationships as other semantic values.
+
+At runtime these targets write only a session override of the Julia Primary render view when that formula is active, otherwise of the linked Julia render view. A mapping may be prepared and persisted while neither exists, but it cannot be armed and samples are ignored until a Julia Primary world or linked Julia seed exists. Release, Stop, workspace exit, device loss and replay completion clear the override without changing authored `RenderConfig`, URL, Waypoint or Journey. This establishes availability/replay behaviour before further formula, palette, material or lens targets are admitted.
+
 ## ADR-037: Controller layouts are independent user-owned endpoint interpretations
 
 **Status:** Accepted — Phase 11.7.

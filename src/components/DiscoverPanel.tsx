@@ -24,10 +24,7 @@ export function DiscoverPanel({
   const summary = summarizeDiscoveryWorkspace(options, discoveryResults);
 
   return (
-    <details className="control-panel__section control-panel__collapsible" open>
-      <summary className="control-panel__summary">Discover</summary>
-
-      <div className="discover-panel">
+    <section className="discover-panel tool-panel" aria-label="Discover controls">
         <div className="discover-panel__overview">
           <div className="control-panel__note">
             <p>Heuristic scan</p>
@@ -170,7 +167,6 @@ export function DiscoverPanel({
             <span>Run a scan to surface candidate regions from the current view.</span>
           </div>
         )}
-      </div>
-    </details>
+    </section>
   );
 }

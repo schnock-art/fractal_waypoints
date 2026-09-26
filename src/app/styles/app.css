@@ -316,7 +316,7 @@ button:focus-visible {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-columns: clamp(340px, 22vw, 420px) minmax(0, 1fr);
   gap: 1rem;
   min-height: 0;
   overflow: hidden;
@@ -334,11 +334,8 @@ button:focus-visible {
 
 .control-panel__essentials {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.45rem;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .control-panel__workspace-scroll {
@@ -346,8 +343,12 @@ button:focus-visible {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 0.25rem;
+  padding-right: 0.35rem;
 }
+
+.tool-panel { display: grid; gap: .85rem; min-width: 0; padding: .1rem; }
+.control-panel--explore .control-panel__section { gap: .55rem; }
+.control-panel--explore .control-panel__section--compact { padding: .5rem .65rem; }
 
 .control-panel__workspace-scroll > * + * {
   margin-top: 0.6rem;
@@ -840,6 +841,11 @@ button:focus-visible {
   gap: 0.45rem;
 }
 
+.waypoint-card__more { position: relative; }
+.waypoint-card__more summary { cursor: pointer; list-style: none; padding: .75rem .85rem; border: 1px solid rgba(158,208,255,.16); border-radius: 14px; background: rgba(14,23,38,.92); }
+.waypoint-card__more summary::-webkit-details-marker { display: none; }
+.waypoint-card__more > div { position: absolute; z-index: 2; right: 0; top: calc(100% + .35rem); display: grid; gap: .35rem; min-width: 8rem; padding: .45rem; border: 1px solid rgba(158,208,255,.18); border-radius: 12px; background: #0c1b2b; box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+
 .waypoint-card__meta span {
   padding: 0.22rem 0.5rem;
   border-radius: 999px;
@@ -891,7 +897,7 @@ button:focus-visible {
 
 .workspace-nav__grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
 }
 
@@ -899,7 +905,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.35rem;
+  min-height: 2.15rem;
   padding: 0.4rem 0.2rem;
   text-align: center;
 }
@@ -924,7 +930,7 @@ button:focus-visible {
 
 .palette-editor__preset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
 }
 
@@ -945,6 +951,7 @@ button:focus-visible {
   color: rgba(212, 228, 245, 0.76);
   font-size: 0.82rem;
 }
+.palette-editor__preset-card strong + span { display: none; }
 
 .palette-editor__preset-preview {
   height: 26px;
@@ -1042,6 +1049,11 @@ button:focus-visible {
   display: grid;
   gap: 0.35rem;
 }
+
+.palette-editor__fine-colour { display: grid; gap: .45rem; }
+.palette-editor__fine-colour summary, .waypoint-panel__save-details summary, .visual-lab details summary { cursor: pointer; color: #90d5ff; font-weight: 700; }
+.palette-editor__fine-colour > div { display: grid; gap: .55rem; margin-top: .35rem; }
+.palette-editor__fine-colour label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .5rem; }
 
 .palette-editor__nudge-row {
   display: grid;
@@ -1205,8 +1217,34 @@ button:focus-visible {
 }
 
 .view-grid--dual {
-  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.85fr);
+  grid-template-columns: minmax(0, 1.9fr) minmax(250px, .75fr);
 }
+
+.view-grid--dual:has(.render-view__overlay--placeholder) {
+  grid-template-columns: minmax(0, 2.5fr) minmax(220px, .7fr);
+}
+
+.view-grid { position: relative; }
+
+.julia-side-panel__tab {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  top: 50%;
+  display: grid;
+  gap: .2rem;
+  min-width: 4.6rem;
+  padding: .7rem .55rem;
+  transform: translateY(-50%);
+  border-radius: 12px 0 0 12px;
+  border-right: 0;
+  text-align: left;
+  background: rgba(11, 30, 48, .94);
+  box-shadow: -8px 0 22px rgba(0,0,0,.24);
+}
+
+.julia-side-panel__tab span { color: #e9f6ff; font-weight: 700; }
+.julia-side-panel__tab small { color: #90d5ff; }
 
 .comparison-stage {
   min-height: 0;
@@ -1259,6 +1297,9 @@ button:focus-visible {
   justify-content: space-between;
   align-items: flex-start;
 }
+
+.render-view__header-actions { display: flex; align-items: flex-start; gap: .55rem; }
+.render-view__panel-action { width: 2.15rem; min-width: 2.15rem; height: 2.15rem; padding: 0; border-radius: 10px; font-size: 1.45rem; line-height: 1; }
 
 .render-view__header h2 {
   margin: 0.3rem 0 0;
@@ -1393,7 +1434,7 @@ button:focus-visible {
 
 .visual-lab__preset-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
 }
 
@@ -1413,6 +1454,9 @@ button:focus-visible {
   font-size: 0.76rem;
   line-height: 1.3;
 }
+.visual-lab__preset-card span { display: none; }
+.waypoint-panel__save-details { display: grid; gap: .65rem; }
+.waypoint-panel__save-details[open] { padding-top: .15rem; }
 
 @media (max-width: 1080px) {
   .app-shell {
@@ -1442,9 +1486,9 @@ button:focus-visible {
     padding-right: 0;
   }
 
-  .workspace-nav__grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+  .workspace-nav__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .julia-side-panel__tab { position: static; transform: none; width: 100%; grid-template-columns: auto 1fr; align-items: center; border-right: 1px solid rgba(158,208,255,.16); border-radius: 12px; text-align: left; }
 
   .comparison-panel__mode-grid,
   .animation-panel__stats,

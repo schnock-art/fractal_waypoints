@@ -570,8 +570,9 @@ test('Compare Right is never promoted and the Primary canvas survives workspace 
   await open(page);
   await page.getByTestId('main-canvas').evaluate((canvas) => { canvas.dataset.continuity = 'same-primary'; });
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
-  const sides = page.locator('.comparison-panel__side-card');
-  await sides.nth(1).getByLabel('Formula', { exact: true }).selectOption('newton');
+  const side = page.locator('.comparison-panel__side-card');
+  await page.getByRole('button', { name: 'Edit Right', exact: true }).click();
+  await side.getByLabel('Formula', { exact: true }).selectOption('newton');
   await page.getByRole('button', { name: /^Overlay Blend both/ }).click();
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   await page.getByRole('button', { name: 'Open comparison' }).click();
@@ -589,7 +590,7 @@ test('Compare Right is never promoted and the Primary canvas survives workspace 
   await page.getByRole('button', { name: 'Stop and edit base' }).click();
   await expect(page.getByTestId('comparison-right-canvas')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Right', exact: true })).toHaveClass('is-active');
-  await expect(sides.nth(1).getByLabel('Formula', { exact: true })).toHaveValue('newton');
+  await expect(side.getByLabel('Formula', { exact: true })).toHaveValue('newton');
   expect(page.url()).toBe(url);
 });
 

@@ -3,6 +3,7 @@ import { createDefaultRenderConfig } from '../src/app/defaultConfig';
 import { describeSemanticParameter, readSemanticParameter, writeSemanticParameter } from '../src/parameters/semantic';
 import { normalizePhoenixParameters, phoenixMemoryParameter, setPhoenixMemory } from '../src/fractals/phoenix';
 import { paletteOffsetParameter, setPaletteOffset } from '../src/palettes/offset';
+import { juliaImaginaryParameter, juliaRealParameter } from '../src/parameters/semantic';
 import { encodeRenderConfigToUrlParam, decodeRenderConfigFromUrlParam } from '../src/persistence/urlState';
 import { migrateWaypoint } from '../src/persistence/renderConfig';
 import { createWaypoint } from '../src/navigation/waypoints';
@@ -12,11 +13,15 @@ import { applyModulations } from '../src/visuals/modulation/runtime';
 
 const memory = 'formula.phoenix.memory';
 const offset = 'palette.offset';
+const juliaReal = 'formula.julia.cReal';
+const juliaImaginary = 'formula.julia.cImag';
 
-describe('two-target semantic pressure test', () => {
+describe('semantic parameter boundary', () => {
   it('exposes domain-owned metadata, not a generic object path or UI catalogue', () => {
     expect(describeSemanticParameter(memory)).toBe(phoenixMemoryParameter);
     expect(describeSemanticParameter(offset)).toBe(paletteOffsetParameter);
+    expect(describeSemanticParameter(juliaReal)).toBe(juliaRealParameter);
+    expect(describeSemanticParameter(juliaImaginary)).toBe(juliaImaginaryParameter);
     expect(phoenixMemoryParameter).toMatchObject({ owner: { kind: 'formula', id: 'phoenix' },
       bounds: { min: -1, max: 1 }, defaultValue: -0.5, interpolation: 'linear', modulationEligible: true });
     expect(paletteOffsetParameter).toMatchObject({ bounds: null, defaultValue: 0, unit: 'palette-coordinate' });
@@ -25,6 +30,19 @@ describe('two-target semantic pressure test', () => {
       const config = createDefaultRenderConfig('phoenix');
       expect(writeSemanticParameter(config, id, 1)).toMatchObject({ status: 'unknown', config });
     }
+  });
+
+  it('admits Julia coordinates only for the linked Julia config and writes no other view state', () => {
+    const mandelbrot = createDefaultRenderConfig('mandelbrot');
+    expect(readSemanticParameter(mandelbrot, juliaReal)).toMatchObject({ status: 'inactive' });
+    expect(writeSemanticParameter(mandelbrot, juliaImaginary, 0.25)).toMatchObject({ status: 'inactive', config: mandelbrot });
+
+    const julia = createDefaultRenderConfig('julia');
+    const result = writeSemanticParameter(julia, juliaReal, -0.123456);
+    expect(result).toMatchObject({ status: 'applied', value: -0.123456 });
+    expect(result.config.fractal.parameters.cReal).toBe(-0.123456);
+    expect(result.config.fractal.parameters.cImag).toBe(julia.fractal.parameters.cImag);
+    expect(result.config.viewport).toBe(julia.viewport);
   });
 
   it('guards formula identity even when an unrelated parameter map contains memory', () => {

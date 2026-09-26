@@ -77,7 +77,7 @@ export function isExternalControlRelationship(value: unknown): value is External
   const transforms = mapping.transforms as unknown[];
   if (transforms.some((transform, index) => !isSignalTransform(transform, index, transforms.length)
     || (record(transform) && transform.kind === 'smooth'))) return false;
-  return mapping.target.kind === 'semantic-parameter' ? mapping.target.id === 'palette.offset' || mapping.target.id === 'formula.phoenix.memory'
+  return mapping.target.kind === 'semantic-parameter' ? ['palette.offset', 'formula.phoenix.memory', 'formula.julia.cReal', 'formula.julia.cImag'].includes(String(mapping.target.id))
     : mapping.target.kind === 'navigation-intent' && mapping.target.id === 'zoom' && ['continuous', 'turn'].includes(String(mapping.target.mode));
 }
 

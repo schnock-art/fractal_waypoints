@@ -90,10 +90,12 @@ for (const formula of ['newton', 'nova']) {
     await page.getByText('Polynomial & convergence', { exact: true }).click();
     await expect(page.getByLabel('Relaxation', { exact: true })).toHaveValue('0.9');
     await page.getByRole('button', { name: 'Compare', exact: true }).click();
-    const sides = page.locator('.comparison-panel__side-card');
-    await sides.nth(0).getByLabel('Formula', { exact: true }).selectOption('newton');
-    await sides.nth(1).getByLabel('Formula', { exact: true }).selectOption('nova');
-    await expect(sides.nth(0).getByLabel('Polynomial roots', { exact: true })).toHaveValue('3');
+    const side = page.locator('.comparison-panel__side-card');
+    await side.getByLabel('Formula', { exact: true }).selectOption('newton');
+    await page.getByRole('button', { name: 'Edit Right', exact: true }).click();
+    await side.getByLabel('Formula', { exact: true }).selectOption('nova');
+    await page.getByRole('button', { name: 'Edit Left', exact: true }).click();
+    await expect(side.getByLabel('Polynomial roots', { exact: true })).toHaveValue('3');
     await page.getByRole('button', { name: 'Open comparison', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Exit comparison', exact: true })).toBeVisible();
     expect(errors).toEqual([]);

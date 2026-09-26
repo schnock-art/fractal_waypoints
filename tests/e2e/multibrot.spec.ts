@@ -81,13 +81,15 @@ test('Multibrot exposes power and renders integer and fractional powers on the G
   await page.reload();
   await expect(page.getByLabel('Power', { exact: true })).toHaveValue('4.5');
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
-  const sides = page.locator('.comparison-panel__side-card');
-  await sides.nth(0).getByLabel('Formula', { exact: true }).selectOption('multibrot');
-  await sides.nth(1).getByLabel('Formula', { exact: true }).selectOption('multibrot');
-  await sides.nth(0).getByLabel('Power', { exact: true }).fill('3');
-  await sides.nth(1).getByLabel('Power', { exact: true }).fill('6');
-  await expect(sides.nth(0).getByLabel('Power', { exact: true })).toHaveValue('3');
-  await expect(sides.nth(1).getByLabel('Power', { exact: true })).toHaveValue('6');
+  const side = page.locator('.comparison-panel__side-card');
+  await side.getByLabel('Formula', { exact: true }).selectOption('multibrot');
+  await side.getByLabel('Power', { exact: true }).fill('3');
+  await page.getByRole('button', { name: 'Edit Right', exact: true }).click();
+  await side.getByLabel('Formula', { exact: true }).selectOption('multibrot');
+  await side.getByLabel('Power', { exact: true }).fill('6');
+  await expect(side.getByLabel('Power', { exact: true })).toHaveValue('6');
+  await page.getByRole('button', { name: 'Edit Left', exact: true }).click();
+  await expect(side.getByLabel('Power', { exact: true })).toHaveValue('3');
   await page.getByRole('button', { name: 'Open comparison', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Exit comparison', exact: true })).toBeVisible();
   for (const surface of await page.locator('canvas').all()) {

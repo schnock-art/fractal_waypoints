@@ -20,6 +20,13 @@ describe('external control boundary', () => {
     expect(applySignalTransforms(127, transforms)).toBe(-2);
   });
 
+  it('accepts explicit linked-Julia semantic identities without opening arbitrary parameter paths', () => {
+    const relation = relationship({ kind: 'semantic-parameter', id: 'formula.julia.cReal' }, rangeTransforms(0, 127, -2, 2));
+    expect(isExternalControlRelationship(relation)).toBe(true);
+    expect(routeExternalControl(relation, { sourceId: relation.source.id, value: 127, timestamp: 7 }))
+      .toEqual({ kind: 'semantic-value', target: 'formula.julia.cReal', value: 2, timestamp: 7 });
+  });
+
   it('keeps navigation intents distinct from semantic parameter writes', () => {
     const continuous = relationship({ kind: 'navigation-intent', id: 'zoom', mode: 'continuous' });
     expect(routeExternalControl(continuous, { sourceId: continuous.source.id, value: 63.5, timestamp: 1 }))

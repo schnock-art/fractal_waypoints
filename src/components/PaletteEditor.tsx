@@ -93,10 +93,7 @@ export function PaletteEditor({ palette, onChange }: PaletteEditorProps) {
   }
 
   return (
-    <details className="control-panel__section control-panel__collapsible" open>
-      <summary className="control-panel__summary">Palette</summary>
-
-      <div className="palette-editor">
+    <section className="palette-editor tool-panel" aria-label="Palette controls">
         <div className="palette-editor__overview">
           <div className="control-panel__note">
             <p>Active palette</p>
@@ -241,42 +238,9 @@ export function PaletteEditor({ palette, onChange }: PaletteEditorProps) {
                     Nudge right
                   </button>
                 </div>
-                <label>
-                  <span>Red</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    step="1"
-                    value={Math.round(selectedStop.color.r * 255)}
-                    onChange={(event) => handleSelectedChannelChange('r', Number(event.target.value))}
-                  />
-                  <strong>{Math.round(selectedStop.color.r * 255)}</strong>
-                </label>
-                <label>
-                  <span>Green</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    step="1"
-                    value={Math.round(selectedStop.color.g * 255)}
-                    onChange={(event) => handleSelectedChannelChange('g', Number(event.target.value))}
-                  />
-                  <strong>{Math.round(selectedStop.color.g * 255)}</strong>
-                </label>
-                <label>
-                  <span>Blue</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    step="1"
-                    value={Math.round(selectedStop.color.b * 255)}
-                    onChange={(event) => handleSelectedChannelChange('b', Number(event.target.value))}
-                  />
-                  <strong>{Math.round(selectedStop.color.b * 255)}</strong>
-                </label>
+                <details className="palette-editor__fine-colour"><summary>Fine colour controls</summary><div>
+                  {(['r', 'g', 'b'] as const).map((channel) => <label key={channel}><span>{{ r: 'Red', g: 'Green', b: 'Blue' }[channel]}</span><input type="range" min="0" max="255" step="1" value={Math.round(selectedStop.color[channel] * 255)} onChange={(event) => handleSelectedChannelChange(channel, Number(event.target.value))} /><strong>{Math.round(selectedStop.color[channel] * 255)}</strong></label>)}
+                </div></details>
               </div>
             </>
           ) : null}
@@ -396,8 +360,7 @@ export function PaletteEditor({ palette, onChange }: PaletteEditorProps) {
             ))}
           </div>
         ) : null}
-      </div>
-    </details>
+    </section>
   );
 }
 

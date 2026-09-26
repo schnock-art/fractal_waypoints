@@ -3,7 +3,7 @@ import { isExternalControlRelationship, rangeTransforms, type ExternalControlRel
 export const PERFORMANCE_SETUP_SCHEMA_VERSION = 1 as const;
 export const PERFORMANCE_SETUP_STORAGE_KEY = 'fractal-explorer:performance-setup:v1';
 
-export type PerformanceBindingTarget = 'zoom' | 'palette.offset';
+export type PerformanceBindingTarget = 'zoom' | 'palette.offset' | 'formula.julia.cReal' | 'formula.julia.cImag';
 export type PerformanceBindingSettings =
   | { kind: 'zoom'; mode: 'continuous' | 'turn' }
   | { kind: 'range'; minimum: number; maximum: number; inverted: boolean; curve: number };
@@ -49,7 +49,7 @@ export function isPerformanceControlSetup(value: unknown): value is PerformanceC
   const bindingIds = new Set<string>(); const targets = new Set<string>();
   for (const binding of value.bindings) {
     if (!record(binding) || typeof binding.id !== 'string' || !binding.id || bindingIds.has(binding.id)
-      || !['zoom', 'palette.offset'].includes(String(binding.target)) || targets.has(String(binding.target))
+      || !['zoom', 'palette.offset', 'formula.julia.cReal', 'formula.julia.cImag'].includes(String(binding.target)) || targets.has(String(binding.target))
       || !isExternalControlRelationship(binding.relationship) || !record(binding.settings)) return false;
     const relationship = binding.relationship; const target = binding.target as PerformanceBindingTarget;
     if (!profileIds.has(relationship.source.deviceProfileId)) return false;
@@ -64,7 +64,7 @@ export function isPerformanceControlSetup(value: unknown): value is PerformanceC
       if (binding.settings.kind !== 'range' || !finite(binding.settings.minimum) || !finite(binding.settings.maximum)
         || binding.settings.minimum === binding.settings.maximum || typeof binding.settings.inverted !== 'boolean'
         || !finite(binding.settings.curve) || binding.settings.curve <= 0 || binding.settings.curve > 8
-        || relationship.mapping.target.kind !== 'semantic-parameter' || relationship.mapping.target.id !== 'palette.offset') return false;
+        || relationship.mapping.target.kind !== 'semantic-parameter' || relationship.mapping.target.id !== target) return false;
       const expected = rangeTransforms(relationship.source.minimum, relationship.source.maximum, binding.settings.minimum,
         binding.settings.maximum, binding.settings.inverted, binding.settings.curve);
       if (!sameTransforms(relationship.mapping.transforms, expected)) return false;

@@ -58,10 +58,7 @@ export function AnimationPanel({
   const summary = summarizeJourneyWorkspace(clip, Math.round((clip.durationMs / 1000) * clip.fps) + 1, recordedEvents);
 
   return (
-    <details className="control-panel__section control-panel__collapsible" open>
-      <summary className="control-panel__summary">Journey</summary>
-
-      <div className="animation-panel">
+    <section className="animation-panel tool-panel" aria-label="Journey controls">
         <div className="animation-panel__overview">
           <div className="control-panel__note">
             <p>Animation clip</p>
@@ -275,7 +272,6 @@ export function AnimationPanel({
             Export WebM
           </button>
         </div>
-      </div>
-    </details>
+    </section>
   );
 }

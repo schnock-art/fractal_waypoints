@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react';
 
 import { formulaRegistry } from '../fractals/registry';
@@ -38,6 +38,7 @@ interface RenderViewProps {
   onDiscreteNavigationAction?: (action: NavigationActionId, precisionMode: boolean) => void;
   onUserNavigate?: () => void;
   highlightForTutorial?: boolean;
+  headerAction?: ReactNode;
 }
 
 interface PointerDragState {
@@ -74,6 +75,7 @@ export function RenderView({
   onDiscreteNavigationAction,
   onUserNavigate,
   highlightForTutorial = false,
+  headerAction,
 }: RenderViewProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const surfaceRef = useRef<RenderSurface | null>(null);
@@ -482,13 +484,11 @@ export function RenderView({
           <p className="render-view__eyebrow">{title}</p>
           <h2>{formulaRegistry[config.fractal.formulaId]?.displayName ?? config.fractal.formulaId} Surface</h2>
         </div>
-        <div className="render-view__meta">
-          <span>{subtitle}</span>
-          <span>{backendLabel}</span>
-          <span>
-            Scale {formatNumber(toNumber(config.viewport.scale))}
-          </span>
-        </div>
+        <div className="render-view__header-actions"><div className="render-view__meta">
+            <span>{subtitle}</span>
+            <span>{backendLabel}</span>
+            <span>Scale {formatNumber(toNumber(config.viewport.scale))}</span>
+          </div>{headerAction}</div>
       </header>
       <div className={highlightForTutorial ? 'render-view__canvas-shell is-first-flight-target' : 'render-view__canvas-shell'}>
         <canvas

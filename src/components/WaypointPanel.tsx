@@ -72,10 +72,7 @@ export function WaypointPanel({
   }
 
   return (
-    <details className="control-panel__section control-panel__collapsible" open>
-      <summary className="control-panel__summary">Waypoints</summary>
-
-      <div className="waypoint-panel">
+    <section className="waypoint-panel tool-panel" aria-label="Waypoint controls">
         <div className="control-panel__note">
           <p>Current capture</p>
           <strong>{activeFormulaLabel} / score {activeScore.toFixed(2)}</strong>
@@ -99,31 +96,10 @@ export function WaypointPanel({
             </div>
           </div>
 
-          <div className="waypoint-panel__save-form">
-            <label>
-              <span>Name</span>
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Crystal inlet" />
-            </label>
-            <label>
-              <span>Description</span>
-              <input
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Why this region is interesting"
-              />
-            </label>
-          </div>
-          <div className="waypoint-panel__actions">
-            <button type="button" onClick={handleSaveCurrentWaypoint}>
-              Save Waypoint
-            </button>
-            <button type="button" onClick={() => {
-              setName(quickSaveName);
-              setDescription(`${activeFormulaLabel} capture saved from Explore.`);
-            }}>
-              Prefill draft
-            </button>
-          </div>
+          <details className="waypoint-panel__save-details"><summary>Save with details</summary><div className="waypoint-panel__save-form">
+              <label><span>Name</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Crystal inlet" /></label>
+              <label><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Why this region is interesting" /></label>
+            </div><div className="waypoint-panel__actions"><button type="button" onClick={handleSaveCurrentWaypoint}>Save Waypoint</button><button type="button" onClick={() => { setName(quickSaveName); setDescription(`${activeFormulaLabel} capture saved from Explore.`); }}>Prefill draft</button></div></details>
         </div>
 
         <div className="waypoint-panel__toolbar">
@@ -207,6 +183,9 @@ export function WaypointPanel({
                             <span>Score {(waypoint.interestingnessScore ?? 0).toFixed(2)}</span>
                           </div>
                           <div className="waypoint-card__actions">
+                            <button type="button" onClick={() => onLoadWaypoint(waypoint)}>Load</button>
+                            {waypoint.source !== 'user' ? <button type="button" onClick={() => onPromoteWaypoint(waypoint)}>Keep</button> : null}
+                            <details className="waypoint-card__more"><summary>More</summary><div>
                             {isEditing ? (
                               <button
                                 type="button"
@@ -232,9 +211,6 @@ export function WaypointPanel({
                                 Edit
                               </button>
                             )}
-                            <button type="button" onClick={() => onLoadWaypoint(waypoint)}>
-                              Load
-                            </button>
                             {waypoint.source === 'user' ? (
                               <>
                                 <button type="button" onClick={() => onRefreshWaypointFromCurrent(waypoint.id)}>
@@ -244,11 +220,8 @@ export function WaypointPanel({
                                   Delete
                                 </button>
                               </>
-                            ) : (
-                              <button type="button" onClick={() => onPromoteWaypoint(waypoint)}>
-                                Keep
-                              </button>
-                            )}
+                            ) : null}
+                            </div></details>
                           </div>
                         </div>
                       </article>
@@ -259,8 +232,7 @@ export function WaypointPanel({
             </details>
           ))}
         </div>
-      </div>
-    </details>
+    </section>
   );
 }
 

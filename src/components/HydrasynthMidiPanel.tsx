@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useMidiControls, type MidiAssignmentTarget } from '../integrations/midi/useMidiControls';
+import { midiAssignmentTargets, useMidiControls, type MidiAssignmentTarget } from '../integrations/midi/useMidiControls';
+import type { SemanticParameterId } from '../parameters/semantic';
 import { ControllerMappingCard } from './controller/ControllerMappingCard';
 import { ControllerLayoutsView, LiveControllerView, MappingControllerView, MidiDiagnosticsView, PerformanceTakesView } from './controller/ControllerWorkspaceViews';
 import { useControllerLayouts } from './controller/useControllerLayouts';
 
-interface Props { active: boolean; running: boolean; onZoomDelta: (delta: number) => void; onPaletteOffset: (value: number) => void; onRelease: (target?: MidiAssignmentTarget) => void }
+interface Props { active: boolean; running: boolean; onZoomDelta: (delta: number) => void; onSemanticValue: (target: SemanticParameterId, value: number) => void; onRelease: (target?: MidiAssignmentTarget) => void; isTargetAvailable: (target: MidiAssignmentTarget) => boolean }
 type ControllerView = 'live' | 'mappings' | 'layouts' | 'takes' | 'diagnostics';
 const views: { id: ControllerView; label: string }[] = [
   { id: 'live', label: 'Live' }, { id: 'mappings', label: 'Mappings' }, { id: 'layouts', label: 'Layouts' },
@@ -20,13 +21,13 @@ function connectionLabel(midi: ReturnType<typeof useMidiControls>, armedCount: n
   return `● Connected · ${armedCount} armed`;
 }
 
-export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOffset, onRelease }: Props) {
-  const midi = useMidiControls(active, running, onZoomDelta, onPaletteOffset, onRelease);
+export function HydrasynthMidiPanel({ active, running, onZoomDelta, onSemanticValue, onRelease, isTargetAvailable }: Props) {
+  const midi = useMidiControls(active, running, onZoomDelta, onSemanticValue, onRelease, isTargetAvailable);
   const layouts = useControllerLayouts();
   const launcherRef = useRef<HTMLButtonElement>(null); const dialogRef = useRef<HTMLElement>(null); const closeRef = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false); const [view, setView] = useState<ControllerView>('live');
   const selected = midi.inputs.find((input) => input.id === midi.selectedId);
-  const mappingCount = [midi.assignments.zoom, midi.assignments['palette.offset']].filter(Boolean).length;
+  const mappingCount = midiAssignmentTargets.filter((target) => midi.assignments[target]).length;
   const armedCount = Object.values(midi.armedTargets).filter(Boolean).length;
   const connection = connectionLabel(midi, armedCount);
   const close = () => { setExpanded(false); requestAnimationFrame(() => launcherRef.current?.focus()); };
@@ -60,7 +61,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
     <section aria-label="Hydrasynth Explorer controller" className="perform-card hydrasynth-launcher">
       <div className="hydrasynth-launcher__heading"><div><span className="control-panel__label">Controller</span><h3>Hydrasynth Explorer</h3></div><span className={`hydrasynth-launcher__state${midi.selectedId ? ' is-connected' : ''}`}>{connection}</span></div>
       <div className="hydrasynth-launcher__instrument"><strong>{layouts.activeLayout?.name ?? selected?.name ?? 'No named layout'}</strong><small>{mappingCount} mapping{mappingCount === 1 ? '' : 's'} · {armedCount} armed{midi.isRecordingTake ? ' · Recording' : midi.isReplayingTake ? ' · Replaying' : ''}</small></div>
-      {mappingCount ? <div className="hydrasynth-launcher__mappings"><ControllerMappingCard assignment={midi.assignments.zoom} target="zoom" armed={midi.isArmed('zoom')} layout={layouts.activeLayout} compact /><ControllerMappingCard assignment={midi.assignments['palette.offset']} target="palette.offset" armed={midi.isArmed('palette.offset')} layout={layouts.activeLayout} compact /></div> : null}
+      {mappingCount ? <div className="hydrasynth-launcher__mappings">{midiAssignmentTargets.filter((target) => midi.assignments[target]).map((target) => <ControllerMappingCard key={target} assignment={midi.assignments[target]} target={target} armed={midi.isArmed(target)} layout={layouts.activeLayout} compact />)}</div> : null}
       <button ref={launcherRef} type="button" aria-haspopup="dialog" aria-expanded={expanded} onClick={open}>Open controller</button>
       {midi.isRecordingTake ? <button type="button" onClick={() => midi.stopRecordingTake()}>Stop recording</button> : null}
       {midi.armedTargets.zoom && midi.zoomMode === 'continuous' ? <button type="button" className="is-secondary" onClick={midi.holdZoom}>Hold zoom</button> : null}

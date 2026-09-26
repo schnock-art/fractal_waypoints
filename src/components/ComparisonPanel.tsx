@@ -10,6 +10,7 @@ import { PhoenixControls } from './PhoenixControls';
 import { normalizePhoenixParameters } from '../fractals/phoenix';
 import { isConvergentFormula, normalizeNewtonParameters } from '../fractals/newton';
 import { resolveCompatibleRenderConfig, getMaterialCompatibility } from '../visuals/materials/registry';
+import { useState } from 'react';
 
 interface ComparisonPanelProps {
   enabled: boolean;
@@ -35,12 +36,10 @@ export function ComparisonPanel({
   onLoadExploreToSide,
 }: ComparisonPanelProps) {
   const summary = summarizeComparisonWorkspace(comparison, enabled);
+  const [editingSide, setEditingSide] = useState<ComparisonSide>('left');
 
   return (
-    <details className="control-panel__section control-panel__collapsible" open>
-      <summary className="control-panel__summary">Compare</summary>
-
-      <div className="comparison-panel">
+    <section className="comparison-panel tool-panel" aria-label="Comparison controls">
         <div className="comparison-panel__overview">
           <div className="control-panel__note">
             <p>Comparison stage</p>
@@ -144,22 +143,21 @@ export function ComparisonPanel({
           </>
         ) : null}
 
+        <div className="comparison-panel__side-toggle">
+          <span>Edit side</span>
+          <div className="comparison-panel__side-buttons">
+            {(['left', 'right'] as const).map((side) => <button key={side} type="button" className={editingSide === side ? 'is-active' : ''} aria-pressed={editingSide === side} onClick={() => setEditingSide(side)}>Edit {side[0].toUpperCase() + side.slice(1)}</button>)}
+          </div>
+        </div>
         <div className="comparison-panel__sides">
           <ComparisonSideCard
-            label="Left"
-            config={comparison.left}
-            onConfigChange={(updater) => onSideConfigChange('left', updater)}
-            onLoadExplore={() => onLoadExploreToSide('left')}
-          />
-          <ComparisonSideCard
-            label="Right"
-            config={comparison.right}
-            onConfigChange={(updater) => onSideConfigChange('right', updater)}
-            onLoadExplore={() => onLoadExploreToSide('right')}
+            label={editingSide === 'left' ? 'Left' : 'Right'}
+            config={comparison[editingSide]}
+            onConfigChange={(updater) => onSideConfigChange(editingSide, updater)}
+            onLoadExplore={() => onLoadExploreToSide(editingSide)}
           />
         </div>
-      </div>
-    </details>
+    </section>
   );
 }
 

@@ -1,4 +1,4 @@
-import { getWorkspaceModeDefinition, workspaceModeDefinitions, type WorkspaceModeId } from '../app/workspaceModes';
+import { workspaceModeDefinitions, type WorkspaceModeId } from '../app/workspaceModes';
 
 interface WorkspaceModeNavProps {
   activeMode: WorkspaceModeId;
@@ -11,16 +11,10 @@ export function WorkspaceModeNav({
   onModeChange,
   highlightMode,
 }: WorkspaceModeNavProps) {
-  const activeDefinition = getWorkspaceModeDefinition(activeMode);
-
   return (
-    <section className="control-panel__section control-panel__collapsible workspace-nav">
+    <nav className="workspace-nav" aria-label="Explore tools">
       <div className="workspace-nav__header">
-        <div>
-          <p className="control-panel__label">Explore tools</p>
-          <strong>{activeDefinition.label}</strong>
-          <span>{activeDefinition.description}</span>
-        </div>
+        <p className="control-panel__label">Explore tools</p>
       </div>
 
       <div className="workspace-nav__grid">
@@ -33,6 +27,8 @@ export function WorkspaceModeNav({
               mode.id === activeMode ? 'is-active' : '',
               mode.id === highlightMode ? 'is-first-flight-target' : '',
             ].filter(Boolean).join(' ')}
+            aria-pressed={mode.id === activeMode}
+            title={mode.description}
             onClick={() => onModeChange(mode.id)}
           >
             <strong>{mode.label}</strong>
@@ -40,6 +36,6 @@ export function WorkspaceModeNav({
           </button>
         ))}
       </div>
-    </section>
+    </nav>
   );
 }

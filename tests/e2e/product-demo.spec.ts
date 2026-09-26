@@ -20,8 +20,9 @@ test.describe('product demo workflow regression', () => {
     await page.getByRole('button', { name: 'Open comparison' }).click();
     await page.getByRole('button', { name: 'Wipe' }).click();
 
-    const formulaSelects = page.locator('.comparison-panel__side-card select').filter({ has: page.locator('option[value="burningShip"]') });
-    await formulaSelects.nth(1).selectOption('burningShip');
+    await page.getByRole('button', { name: 'Edit Right', exact: true }).click();
+    const formulaSelect = page.locator('.comparison-panel__side-card select').filter({ has: page.locator('option[value="burningShip"]') });
+    await formulaSelect.selectOption('burningShip');
     await expect(page.getByText('Comparison mode is active')).toBeVisible();
     await waitForCanvasPaint(page, 'comparison-left-canvas');
     await waitForCanvasPaint(page, 'comparison-right-canvas');

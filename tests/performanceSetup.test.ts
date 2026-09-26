@@ -4,14 +4,14 @@ import { clearPerformanceControlSetup, createPerformanceControlSetup, exportPerf
   importPerformanceControlSetup, isPerformanceControlSetup, loadPerformanceControlSetup, PERFORMANCE_SETUP_STORAGE_KEY,
   savePerformanceControlSetup, type PerformanceControlBinding } from '../src/connections/performanceSetup';
 
-function relation(target: 'zoom' | 'palette.offset', learned = false): ExternalControlRelationship {
+function relation(target: 'zoom' | 'palette.offset' | 'formula.julia.cReal', learned = false): ExternalControlRelationship {
   const sourceId = learned ? 'learned:cc:126:ch1' : 'hydrasynth:macro.1:cc:16:ch1';
   return {
     source: { schemaVersion: 1, id: sourceId, kind: 'absolute-control', deviceProfileId: learned ? 'learned-midi-control' : 'asm-hydrasynth-explorer-2.2',
       controlId: learned ? 'cc:126' : 'macro.1', address: { protocol: 'midi-cc', controller: learned ? 126 : 16 }, channel: 0, minimum: 0, maximum: 127 },
     mapping: { schemaVersion: 1, id: target, sourceId, enabled: true,
       target: target === 'zoom' ? { kind: 'navigation-intent', id: 'zoom', mode: 'continuous' }
-        : { kind: 'semantic-parameter', id: 'palette.offset' },
+        : { kind: 'semantic-parameter', id: target },
       transforms: target === 'zoom' ? rangeTransforms(0, 127, -1, 1) : rangeTransforms(0, 127, -2, 3, true, 2) },
   };
 }
@@ -49,12 +49,28 @@ describe('performance control setup', () => {
     expect(window.localStorage.getItem('fractal-explorer:waypoints:v1')).toBe('[{"keep":true}]');
   });
 
+  it('preserves a Julia coordinate relationship in the same independent setup format', () => {
+    const juliaRelationship = relation('formula.julia.cReal');
+    juliaRelationship.mapping.transforms = rangeTransforms(0, 127, -2, 2);
+    const julia: PerformanceControlBinding = { id: 'formula.julia.cReal', target: 'formula.julia.cReal', relationship: juliaRelationship,
+      settings: { kind: 'range', minimum: -2, maximum: 2, inverted: false, curve: 1 } };
+    const setup = createPerformanceControlSetup([...bindings(), julia]);
+    expect(importPerformanceControlSetup(exportPerformanceControlSetup(setup))).toEqual({ status: 'loaded', setup });
+  });
+
   it('rejects mismatched editor settings, duplicate targets and missing profile references', () => {
     const valid = createPerformanceControlSetup(bindings());
     expect(isPerformanceControlSetup({ ...valid, bindings: [...valid.bindings, { ...valid.bindings[0], id: 'again' }] })).toBe(false);
     expect(isPerformanceControlSetup({ ...valid, deviceProfiles: valid.deviceProfiles.slice(1) })).toBe(false);
     const mismatched = structuredClone(valid); (mismatched.bindings[1].settings as { curve: number }).curve = 3;
     expect(isPerformanceControlSetup(mismatched)).toBe(false);
+  });
+
+  it('remains valid after removing one binding while keeping the other setup relationships', () => {
+    const setup = createPerformanceControlSetup(bindings());
+    const remaining = createPerformanceControlSetup(setup.bindings.filter((binding) => binding.target !== 'palette.offset'));
+    expect(remaining.bindings.map((binding) => binding.target)).toEqual(['zoom']);
+    expect(isPerformanceControlSetup(remaining)).toBe(true);
   });
 
   it('leaves a future stored version untouched and reports it explicitly', () => {

@@ -27,6 +27,8 @@ import { WorkspaceModeNav } from '../components/WorkspaceModeNav';
 import { VisualLab } from '../components/VisualLab';
 import { PerformPanel } from '../components/PerformPanel';
 import { applyPerformanceOverrides, type PerformanceOverrides } from '../performance/model';
+import type { SemanticParameterId } from '../parameters/semantic';
+import type { MidiAssignmentTarget } from '../integrations/midi/useMidiControls';
 import type { MappingEvaluation } from '../visuals/modulation/runtime';
 import { formulaRegistry } from '../fractals/registry';
 import { MultibrotControls } from '../components/MultibrotControls';
@@ -73,6 +75,7 @@ export function App() {
   const [juliaConfig, setJuliaConfig] = useState<RenderConfig>(() => createDefaultRenderConfig('julia'));
   const [juliaSeed, setJuliaSeed] = useState<DoubleSingleComplex | null>(null);
   const [showJuliaPanel, setShowJuliaPanel] = useState(true);
+  const [juliaPanelCollapsed, setJuliaPanelCollapsed] = useState(() => mainConfig.fractal.formulaId !== 'mandelbrot');
   const [rendererDiagnostics, setRendererDiagnostics] = useState<RendererDiagnostics | null>(null);
   const [navigationSettings, setNavigationSettings] = useState<NavigationSettings>(() =>
     loadNavigationSettings(createDefaultNavigationSettings()),
@@ -91,6 +94,7 @@ export function App() {
   const [previewKind, setPreviewKind] = useState<'journey' | 'internal'>('journey');
   const [overrides, setOverrides] = useState<PerformanceOverrides>({});
   const [midiOverrides, setMidiOverrides] = useState<PerformanceOverrides>({});
+  const [midiJuliaOverrides, setMidiJuliaOverrides] = useState<PerformanceOverrides>({});
   const [midiViewport, setMidiViewport] = useState<ViewportConfig | null>(null);
   const [showSettingsPortal, setShowSettingsPortal] = useState(false);
   const [animationClip, setAnimationClip] = useState(() => createDefaultAnimationClip(mainConfig));
@@ -104,6 +108,8 @@ export function App() {
   const [selectedEndWaypointId, setSelectedEndWaypointId] = useState('');
   const [firstFlightState, setFirstFlightState] = useState<FirstFlightState>('navigate');
   const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const juliaRailRef = useRef<HTMLButtonElement | null>(null);
+  const juliaCollapseButtonRef = useRef<HTMLButtonElement | null>(null);
   const exploreWorkspaceButtonRef = useRef<HTMLButtonElement | null>(null);
   const playbackFrameRef = useRef<number | null>(null);
   const playbackElapsedRef = useRef(0);
@@ -126,6 +132,12 @@ export function App() {
     }
   }, [mainConfig, animationClip, playbackClip, previewTimeMs, previewKind, overrides, midiOverrides, midiViewport]);
   const effectiveConfig = preview.config;
+  // Julia control is deliberately a separate, linked-view session override.
+  // It never mutates the authored Julia seed or leaks into Primary snapshots.
+  const effectiveJuliaConfig = useMemo(
+    () => applyPerformanceOverrides(juliaConfig, midiJuliaOverrides),
+    [juliaConfig, midiJuliaOverrides],
+  );
   const previewActiveRef = useRef(previewActive);
   previewActiveRef.current = previewActive || workspace === 'perform' || showComparison;
   const handlePrimarySurfaceChange = useCallback((next: RenderConfig) => {
@@ -182,6 +194,13 @@ export function App() {
       },
     }));
   }, [juliaSeed, mainConfig.material, mainConfig.lens, mainConfig.fractal.bailout, mainConfig.fractal.maxIterations, mainConfig.palette, mainConfig.quality]);
+
+  useEffect(() => {
+    // Julia linking is a Mandelbrot-specific Explore relationship. Other
+    // formulas retain the panel as an available, compact rail instead of
+    // consuming a secondary render column.
+    setJuliaPanelCollapsed(mainConfig.fractal.formulaId !== 'mandelbrot');
+  }, [mainConfig.fractal.formulaId]);
 
   useEffect(() => {
     saveNavigationSettings(navigationSettings);
@@ -301,6 +320,7 @@ export function App() {
   }, [animationClip, playbackClip, isPlayingAnimation, previewKind]);
 
   function handleMainFormulaChange(formulaId: FormulaId) {
+    setJuliaPanelCollapsed(formulaId !== 'mandelbrot');
     setMainConfig((current) => {
       const next = createDefaultRenderConfig(formulaId);
       const nextConfig = {
@@ -322,11 +342,22 @@ export function App() {
   function handleJuliaSeedSelect(point: DoubleSingleComplex) {
     setJuliaSeed(point);
     setShowJuliaPanel(true);
+    setJuliaPanelCollapsed(false);
     setJuliaConfig((current) => ({
       ...current,
       viewport: resetJuliaViewport(current.viewport.aspectRatio),
     }));
     completeFirstFlightAction('linkJulia');
+  }
+
+  function collapseJuliaPanel() {
+    setJuliaPanelCollapsed(true);
+    requestAnimationFrame(() => juliaRailRef.current?.focus());
+  }
+
+  function expandJuliaPanel() {
+    setJuliaPanelCollapsed(false);
+    requestAnimationFrame(() => juliaCollapseButtonRef.current?.focus());
   }
 
   function updateMainJuliaParameter(name: 'cReal' | 'cImag', value: number) {
@@ -518,6 +549,7 @@ export function App() {
     setPreviewKind('journey');
     setOverrides({});
     setMidiViewport(null);
+    setMidiJuliaOverrides({});
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPreviewTimeMs(0);
@@ -528,6 +560,7 @@ export function App() {
   function handleStopPlayback() {
     setOverrides({});
     setMidiViewport(null);
+    setMidiJuliaOverrides({});
     setIsPlayingAnimation(false);
     setPreviewTimeMs(null);
     setPlaybackClip(null);
@@ -541,6 +574,7 @@ export function App() {
     setPreviewKind('internal');
     setOverrides({});
     setMidiViewport(null);
+    setMidiJuliaOverrides({});
     playbackElapsedRef.current = 0;
     playbackStartedAtRef.current = null;
     setPlaybackClip(null);
@@ -638,6 +672,7 @@ export function App() {
     setFirstFlightState('navigate');
     setShowComparison(false);
     setShowJuliaPanel(true);
+    setJuliaPanelCollapsed(false);
     setJuliaSeed(null);
     setActiveWorkspaceMode('palette');
     setMainConfig((current) => {
@@ -903,7 +938,7 @@ export function App() {
       </section>
 
       <section className="workspace">
-        <aside className={workspace === 'perform' ? 'control-panel control-panel--perform' : 'control-panel'}>
+        <aside className={workspace === 'perform' ? 'control-panel control-panel--perform' : 'control-panel control-panel--explore'}>
           <div className="control-panel__essentials" style={workspace === 'perform' ? { display: 'none' } : undefined}>
             <div className="control-panel__section control-panel__section--compact">
               <p className="control-panel__label">Explore · authored base</p>
@@ -981,7 +1016,7 @@ export function App() {
               <button type="button" onClick={resetMainView}>
                 Reset view
               </button>
-              <button type="button" onClick={() => setShowJuliaPanel((current) => !current)}>
+              <button type="button" onClick={() => { if (!showJuliaPanel) setJuliaPanelCollapsed(false); setShowJuliaPanel((current) => !current); }}>
                 {showJuliaPanel ? 'Hide Julia panel' : 'Show Julia panel'}
               </button>
             </div>
@@ -1047,11 +1082,27 @@ export function App() {
               {workspace === 'perform' ? <PerformPanel base={mainConfig} effective={effectiveConfig} active={previewActive} running={isPlayingAnimation} journey={previewKind === 'journey'} mappings={preview.mappings ?? []} overrides={{ ...overrides, ...midiOverrides }}
                 onOverride={(id, value) => { if (previewActive) setOverrides((current) => { const next = { ...current }; if (value === undefined) delete next[id]; else next[id] = value; return next; }); }}
                 onMidiZoom={(delta) => { if (previewActive) { const intent = midiCcDeltaToZoom(delta); if (intent) setMidiViewport((current) => applyNavigationFrame(current ?? effectiveConfig.viewport, [intent.action], navigationSettings, intent.deltaSeconds)); } }}
-                onMidiPaletteOffset={(value) => { if (previewActive) setMidiOverrides({ 'palette.offset': value }); }}
+                onMidiSemanticValue={(target: SemanticParameterId, value) => {
+                  if (!previewActive) return;
+                  if (target === 'palette.offset') setMidiOverrides({ 'palette.offset': value });
+                  else if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') {
+                    if (mainConfig.fractal.formulaId === 'julia') setMidiOverrides((current) => ({ ...current, [target]: value }));
+                    else setMidiJuliaOverrides((current) => ({ ...current, [target]: value }));
+                  }
+                }}
                 onMidiRelease={(target) => {
                   if (!target || target === 'zoom') setMidiViewport(null);
                   if (!target || target === 'palette.offset') setMidiOverrides({});
+                  if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') setMidiOverrides((current) => {
+                    const next = { ...current }; delete next[target]; return next;
+                  });
+                  if (!target) setMidiJuliaOverrides({});
+                  else if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') setMidiJuliaOverrides((current) => {
+                    const next = { ...current }; delete next[target]; return next;
+                  });
                 }}
+                isMidiTargetAvailable={(target: MidiAssignmentTarget) => target === 'formula.julia.cReal' || target === 'formula.julia.cImag'
+                  ? mainConfig.fractal.formulaId === 'julia' || juliaSeed !== null : true}
                 onChange={(config) => { if (!previewActive) setMainConfig(config); }} onEdit={() => { setWorkspace('explore'); exploreWorkspaceButtonRef.current?.focus(); }} /> : <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {renderActiveWorkspacePanel()}
               </fieldset>}
@@ -1099,7 +1150,7 @@ export function App() {
             onResetSide={handleResetComparisonSide}
           />
         </div> : null}
-          <section style={showComparison && workspace === 'explore' && !previewActive ? { display: 'none' } : undefined} className={showJuliaPanel && workspace === 'explore' ? 'view-grid view-grid--dual' : 'view-grid'}>
+          <section style={showComparison && workspace === 'explore' && !previewActive ? { display: 'none' } : undefined} className={showJuliaPanel && !juliaPanelCollapsed && workspace === 'explore' ? 'view-grid view-grid--dual' : 'view-grid'}>
             <RenderView
               viewId="main"
               title={workspace === 'perform' ? 'Primary · Perform' : 'Explore'}
@@ -1122,18 +1173,20 @@ export function App() {
               highlightForTutorial={firstFlightState === 'navigate' || firstFlightState === 'linkJulia'}
             />
 
-            {showJuliaPanel && workspace === 'explore' ? (
+            {showJuliaPanel && workspace === 'explore' && juliaPanelCollapsed ? <button ref={juliaRailRef} type="button" className="julia-side-panel__tab" aria-expanded="false" aria-label="Expand Julia panel" data-testid="julia-side-panel-tab" onClick={expandJuliaPanel}><span>Julia</span><small>{juliaSeed ? 'Linked seed' : 'Ready to link'}</small></button> : null}
+            {showJuliaPanel && workspace === 'explore' && !juliaPanelCollapsed ? (
               <RenderView
                 viewId="julia"
                 title="Julia"
                 subtitle={juliaPanelPresentation.subtitle}
-                config={juliaConfig}
+                config={effectiveJuliaConfig}
                 onConfigChange={setJuliaConfig}
                 onDiagnosticsChange={setRendererDiagnostics}
                 navigationSettings={navigationSettings}
                 interactionEnabled={juliaPanelPresentation.interactionEnabled}
                 renderingEnabled={juliaPanelPresentation.renderingEnabled}
                 placeholder={juliaPanelPresentation.placeholder}
+                headerAction={<button ref={juliaCollapseButtonRef} type="button" className="render-view__panel-action" aria-label="Collapse Julia panel" aria-expanded="true" onClick={collapseJuliaPanel}><span aria-hidden="true">›</span></button>}
                 onRequestReset={() =>
                   setJuliaConfig((current) => ({
                     ...current,

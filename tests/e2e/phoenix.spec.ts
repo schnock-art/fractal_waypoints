@@ -48,9 +48,11 @@ test('Phoenix tunes, renders materials, reloads and compares on WebGPU', async (
   await expect(page.getByRole('slider', { name: /^Offset/ })).toHaveValue('0.37');
   await visibleFrame(canvas);
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
-  const sides = page.locator('.comparison-panel__side-card');
-  for (const side of await sides.all()) await side.getByLabel('Formula', { exact: true }).selectOption('phoenix');
-  await sides.nth(1).getByLabel('Orbit memory', { exact: true }).fill('0');
+  const side = page.locator('.comparison-panel__side-card');
+  await side.getByLabel('Formula', { exact: true }).selectOption('phoenix');
+  await page.getByRole('button', { name: 'Edit Right', exact: true }).click();
+  await side.getByLabel('Formula', { exact: true }).selectOption('phoenix');
+  await side.getByLabel('Orbit memory', { exact: true }).fill('0');
   await page.getByRole('button', { name: 'Open comparison', exact: true }).click();
   for (const surface of await page.locator('canvas').all()) if (await surface.isVisible()) await visibleFrame(surface);
   expect(errors).toEqual([]);

@@ -86,6 +86,10 @@ test.describe('Julia surfaces', () => {
     const juliaView = page.getByTestId('julia-view');
     await expect(juliaView).toHaveAttribute('data-rendering-state', 'idle');
     await expect(page.getByTestId('julia-placeholder')).toContainText('Choose a Mandelbrot seed');
+    await juliaView.getByRole('button', { name: 'Collapse Julia panel', exact: true }).click();
+    await expect(page.getByTestId('julia-side-panel-tab')).toContainText('Ready to link');
+    await page.getByTestId('julia-side-panel-tab').click();
+    await expect(juliaView).toHaveAttribute('data-rendering-state', 'idle');
 
     await page.getByTestId('main-canvas').click({
       position: { x: 340, y: 220 },
@@ -131,6 +135,16 @@ test.describe('Julia surfaces', () => {
     await expect(linkedReal).toHaveValue('-0.4211');
   });
 
+  test('keeps Julia compact for primary formulas that cannot link a Julia seed', async ({ page }) => {
+    await page.goto('/');
+    const formula = page.locator('.control-panel__section').filter({ hasText: 'Formula' }).locator('select');
+    await formula.selectOption('tricorn');
+    await expect(page.getByTestId('julia-view')).toHaveCount(0);
+    await expect(page.getByTestId('julia-side-panel-tab')).toContainText('Ready to link');
+    await formula.selectOption('mandelbrot');
+    await expect(page.getByTestId('julia-view')).toHaveAttribute('data-rendering-state', 'idle');
+  });
+
   test('supports Julia-side focus after the linked view activates', async ({ page }) => {
     await page.goto('/');
 
@@ -168,6 +182,30 @@ test.describe('Julia surfaces', () => {
 
     expect(regularZoomScale).toBeLessThan(precisionZoomScale);
     expect(precisionZoomScale).toBeLessThan(initialScale);
+  });
+
+  test('Julia panel chrome collapses a seeded panel and returns canvas space to Primary', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('main-canvas').click({ position: { x: 340, y: 220 } });
+    await expect(page.getByTestId('julia-view')).toBeVisible();
+    const primary = page.getByTestId('main-canvas');
+    const before = await primary.boundingBox();
+    const collapse = page.getByTestId('julia-view').getByRole('button', { name: 'Collapse Julia panel', exact: true });
+    await expect(collapse).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Collapse Julia side panel', exact: true })).toHaveCount(0);
+    await collapse.click();
+    await expect(page.getByTestId('julia-view')).toHaveCount(0);
+    await expect(page.getByTestId('julia-side-panel-tab')).toContainText('Julia');
+    expect((await primary.boundingBox())!.width).toBeGreaterThan(before!.width);
+    await expect(page.getByTestId('julia-side-panel-tab')).toBeFocused();
+    await page.getByTestId('julia-side-panel-tab').click();
+    await expect(page.getByTestId('julia-view')).toBeVisible();
+    await expect(page.getByTestId('julia-view').getByRole('button', { name: 'Collapse Julia panel', exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'Hide Julia panel', exact: true }).click();
+    await expect(page.getByTestId('julia-view')).toHaveCount(0);
+    await expect(page.getByTestId('julia-side-panel-tab')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Show Julia panel', exact: true }).click();
+    await expect(page.getByTestId('julia-view')).toBeVisible();
   });
 });
 

@@ -30,13 +30,13 @@ Internal modulation and external control share validated stateless transforms: s
 
 The MIDI adapter decodes complete absolute CC/NRPN values and timestamps them. The external frame buffer keeps at most one latest absolute sample per source for the next animation frame, accepts at most 32 distinct pending sources, rejects older timestamps, and reports received, emitted, coalesced, stale, and overflow counts. This bounds UI/render work during dense LFO traffic while retaining the latest absolute state. It is not an audio-rate transport.
 
-Palette output is an absolute semantic value applied through the existing temporary Perform override and final configuration normalisation. Zoom remains a navigation target, never a numeric render parameter. Continuous mode produces a signed zoom-rate intent; turn mode quantises the absolute position before deriving a relative navigation intent from successive samples. The first turn-mode sample establishes a baseline.
+Palette output and Julia real/imaginary coordinates are absolute semantic values applied through temporary Perform overrides and final configuration normalisation. Julia values apply to a Julia Primary world when that is active, otherwise to the linked Julia view; they remain unavailable until either exists, and release without changing authored configuration. Zoom remains a navigation target, never a numeric render parameter. Continuous mode produces a signed zoom-rate intent; turn mode quantises the absolute position before deriving a relative navigation intent from successive samples. The first turn-mode sample establishes a baseline.
 
 Disconnect, input change, Stop, workspace exit, and disarm release effective values. Session relationships survive an input disconnect or manual rebind but return disarmed, so reconnect cannot resume movement without explicit arming. Decoder state, timestamp baselines, pending samples, zoom rate, and relative baselines reset on rebind. No browser input ID is stored in the relationship.
 
 ## Current limits
 
-- One session relationship per proven target: Zoom and Palette offset.
+- One session relationship per proven target: Zoom, Palette offset, Julia Real and Julia Imaginary.
 - Sources are absolute continuous controls only. Discrete events, switches, notes, pressure, clocks, mutable state, and feedback are not modelled.
 - Relationships can persist in a separate controller setup and export/import as JSON. A recorded take snapshots only its armed relationships and timestamped absolute samples. Neither belongs in `RenderConfig`.
 - Live smoothing is not implemented; frame coalescing is load control, not signal smoothing.

@@ -8,7 +8,7 @@ Phase 11.5 persists useful controller relationships without making fractal docum
 
 - a setup name;
 - referenced device-profile identities;
-- at most one binding for each currently proven target, Zoom and Palette offset;
+- at most one binding for each currently proven target: Zoom, Palette offset, Julia Real and Julia Imaginary;
 - each binding's external source identity, transforms, semantic/navigation target, and editor settings.
 
 It does **not** own browser MIDI input IDs, permission/connection state, armed state, live values, transport state, authored `RenderConfig`, URLs, Waypoints, Journey data, recorded takes, or future Patch layout. Clearing a controller setup leaves all fractal/world persistence untouched. Loading or importing a setup never changes an authored or effective fractal value.
@@ -21,7 +21,7 @@ The browser's transient port ID is never stored in the setup. After reload or de
 
 ## Validation and compatibility
 
-Validation checks the setup version, unique binding/target IDs, declared profile references, complete external relationships, matching target kinds, finite range/curve settings, and exact transforms generated from those settings. This prevents editor metadata and runtime transforms from disagreeing.
+Validation checks the setup version, unique binding/target IDs, declared profile references, complete external relationships, matching target kinds, finite range/curve settings, and exact transforms generated from those settings. Julia bindings retain the same schema-1 shape as Palette bindings; their runtime availability depends on a linked Julia view and does not affect setup portability. This prevents editor metadata and runtime transforms from disagreeing.
 
 JSON import is all-or-nothing. Invalid JSON or invalid version-1 data does not replace the current setup. A future schema version is reported as unsupported and left untouched in local storage; this build never guesses a downgrade. Export produces a portable JSON document named `fractal-waypoints-controller-setup.json`.
 

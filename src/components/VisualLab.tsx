@@ -13,8 +13,7 @@ export function VisualLab({ config, onChange }: VisualLabProps) {
   const compatibility = getMaterialCompatibility(config.fractal.formulaId, material.id);
 
   return (
-    <details className="control-panel__section control-panel__collapsible" open>
-      <summary className="control-panel__summary">Visual Lab</summary>
+    <section className="visual-lab tool-panel" aria-label="Visual Lab controls">
       <div className="discover-panel">
         <div className="control-panel__note">
           <p>Material → Lens</p>
@@ -44,8 +43,8 @@ export function VisualLab({ config, onChange }: VisualLabProps) {
             return <RangeControl key={`${effect.id}-${parameter.id}`} label={parameter.label} value={value} min={parameter.min} max={parameter.max} step={parameter.step} suffix={effect.id === 'exposure' ? 'x' : ''} onChange={(nextValue) => onChange((current) => ({ ...current, lens: updateLensEffect(current.lens, effect.id, { [parameter.id]: nextValue }, effect.id === 'exposure' || effect.id === 'toneMapping' || nextValue > 0) }))} />;
           }))}
         </div>
-        <div className="control-panel__note">{Object.values(lensEffectRegistry).map((effect) => <span key={effect.id}>{effect.displayName}: {effect.description}</span>)}</div>
+        <details className="control-panel__note"><summary>About lens effects</summary>{Object.values(lensEffectRegistry).map((effect) => <span key={effect.id}>{effect.displayName}: {effect.description}</span>)}</details>
       </div>
-    </details>
+    </section>
   );
 }

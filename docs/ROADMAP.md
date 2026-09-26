@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.7 are delivered; 11.8 playable-target expansion is next.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, reusable named controller layouts, shared transforms, bounded external updates, independently versioned local setup/layout documents with JSON import/export, and locally replayable logical performance takes. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.7 are delivered; Phase 11.8 has begun with linked Julia coordinates.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom, Palette offset and linked Julia-coordinate relationships, reusable named controller layouts, shared transforms, bounded external updates, independently versioned local setup/layout documents with JSON import/export, and locally replayable logical performance takes. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -579,7 +579,8 @@ Status: complete for reusable local layouts. See [CONTROLLER_LAYOUTS.md](CONTROL
 Goal: admit expressive, validated semantic targets from several domain owners before Patch, rather than exposing every numeric field in `RenderConfig`.
 
 - [ ] Extend navigation deliberately with pan X/Y and viewport rotation where their behaviour is genuinely an intent rather than an ordinary scalar parameter. Zoom remains the reference navigation target.
-- [ ] Prioritise formula-specific continuous targets: Julia real/imaginary coordinates as the first acceptance case (`Macro 1 → Julia Real`, `Macro 2 → Julia Imaginary`), then Phoenix memory and selected expressive Multibrot/Newton/Nova controls only where their owners define clear semantics.
+- [x] Admit Julia real/imaginary coordinates as the first formula-specific continuous acceptance case (`Macro 1 → Julia Real`, `Macro 2 → Julia Imaginary`): closed semantic IDs, `-2…2` default response ranges, linked-view availability gating, session-only overrides, and the existing setup/take/replay path.
+- [ ] Prioritise the next formula-specific continuous targets: Phoenix memory and selected expressive Multibrot/Newton/Nova controls only where their owners define clear semantics.
 - [ ] Evaluate palette scale and a small set of useful palette-domain controls; do not expose individual stop internals merely because they are numeric.
 - [ ] Evaluate Visual Lab candidates individually: orbit emission, trap rotations, useful trap position/scale controls, and exterior/interior mixes. Existing internal `ModulationTarget` membership is evidence, not automatic external-target admission.
 - [ ] Evaluate expressive continuous lenses such as exposure, vignette, selected bloom parameters, grain and chromatic aberration. Lens enable flags remain discrete state, not numeric controls.
@@ -676,6 +677,8 @@ Exploratory research only; it does not enter the current Fractal Waypoints imple
 - [ ] Keep camera capture, world-model inference, storage policy, and any model-training pipeline outside Fractal Waypoints until a separately scoped experiment establishes their value and operating constraints.
 
 ### Polish backlog — Not instrument prerequisites
+
+- [x] Consolidate Explore into a compact world inspector, balanced six-tool navigation, and one active-tool scroll region. Palette, Visual Lab, Waypoints, Discover, Compare, Journey, and the unseeded Julia invitation received a presentation-only density review; see [Explore workspace UX](EXPLORE_WORKSPACE.md).
 
 - [ ] Add an adaptive deep-zoom render scale that can lower internal GPU resolution automatically while retaining an explicit user override. (Jetson/WebGPU deep-zoom review.)
 
