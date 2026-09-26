@@ -12,6 +12,14 @@ const views: { id: ControllerView; label: string }[] = [
   { id: 'takes', label: 'Takes' }, { id: 'diagnostics', label: 'Diagnostics' },
 ];
 
+function connectionLabel(midi: ReturnType<typeof useMidiControls>, armedCount: number) {
+  if (midi.connecting) return '◌ Reconnecting';
+  if (midi.connectionState === 'permission-required') return '○ MIDI access required';
+  if (midi.connectionState === 'disconnected') return '○ Disconnected';
+  if (midi.connectionState === 'choosing-input') return '○ Choose input';
+  return `● Connected · ${armedCount} armed`;
+}
+
 export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOffset, onRelease }: Props) {
   const midi = useMidiControls(active, running, onZoomDelta, onPaletteOffset, onRelease);
   const layouts = useControllerLayouts();
@@ -20,6 +28,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
   const selected = midi.inputs.find((input) => input.id === midi.selectedId);
   const mappingCount = [midi.assignments.zoom, midi.assignments['palette.offset']].filter(Boolean).length;
   const armedCount = Object.values(midi.armedTargets).filter(Boolean).length;
+  const connection = connectionLabel(midi, armedCount);
   const close = () => { setExpanded(false); requestAnimationFrame(() => launcherRef.current?.focus()); };
   const open = () => { setView('live'); setExpanded(true); };
 
@@ -49,8 +58,8 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
 
   return <>
     <section aria-label="Hydrasynth Explorer controller" className="perform-card hydrasynth-launcher">
-      <div className="hydrasynth-launcher__heading"><div><span className="control-panel__label">Controller</span><h3>Hydrasynth Explorer</h3></div><span className={`hydrasynth-launcher__state${midi.selectedId ? ' is-connected' : ''}`}>{midi.selectedId ? '● Connected' : '○ Setup required'}</span></div>
-      <div className="hydrasynth-launcher__instrument"><strong>{layouts.activeLayout?.name ?? selected?.name ?? 'No controller layout selected'}</strong><small>{mappingCount} mapping{mappingCount === 1 ? '' : 's'} · {armedCount} armed{midi.isRecordingTake ? ' · Recording' : midi.isReplayingTake ? ' · Replaying' : ''}</small></div>
+      <div className="hydrasynth-launcher__heading"><div><span className="control-panel__label">Controller</span><h3>Hydrasynth Explorer</h3></div><span className={`hydrasynth-launcher__state${midi.selectedId ? ' is-connected' : ''}`}>{connection}</span></div>
+      <div className="hydrasynth-launcher__instrument"><strong>{layouts.activeLayout?.name ?? selected?.name ?? 'No named layout'}</strong><small>{mappingCount} mapping{mappingCount === 1 ? '' : 's'} · {armedCount} armed{midi.isRecordingTake ? ' · Recording' : midi.isReplayingTake ? ' · Replaying' : ''}</small></div>
       {mappingCount ? <div className="hydrasynth-launcher__mappings"><ControllerMappingCard assignment={midi.assignments.zoom} target="zoom" armed={midi.isArmed('zoom')} layout={layouts.activeLayout} compact /><ControllerMappingCard assignment={midi.assignments['palette.offset']} target="palette.offset" armed={midi.isArmed('palette.offset')} layout={layouts.activeLayout} compact /></div> : null}
       <button ref={launcherRef} type="button" aria-haspopup="dialog" aria-expanded={expanded} onClick={open}>Open controller</button>
       {midi.isRecordingTake ? <button type="button" onClick={() => midi.stopRecordingTake()}>Stop recording</button> : null}
@@ -62,7 +71,7 @@ export function HydrasynthMidiPanel({ active, running, onZoomDelta, onPaletteOff
       <button type="button" tabIndex={-1} className="hydrasynth-dialog__backdrop" aria-label="Close controller workspace" onClick={close} />
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="hydrasynth-dialog-title" className="hydrasynth-dialog controller-workspace">
         <header className="controller-workspace__header">
-          <div><span className="control-panel__label">Controller workspace</span><h2 id="hydrasynth-dialog-title">Hydrasynth Explorer</h2><p><span className={`controller-state${midi.selectedId ? ' is-live' : ''}`}>{midi.selectedId ? '● Connected' : '○ Not connected'}</span>{selected ? ` · ${selected.name ?? 'Unnamed MIDI input'}` : ''}{layouts.activeLayout ? ` · ${layouts.activeLayout.name}` : ''}</p></div>
+          <div><span className="control-panel__label">Controller workspace</span><h2 id="hydrasynth-dialog-title">Hydrasynth Explorer</h2><p><span className={`controller-state${midi.selectedId ? ' is-live' : ''}`}>{connection}</span>{selected ? ` · ${selected.name ?? 'Unnamed MIDI input'}` : ''}{layouts.activeLayout ? ` · ${layouts.activeLayout.name}` : ''}</p></div>
           <div className="controller-workspace__header-actions">{midi.isRecordingTake ? <button type="button" className="is-recording" onClick={() => midi.stopRecordingTake()}>● Recording · Stop</button> : midi.isReplayingTake ? <span className="controller-state is-live">▶ Replaying take</span> : null}{!midi.connected ? <button type="button" disabled={midi.connecting} onClick={midi.connect}>{midi.connecting ? 'Connecting…' : 'Connect'}</button> : !midi.selectedId ? <label className="controller-header-input">Input<select aria-label="MIDI input" value={midi.selectedId} onChange={(event) => midi.selectInput(event.target.value)}><option value="">Select an input</option>{midi.inputs.map((input) => <option key={input.id} value={input.id}>{input.name ?? 'Unnamed MIDI input'}</option>)}</select></label> : null}<button ref={closeRef} type="button" className="is-secondary" onClick={close}>Close</button></div>
         </header>
         <div className="controller-workspace__body">

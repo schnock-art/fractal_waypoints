@@ -541,6 +541,8 @@ Definition of done: mappings can survive an appropriate setup/session boundary w
 
 Status: complete for the current two-target controller surface. Mappings save automatically to an independently versioned local setup, load visibly but unarmed when hardware is absent, rebind by profile/address/channel rather than port ID, and support validated JSON import/export. See [the setup contract](PERFORMANCE_SETUP.md) and ADR-035. Recorded input is now the separate Phase 11.6 take domain.
 
+**Controller UX polish (2026-09-26):** the launcher now separates connection from optional layout choice, and Live presents the next actionable state. After the initial explicit browser MIDI permission, a returning in-session port can be safely rebound using a runtime-only hint. Disconnect always releases effects and disarms mappings; reconnect never resumes a control, recording, or replay automatically. Ambiguous new ports still require an explicit choice.
+
 The [performance preset and mapping recipe catalogue](PERFORMANCE_PRESET_IDEAS.md) preserves actual-use ideas such as Pressure Bloom, Chromatic Drift and Macro Performance Bank. These are hypotheses for later testing, not a canonical preset schema or implementation commitments.
 
 ### Phase 11.6 — Recording and replay

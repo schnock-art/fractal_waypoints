@@ -10,10 +10,22 @@ import { assignmentSourceLabel } from './controllerDisplay';
 interface SharedProps { midi: MidiControlsApi; layouts: ControllerLayoutsApi; active: boolean; running: boolean }
 interface LiveProps extends SharedProps { onNavigate: (view: 'mappings' | 'takes') => void }
 
+function liveHeading(midi: MidiControlsApi, assignments: number, running: boolean) {
+  if (midi.isRecordingTake) return 'Recording performance';
+  if (midi.isReplayingTake) return 'Replaying take';
+  if (midi.connectionState === 'disconnected') return 'Controller disconnected';
+  if (midi.connectionState === 'reconnected') return 'Controller reconnected';
+  if (!midi.connected) return 'Connect a controller';
+  if (!midi.selectedId) return 'Connect your controller';
+  if (!assignments) return 'Add your first mapping';
+  if (!Object.values(midi.armedTargets).some(Boolean)) return 'Arm your controls';
+  return running ? 'Ready to play' : 'Ready when you press Play';
+}
+
 export function LiveControllerView({ midi, layouts, active, running, onNavigate }: LiveProps) {
   const assignments = [midi.assignments.zoom, midi.assignments['palette.offset']].filter(Boolean).length;
   return <section className="controller-view controller-live" aria-labelledby="controller-live-title">
-    <header className="controller-view__heading"><div><span className="control-panel__label">Live instrument</span><h3 id="controller-live-title">Ready to play</h3></div><small>{midi.traffic}</small></header>
+    <header className="controller-view__heading"><div><span className="control-panel__label">Live instrument</span><h3 id="controller-live-title">{liveHeading(midi, assignments, running)}</h3></div><small>{midi.traffic}</small></header>
     <div className="controller-live__summary">
       <div><small>Layout</small><strong>{layouts.activeLayout?.name ?? 'No named layout'}</strong></div>
       <div><small>Mappings</small><strong>{assignments} configured · {Object.values(midi.armedTargets).filter(Boolean).length} armed</strong></div>

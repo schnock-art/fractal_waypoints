@@ -17,7 +17,7 @@ It does **not** own browser MIDI input IDs, permission/connection state, armed s
 
 Named Explorer controls reference `asm-hydrasynth-explorer-2.2`. A custom received CC uses the explicit `learned-midi-control` profile identity and retains its `ControlAddress` and channel. This avoids pretending a user-routed Mod Matrix destination is part of ASM's documented control catalogue.
 
-The browser's transient port ID is never stored. After reload or device absence, the relationships remain visible but unarmed. The user connects any equivalent input that emits the saved control address/channel, inspects the mapping, and arms it explicitly. Rebinding a target to another named or learned control replaces only that source while retaining the target workflow.
+The browser's transient port ID is never stored in the setup. After reload or device absence, the relationships remain visible but unarmed. The user connects any equivalent input that emits the saved control address/channel, inspects the mapping, and arms it explicitly. Within one already-permitted browser session only, the runtime may remember the last selected port as a non-persisted reconnection hint. It reselects that returning port (including a generic interface such as `Focusrite USB MIDI`) but releases effects and leaves mappings disarmed; it never resumes live values, zoom, recording, or replay. When several plausible new ports are present without that safe hint, it asks the user to choose. Rebinding a target to another named or learned control replaces only that source while retaining the target workflow.
 
 ## Validation and compatibility
 

@@ -13,6 +13,7 @@ import { clearPerformanceControlTake, createPerformanceControlTake, loadPerforma
 interface MidiInput { id: string; name: string | null; state: 'connected' | 'disconnected'; onmidimessage: ((event: { data: Uint8Array; timeStamp: number }) => void) | null }
 interface MidiAccess { inputs: Map<string, MidiInput>; onstatechange: (() => void) | null }
 export type MidiAssignmentTarget = 'zoom' | 'palette.offset';
+export type MidiConnectionState = 'permission-required' | 'choosing-input' | 'connected' | 'disconnected' | 'reconnected';
 type AssignmentInput = Pick<ControlInput, 'address' | 'channel'> & { target: MidiAssignmentTarget; minimum?: number; maximum?: number; inverted?: boolean; curve?: number; learned?: boolean };
 export type MidiAssignment = AssignmentInput & { relationship: ExternalControlRelationship };
 type Assignment = MidiAssignment;
@@ -55,6 +56,11 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   const initialTake = useRef<PerformanceTakeRead | null>(null);
   if (!initialTake.current) initialTake.current = loadPerformanceControlTake();
   const access = useRef<MidiAccess | null>(null);
+  // Browser port IDs are deliberately runtime-only. These hints only make a
+  // granted session resilient to a cable/interface reconnect; they are never
+  // included in a controller setup, layout, take, or render document.
+  const lastSelectedInput = useRef<{ id: string; name: string | null } | null>(null);
+  const userSelectedInput = useRef<{ id: string; name: string | null } | null>(null);
   const callbacks = useRef({ active, running, onZoomDelta, onPaletteOffset, onRelease });
   callbacks.current = { active, running, onZoomDelta, onPaletteOffset, onRelease };
   const runtime = useRef({ selectedId: '', assignments: initialAssignments.current, armed: unarmed(), previous: null as number | null, mode: initialZoomMode, rate: 0, remainder: 0 });
@@ -69,6 +75,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   const [selectedId, setSelectedId] = useState('');
   const [revision, setRevision] = useState(0);
   const [connecting, setConnecting] = useState(false);
+  const [connectionState, setConnectionState] = useState<MidiConnectionState>('permission-required');
   const mounted = useRef(true);
   const [assignments, setAssignments] = useState<Assignments>(initialAssignments.current);
   const [armedTargets, setArmedTargets] = useState<ArmedTargets>(unarmed());
@@ -154,10 +161,26 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     callbacks.current.onRelease(target);
   };
   const release = () => { stopReplay(); stopRecordingTake('Recording stopped because the live controller session ended.'); holdZoom(); runtime.current.armed = unarmed(); frameBuffer.current.reset(); setArmedTargets(unarmed()); callbacks.current.onRelease(); };
-  const selectInput = (id: string) => {
+  const bindInput = (id: string, reconnected = false) => {
     release(); runtime.current.selectedId = id;
     setSelectedId(id); setMessages([]); setLastInput(null); setTraffic('No MIDI received yet.');
-    setStatus(id ? `${Object.keys(runtime.current.assignments).length ? 'Input bound. Existing mappings were retained and are safely disarmed. ' : ''}Turn a control on the synth to identify it.` : 'Choose an input to continue. Existing mappings are retained but disarmed.');
+    const input = access.current?.inputs.get(id);
+    if (input) lastSelectedInput.current = { id: input.id, name: input.name };
+    setConnectionState(reconnected ? 'reconnected' : 'connected');
+    setStatus(reconnected
+      ? 'Controller reconnected. Existing mappings are retained and safely disarmed; arm when ready.'
+      : `${Object.keys(runtime.current.assignments).length ? 'Input bound. Existing mappings were retained and are safely disarmed. ' : ''}Turn a control on the synth to identify it.`);
+  };
+  const selectInput = (id: string) => {
+    if (!id) {
+      release(); runtime.current.selectedId = ''; userSelectedInput.current = null;
+      setSelectedId(''); setConnectionState(access.current ? 'choosing-input' : 'permission-required');
+      setStatus('Choose an input to continue. Existing mappings are retained but disarmed.');
+      return;
+    }
+    const input = access.current?.inputs.get(id);
+    if (input) userSelectedInput.current = { id: input.id, name: input.name };
+    bindInput(id);
   };
   useEffect(() => {
     mounted.current = true;
@@ -231,11 +254,42 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     setConnecting(true);
     try {
       const next = await request.call(navigator); if (!mounted.current) return; access.current = next;
-      const refresh = () => { const connected = [...next.inputs.values()].filter((input) => input.state === 'connected'); setInputs(connected); const selected = runtime.current.selectedId; if (selected && !connected.some((input) => input.id === selected)) { selectInput(''); setStatus('Selected input disconnected. Live controls released; saved mappings remain available for explicit rebind and re-arm.'); } setRevision((value) => value + 1); };
+      const refresh = () => {
+        const connected = [...next.inputs.values()].filter((input) => input.state === 'connected');
+        setInputs(connected);
+        const selected = runtime.current.selectedId;
+        if (selected && !connected.some((input) => input.id === selected)) {
+          next.inputs.get(selected)?.onmidimessage && (next.inputs.get(selected)!.onmidimessage = null);
+          release(); runtime.current.selectedId = ''; setSelectedId('');
+          setConnectionState('disconnected');
+          setStatus('Controller disconnected. Live effects were released; mappings remain configured and disarmed.');
+          // Keep the loss visible for this event. A different port appearing in
+          // the same change must not turn a disconnected controller into an
+          // implicit rebind.
+          setRevision((value) => value + 1);
+          return;
+        }
+        if (!runtime.current.selectedId) {
+          const remembered = lastSelectedInput.current;
+          const explicit = userSelectedInput.current;
+          const byId = remembered && connected.find((input) => input.id === remembered.id);
+          const byUserName = !byId && explicit?.name
+            ? connected.filter((input) => input.name === explicit.name).length === 1
+              ? connected.find((input) => input.name === explicit.name) : undefined
+            : undefined;
+          // Do not replace a missing explicit choice with a merely plausible
+          // device. It is safer to wait for that interface to return.
+          const hydrasynth = connected.filter((input) => isHydrasynthInput(input.name ?? ''));
+          const fallback = !explicit ? (hydrasynth.length === 1 ? hydrasynth[0] : connected.length === 1 ? connected[0] : undefined) : undefined;
+          const candidate = byId ?? byUserName ?? fallback;
+          if (candidate) bindInput(candidate.id, !!remembered);
+          else if (!connected.length) { setConnectionState('disconnected'); setStatus('No MIDI inputs connected. Plug in the Explorer or its MIDI interface.'); }
+          else { setConnectionState('choosing-input'); setStatus('Choose a MIDI input. More than one plausible controller is connected.'); }
+        }
+        setRevision((value) => value + 1);
+      };
       next.onstatechange = refresh; refresh();
-      const connected = [...next.inputs.values()].filter((input) => input.state === 'connected'); const preferred = connected.find((input) => isHydrasynthInput(input.name ?? '')) ?? connected[0];
-      if (preferred) selectInput(preferred.id); else setStatus('No MIDI inputs connected. Plug in the Explorer or its MIDI interface, then select the input.');
-    } catch { if (mounted.current) setStatus('MIDI permission was not granted. Allow MIDI access to connect.'); }
+    } catch { if (mounted.current) { setConnectionState('permission-required'); setStatus('MIDI permission was not granted. Allow MIDI access to connect.'); } }
     finally { if (mounted.current) setConnecting(false); }
   }
   const assign = (value: AssignmentInput) => {
@@ -303,7 +357,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     if (!bindings.length) return false;
     downloadPerformanceControlSetup(createPerformanceControlSetup(bindings)); setSetupStatus('Controller setup exported as JSON.'); return true;
   };
-  return { inputs, selectedId, connected: access.current !== null, connecting, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, setupStatus, clearSetup, importSetup, exportSetup, zoomMode, changeZoomMode, zoomRate, holdZoom, take, takeStatus, isRecordingTake, isReplayingTake, startRecordingTake, stopRecordingTake, replayTake, clearTake };
+  return { inputs, selectedId, connected: access.current !== null, connecting, connectionState, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, setupStatus, clearSetup, importSetup, exportSetup, zoomMode, changeZoomMode, zoomRate, holdZoom, take, takeStatus, isRecordingTake, isReplayingTake, startRecordingTake, stopRecordingTake, replayTake, clearTake };
 }
 
 export type MidiControlsApi = ReturnType<typeof useMidiControls>;

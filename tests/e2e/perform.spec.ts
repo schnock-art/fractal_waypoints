@@ -152,7 +152,7 @@ test('Hydrasynth setup expands from the compact Perform launcher and restores fo
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
   const launcher = page.getByRole('button', { name: 'Open controller' });
   await expect(launcher).toBeInViewport();
-  await expect(page.getByRole('region', { name: 'Hydrasynth Explorer controller' })).toContainText('Setup required');
+  await expect(page.getByRole('region', { name: 'Hydrasynth Explorer controller' })).toContainText('MIDI access required');
   const dialog = await openController(page);
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
@@ -287,7 +287,7 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   await expect(page.getByRole('button', { name: 'Release MIDI zoom' })).toHaveCount(0);
   await page.evaluate(() => (window as unknown as { reconnectMidi: () => void }).reconnectMidi());
   await page.getByRole('button', { name: 'Open controller' }).click();
-  await page.getByRole('combobox', { name: 'MIDI input' }).selectOption('explorer');
+  await expect(page.getByRole('dialog', { name: 'Hydrasynth Explorer' })).toContainText('Controller reconnected');
   await page.getByRole('tab', { name: 'Mappings' }).click();
   await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
   await page.getByRole('button', { name: 'Arm zoom', exact: true }).click();
@@ -295,6 +295,50 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   await nrpn(1024);
   await expect.poll(scale).not.toBe(baseScale);
   expect(page.url()).toBe(authoredUrl);
+});
+
+test('MIDI access remains explicit and a chosen generic interface reconnects without guessing', async ({ page }) => {
+  await page.addInitScript(() => {
+    type Input = { id: string; name: string; state: string; onmidimessage: null };
+    const focusrite: Input = { id: 'focusrite', name: 'Focusrite USB MIDI', state: 'connected', onmidimessage: null };
+    const hydrasynth: Input = { id: 'explorer', name: 'Hydrasynth Explorer', state: 'connected', onmidimessage: null };
+    const access = { inputs: new Map([['focusrite', focusrite], ['explorer', hydrasynth]]), onstatechange: null as null | (() => void) };
+    let requests = 0;
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => { requests += 1; return access; } });
+    Object.assign(window, {
+      midiAccessRequests: () => requests,
+      disconnectFocusrite: () => { focusrite.state = 'disconnected'; access.onstatechange?.(); },
+      reconnectFocusrite: () => { focusrite.state = 'connected'; access.onstatechange?.(); },
+    });
+  });
+  await open(page);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const dialog = await openController(page);
+  expect(await page.evaluate(() => (window as unknown as { midiAccessRequests: () => number }).midiAccessRequests())).toBe(0);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  expect(await page.evaluate(() => (window as unknown as { midiAccessRequests: () => number }).midiAccessRequests())).toBe(1);
+  await dialog.getByRole('tab', { name: 'Diagnostics' }).click();
+  await dialog.getByRole('combobox', { name: 'MIDI input' }).selectOption('focusrite');
+  await page.evaluate(() => (window as unknown as { disconnectFocusrite: () => void }).disconnectFocusrite());
+  await expect(dialog.getByText('Controller disconnected')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { reconnectFocusrite: () => void }).reconnectFocusrite());
+  await expect(dialog.getByText('Controller reconnected')).toBeVisible();
+  await expect(dialog.getByRole('combobox', { name: 'MIDI input' })).toHaveValue('focusrite');
+});
+
+test('ambiguous generic MIDI inputs require a user choice', async ({ page }) => {
+  await page.addInitScript(() => {
+    type Input = { id: string; name: string; state: string; onmidimessage: null };
+    const first: Input = { id: 'interface-a', name: 'USB MIDI A', state: 'connected', onmidimessage: null };
+    const second: Input = { id: 'interface-b', name: 'USB MIDI B', state: 'connected', onmidimessage: null };
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['interface-a', first], ['interface-b', second]]), onstatechange: null }) });
+  });
+  await open(page);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await expect(dialog.getByText('Choose a MIDI input. More than one plausible controller is connected.')).toBeVisible();
+  await expect(dialog.getByRole('combobox', { name: 'MIDI input' })).toHaveValue('');
 });
 
 test('Hydrasynth maps a knob to a temporary Palette offset and restores it safely', async ({ page }) => {
