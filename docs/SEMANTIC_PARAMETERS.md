@@ -30,6 +30,10 @@ The descriptors contain domain owner, continuous numeric kind, unit, default, bo
 - Decide whether normalized reads need accompanying repair diagnostics when consumers start accepting malformed documents directly; currently import and domain normalisation own repair.
 - No registry-wide extraction, generic path traversal, new schema envelope, or global final validator is justified by these two targets. Review a concrete third owner before generalising descriptor ownership types.
 
+## Future external playable-target admission
+
+Phase 11.8 will use this semantic seam to assess external controller targets across navigation, formula, palette, material and lens owners. Every target must have a stable semantic identity, declared value kind, availability/inactive behaviour, true bounds distinct from display hints, interpolation policy, hardware-affordance fit, temporary-override ownership, composition policy, take-replay behaviour, performance impact and demonstrated expressive value. Julia real/imaginary coordinates are the first planned formula-specific acceptance case. Existing numeric configuration fields and internal modulation membership alone do not admit an external target.
+
 ## Verification and UX
 
 Focused tests cover unknown/prototype-like addresses, formula availability, non-finite/non-number input, continuous clamping, unwrapped offsets across repeat modes, pure writes, read defaults, URL/Waypoint compatibility, Journey interpolation and legacy palette modulation without accumulation. The Phoenix browser regression exercises both existing controls, visible GPU rendering, reload and independent Compare editing.

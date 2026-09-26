@@ -2,7 +2,7 @@
 
 ## Direction after Phase 9 — From Explorer to Instrument
 
-Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.6 are delivered.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, shared transforms, bounded external updates, an independently versioned local controller setup with JSON import/export, and locally replayable logical performance takes. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
+Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within their scoped slices, and **10.3 has a first playable Perform slice**, not its full planned feature set. **Hydrasynth Phases 11.1–11.7 are delivered; 11.8 playable-target expansion is next.** The current controller supports the named CC catalogue, supported Macro/Filter NRPN inputs, simultaneous Zoom and Palette offset relationships, reusable named controller layouts, shared transforms, bounded external updates, independently versioned local setup/layout documents with JSON import/export, and locally replayable logical performance takes. Review [the Perform findings and deliberate deferrals](PERFORM_FINDINGS.md) through actual use before expanding Perform. Historical completion records below remain intact; relocated unchecked work is linked to its new home rather than declared complete.
 
 | Era | Role | Status |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Current milestone: Phase 9.3 and Phases **10.0–10.2** are complete within thei
 | Phase 8 | Visual instrument: metrics, materials, Visual Lab, HDR | Delivered core; polish and capability-gated work remain |
 | Phase 9 | Mathematical architecture pressure test | Complete milestone; specialist admissions remain research |
 | Phase 10 | The Instrument: make the existing world playable | 10.0–10.2 complete; first 10.3 slice delivered |
-| Phase 11 | Connections | 11.1–11.6 delivered |
+| Phase 11 | Connections | 11.1–11.7 delivered; 11.8 playable targets next |
 | Phase 12 | Patch Bay | Unscheduled until deliberately started |
 
 Deep Space, Third Dimension, and Alternative Mathematics are optional parallel research tracks, not prerequisites for the instrument. The post-Hydrasynth runtime precision probe, Jetson benchmark harness, and perturbation investigation have a deliberate order below; none blocks the Hydrasynth sequence. The long-term Schnock Generative Instrument is a conceptual workshop of independently useful peers, not an application rename, monorepo plan, or framework mandate.
@@ -467,7 +467,7 @@ Definition of done: users and internal systems can inspect mathematical behaviou
 
 ## Phase 11 — Connections
 
-**Hydrasynth Explorer has completed its active implementation sequence through Phase 11.6.** One physical controller has pressure-tested the shared external-source boundary; setup and recorded takes now survive independently from the fractal world. Broader device, audio, and software-adapter work remains deliberately scoped after this sequence.
+**Hydrasynth Explorer has completed its first active sequence through Phase 11.7; continue with 11.8 playable-target expansion.** One physical controller has pressure-tested the shared external-source boundary; layouts, setup and recorded takes now survive independently from the fractal world. Broader device, audio, and software-adapter work remains deliberately scoped after these next instrument-design phases.
 
 Goal: evolve the working initial Hydrasynth slice into an intuitive instrument surface, then validate only the smallest shared external-control model that real use demands. The control surface and future Patch are different benches looking at the same wiring.
 
@@ -539,7 +539,7 @@ Goal: retain useful controller setup without making a Waypoint depend on hardwar
 
 Definition of done: mappings can survive an appropriate setup/session boundary while a Waypoint remains a meaningful fractal/world snapshot without the original Explorer present.
 
-Status: complete for the current two-target controller surface. Mappings save automatically to an independently versioned local setup, load visibly but unarmed when hardware is absent, rebind by profile/address/channel rather than port ID, and support validated JSON import/export. See [the setup contract](PERFORMANCE_SETUP.md) and ADR-035. Recorded input remains Phase 11.6.
+Status: complete for the current two-target controller surface. Mappings save automatically to an independently versioned local setup, load visibly but unarmed when hardware is absent, rebind by profile/address/channel rather than port ID, and support validated JSON import/export. See [the setup contract](PERFORMANCE_SETUP.md) and ADR-035. Recorded input is now the separate Phase 11.6 take domain.
 
 The [performance preset and mapping recipe catalogue](PERFORMANCE_PRESET_IDEAS.md) preserves actual-use ideas such as Pressure Bloom, Chromatic Drift and Macro Performance Bank. These are hypotheses for later testing, not a canonical preset schema or implementation commitments.
 
@@ -555,7 +555,49 @@ Definition of done: controller setup and recorded performance are distinct; dete
 
 Status: complete for bounded local performance takes. A take stores an ordered, capped logical source sequence and snapshot of the armed relationships, replays without a browser MIDI input, and restores the authored view at completion. Take playback is deliberately scoped to logical controller sequence replay; authored Journey export remains its existing deterministic path until a future export feature explicitly consumes a recorded take. See [PERFORMANCE_TAKES.md](PERFORMANCE_TAKES.md) and ADR-036.
 
-After Phase 11.6, the runtime precision probe, reproducible Jetson benchmark harness, and perturbation rendering investigation proceed in that order. They must not delay the Hydrasynth sequence.
+### Phase 11.7 — Named controller layouts / signal lanes
+
+Goal: let a performer name the external instrument they deliberately built without claiming Fractal Waypoints inferred its internal routing.
+
+- [x] Define a user-owned reusable **controller layout** document over explicit address/channel lanes, with optional device-profile reference, expected hardware-patch name/notes and user-defined lane labels.
+- [x] Preserve the identity hierarchy and raw-endpoint fallback. Layout labels are resolved for presentation only; setup relationships and takes retain their independent serialised identity.
+- [x] Use friendly display priority: active controller-layout lane, genuine profiled-control label, then raw address/channel. Diagnostics retain raw protocol identity.
+- [x] Support lane creation from manually entered CC/channel and observed CC/NRPN traffic, with local persistence and atomic JSON import/export.
+
+Acceptance scenario: create **Fractal Ways 1**, name CC26/channel 1 **Aftertouch** and CC27/channel 1 **Colour LFO**, then later see `Aftertouch → Palette offset` and `Colour LFO → Orbit emission` while retaining raw address/channel inspection.
+
+Definition of done: a complex external instrument is understandable from human-readable lanes without falsifying MIDI provenance, duplicating a device profile, coupling layouts to fractal world state, or making take replay depend on mutable aliases.
+
+Status: complete for reusable local layouts. See [CONTROLLER_LAYOUTS.md](CONTROLLER_LAYOUTS.md) and ADR-037. Editing a layout cannot change a mapping or recorded take; selecting no layout leaves the normal raw-address workflow intact.
+
+**Controller UX review (2026-09-26):** the accumulated single technical dialog has been replaced by one wider intent-based workspace: Live, Mappings, Layouts, Takes, and Diagnostics. Live is the calm default; mapping creation follows Source → Target → Response; catalogue/raw MIDI/setup JSON/help are progressively disclosed. Presentation components were split while all Phase 11 persistence and provenance boundaries remained unchanged. See [CONTROLLER_WORKSPACE.md](CONTROLLER_WORKSPACE.md).
+
+### Phase 11.8 — Playable target expansion
+
+Goal: admit expressive, validated semantic targets from several domain owners before Patch, rather than exposing every numeric field in `RenderConfig`.
+
+- [ ] Extend navigation deliberately with pan X/Y and viewport rotation where their behaviour is genuinely an intent rather than an ordinary scalar parameter. Zoom remains the reference navigation target.
+- [ ] Prioritise formula-specific continuous targets: Julia real/imaginary coordinates as the first acceptance case (`Macro 1 → Julia Real`, `Macro 2 → Julia Imaginary`), then Phoenix memory and selected expressive Multibrot/Newton/Nova controls only where their owners define clear semantics.
+- [ ] Evaluate palette scale and a small set of useful palette-domain controls; do not expose individual stop internals merely because they are numeric.
+- [ ] Evaluate Visual Lab candidates individually: orbit emission, trap rotations, useful trap position/scale controls, and exterior/interior mixes. Existing internal `ModulationTarget` membership is evidence, not automatic external-target admission.
+- [ ] Evaluate expressive continuous lenses such as exposure, vignette, selected bloom parameters, grain and chromatic aberration. Lens enable flags remain discrete state, not numeric controls.
+- [ ] Defer formula/material/palette selection, lens enablement, trigger actions, notes, gates and buttons until discrete/event/state semantics are deliberately designed. Treat iterations, pixel density, quality and precision as non-performance parameters unless a concrete use case justifies their workload and determinism impact.
+
+Every proposed target must answer this admission checklist before it becomes playable:
+
+1. Domain owner and stable semantic ID, rather than an object path.
+2. Value kind: continuous, navigation, discrete, event or state.
+3. Availability and behaviour when the active formula, material or lens does not support it.
+4. True domain bounds, distinct from display range and step size, plus sensible interpolation.
+5. Hardware affordance fit: absolute, bipolar, relative, rate, spring-centred, touch or pressure.
+6. Temporary override ownership, eventual source composition, and take replay behaviour.
+7. Performance/precision effect and actual expressive value.
+
+Presentation may later distinguish core performance targets (Zoom, Julia coordinates, Palette offset, Orbit emission, Exposure and trap rotation), searchable extended targets, and experimental targets. These are product tiers over one semantic model, not separate mapping architectures.
+
+Definition of done: multiple formula, palette, material and lens owners expose a small, useful continuous target set through validated identities, availability and replay rules; arbitrary configuration traversal remains absent.
+
+After Phase 11.8, the runtime precision probe, reproducible Jetson benchmark harness, and perturbation rendering investigation proceed in that order. They remain independent engineering work and do not erase the instrument-development sequence.
 
 ### Subsequent connection work
 

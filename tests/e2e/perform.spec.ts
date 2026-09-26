@@ -20,6 +20,24 @@ async function open(page: import('@playwright/test').Page, base: RenderConfig = 
   await expect(page.getByText('WebGPU', { exact: true }).first()).toBeVisible();
   await expect.poll(() => page.getByTestId('main-canvas').evaluate((c: HTMLCanvasElement) => c.width)).toBeGreaterThan(1);
 }
+async function openController(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Open controller' }).click();
+  return page.getByRole('dialog', { name: 'Hydrasynth Explorer' });
+}
+async function openMappingEditor(dialog: import('@playwright/test').Locator) {
+  await dialog.getByRole('tab', { name: 'Mappings' }).click();
+  await dialog.getByRole('button', { name: '+ Add mapping' }).click();
+}
+async function chooseProfileSource(dialog: import('@playwright/test').Locator, label: string) {
+  await dialog.getByText('Browse Hydrasynth controls', { exact: true }).click();
+  await dialog.getByRole('button', { name: new RegExp(`^${label}, MIDI CC`) }).click();
+  await dialog.getByRole('button', { name: `Use ${label}` }).click();
+}
+async function chooseManualCc(dialog: import('@playwright/test').Locator, cc: number) {
+  await dialog.getByText('Enter MIDI address manually', { exact: true }).click();
+  await dialog.getByRole('spinbutton', { name: 'Direct MIDI CC number' }).fill(String(cc));
+  await dialog.getByRole('button', { name: `Use CC ${cc}` }).click();
+}
 async function visiblePrimary(page: import('@playwright/test').Page) {
   await expect.poll(async () => {
     const png = PNG.sync.read(await page.getByTestId('main-canvas').screenshot());
@@ -129,20 +147,60 @@ test('empty surface creates a playable wave; formula replacement keeps definitio
   await expect(page.getByRole('article', { name: 'Mapping 1', exact: true })).toContainText('disabled');
 });
 
-test('Hydrasynth setup expands from the compact Perform launcher and restores focus', async ({ page }) => {
+test('Hydrasynth setup expands from the compact Perform launcher and restores focus', async ({ page }, info) => {
   await open(page);
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
-  const launcher = page.getByRole('button', { name: 'Open Hydrasynth controls' });
+  const launcher = page.getByRole('button', { name: 'Open controller' });
   await expect(launcher).toBeInViewport();
   await expect(page.getByRole('region', { name: 'Hydrasynth Explorer controller' })).toContainText('Setup required');
-  await launcher.click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
+  const dialog = await openController(page);
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
-  await expect(dialog.getByRole('button', { name: 'Macro 8, MIDI CC 23' })).toBeVisible();
+  await expect(dialog.getByRole('tab', { name: 'Live' })).toHaveAttribute('aria-selected', 'true');
+  await expect(dialog.getByRole('button', { name: 'Macro 8, MIDI CC 23' })).toHaveCount(0);
+  await expect(dialog.getByText(/Raw MIDI monitor/)).toHaveCount(0);
+  await page.screenshot({ path: info.outputPath('controller-live.png') });
+  await dialog.getByRole('tab', { name: 'Diagnostics' }).click();
+  await expect(dialog.getByText(/Raw MIDI monitor/)).toBeVisible();
+  await dialog.getByRole('tab', { name: 'Live' }).click();
+  await dialog.getByRole('tab', { name: 'Live' }).press('ArrowRight');
+  await expect(dialog.getByRole('tab', { name: 'Mappings' })).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(launcher).toBeFocused();
+});
+
+test('Hydrasynth controller layouts name reusable raw endpoints without changing their mapping identity', async ({ page }) => {
+  await page.addInitScript(() => {
+    type Input = { id: string; name: string; state: string; onmidimessage: null };
+    const input: Input = { id: 'explorer', name: 'Hydrasynth Explorer', state: 'connected', onmidimessage: null };
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['explorer', input]]), onstatechange: null }) });
+  });
+  await open(page);
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await dialog.getByRole('tab', { name: 'Layouts' }).click();
+  await dialog.getByLabel('New controller layout name').fill('Fractal Ways 1');
+  await dialog.getByRole('button', { name: 'Create named layout' }).click();
+  await dialog.getByRole('button', { name: '+ Add lane' }).first().click();
+  await dialog.getByLabel('Controller layout lane label').fill('Colour LFO');
+  await dialog.getByRole('button', { name: 'Enter endpoint manually' }).click();
+  await dialog.getByLabel('Layout MIDI CC number').fill('26');
+  await dialog.getByRole('button', { name: 'Add CC 26 lane' }).click();
+  await expect(dialog.getByLabel('Controller layout lanes')).toContainText('Colour LFO');
+  await openMappingEditor(dialog);
+  await chooseManualCc(dialog, 26);
+  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('Colour LFO');
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('Palette offset');
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 26 · Channel 1');
+  await page.reload();
+  await page.getByRole('button', { name: 'Perform', exact: true }).click();
+  const restored = await openController(page);
+  await restored.getByRole('tab', { name: 'Layouts' }).click();
+  await expect(restored.getByLabel('Controller layout lanes')).toContainText('Colour LFO');
 });
 
 test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safely', async ({ page }) => {
@@ -163,15 +221,14 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   const authoredUrl = page.url();
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
   await page.getByRole('button', { name: 'Play internal motion' }).click();
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
-  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
-  await dialog.getByRole('combobox', { name: 'Zoom behaviour' }).selectOption('turn');
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await openMappingEditor(dialog);
+  await dialog.getByRole('radio', { name: 'Zoom while turning' }).check();
   await send([0xb2, 74, 64]);
-  await expect(page.getByTestId('hydrasynth-traffic')).toContainText('Filter 1 cutoff');
-  await dialog.getByRole('button', { name: 'Select last touched control' }).click();
-  await expect(dialog.getByRole('combobox', { name: 'Control MIDI channel' })).toHaveValue('2');
-  await dialog.getByRole('button', { name: 'Assign Filter 1 cutoff to zoom' }).click();
+  await expect(dialog.getByText('Detected').locator('..')).toContainText('Filter 1 cutoff');
+  await dialog.getByRole('button', { name: 'Use this source' }).click();
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await dialog.getByRole('button', { name: 'Arm zoom', exact: true }).click();
   // Read the visible scale text rather than reaching into application state.
   const scale = () => page.getByText(/^Scale /).first().innerText();
@@ -185,16 +242,18 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   await dialog.getByRole('button', { name: 'Disarm zoom', exact: true }).click();
   await expect.poll(scale).toBe(baseScale);
   await nrpn(512);
-  await expect(page.getByTestId('hydrasynth-traffic')).toContainText('Macro 1 · NRPN 8152');
-  await dialog.getByRole('button', { name: 'Select last touched control' }).click();
-  await expect(dialog.getByRole('combobox', { name: 'Control transmission' })).toHaveValue('midi-nrpn');
-  await dialog.getByRole('button', { name: 'Assign Macro 1 to zoom' }).click();
+  await dialog.getByRole('button', { name: '+ Add mapping' }).click();
+  await expect(dialog.getByText('Detected').locator('..')).toContainText('Macro 1');
+  await dialog.getByRole('button', { name: 'Use this source' }).click();
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await dialog.getByRole('button', { name: 'Arm zoom', exact: true }).click();
   await nrpn(600);
   expect(await scale()).toBe(baseScale);
   await nrpn(650);
   await expect.poll(scale).not.toBe(baseScale);
-  await dialog.getByRole('combobox', { name: 'Zoom behaviour' }).selectOption('continuous');
+  await dialog.getByRole('button', { name: 'Edit mapping' }).first().click();
+  await dialog.getByRole('radio', { name: 'Continuous speed' }).check();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   const numericScale = async () => Number((await scale()).replace('Scale ', '').trim());
   const beforeContinuous = await numericScale();
@@ -227,8 +286,9 @@ test('Hydrasynth CC and NRPN controls assign, navigate, re-arm and release safel
   await expect.poll(scale).toBe(baseScale);
   await expect(page.getByRole('button', { name: 'Release MIDI zoom' })).toHaveCount(0);
   await page.evaluate(() => (window as unknown as { reconnectMidi: () => void }).reconnectMidi());
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
+  await page.getByRole('button', { name: 'Open controller' }).click();
   await page.getByRole('combobox', { name: 'MIDI input' }).selectOption('explorer');
+  await page.getByRole('tab', { name: 'Mappings' }).click();
   await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
   await page.getByRole('button', { name: 'Arm zoom', exact: true }).click();
   await page.getByRole('button', { name: 'Close', exact: true }).click();
@@ -250,13 +310,14 @@ test('Hydrasynth maps a knob to a temporary Palette offset and restores it safel
   const authoredUrl = page.url();
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
   await page.getByRole('button', { name: 'Play internal motion' }).click();
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
-  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await openMappingEditor(dialog);
+  await chooseProfileSource(dialog, 'Macro 1');
   await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
   await dialog.getByRole('spinbutton', { name: 'Palette offset minimum' }).fill('-2');
   await dialog.getByRole('spinbutton', { name: 'Palette offset maximum' }).fill('3');
-  await dialog.getByRole('button', { name: 'Assign Macro 1 to Palette offset' }).click();
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
   await send([0xb0, 16, 127]);
   await expect(page.getByTestId('control-palette.offset')).toContainText('Effective 3');
@@ -276,13 +337,14 @@ test('Hydrasynth accepts a custom received CC as a continuous Palette signal', a
   await open(page);
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
   await page.getByRole('button', { name: 'Play internal motion' }).click();
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
-  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
-  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await openMappingEditor(dialog);
   await send([0xb0, 126, 127]); // A custom CC not named by the Explorer parameter profile.
-  await expect(page.getByTestId('hydrasynth-traffic')).toContainText('CC 126');
-  await dialog.getByRole('button', { name: 'Assign last received CC to Palette offset' }).click();
+  await expect(dialog.getByText('Detected').locator('..')).toContainText('CC 126');
+  await dialog.getByRole('button', { name: 'Use this source' }).click();
+  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
   await send([0xb0, 126, 0]);
   await expect(page.getByTestId('control-palette.offset')).toContainText('Effective -1');
@@ -301,13 +363,14 @@ test('Hydrasynth assigns a CC endpoint directly without misidentifying its prove
   await open(page);
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
   await page.getByRole('button', { name: 'Play internal motion' }).click();
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
-  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await openMappingEditor(dialog);
+  await chooseManualCc(dialog, 16);
   await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
-  await dialog.getByRole('spinbutton', { name: 'Direct MIDI CC number' }).fill('16');
-  await dialog.getByRole('button', { name: 'Assign CC 16 directly to Palette offset' }).click();
-  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 16 → Palette offset');
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 16');
+  await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('Palette offset');
   await expect(page.getByTestId('hydrasynth-mapping-palette')).not.toContainText('Macro 1');
   await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
   await send([0xb0, 16, 127]);
@@ -331,20 +394,20 @@ test('Hydrasynth records and replays a mapped take after the input disconnects',
   await open(page);
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
   await page.getByRole('button', { name: 'Play internal motion' }).click();
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
-  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await openMappingEditor(dialog);
+  await chooseManualCc(dialog, 126);
   await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
-  await dialog.getByRole('spinbutton', { name: 'Direct MIDI CC number' }).fill('126');
-  await dialog.getByRole('button', { name: 'Assign CC 126 directly to Palette offset' }).click();
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
-  await dialog.getByText('Recorded performance take', { exact: true }).click();
-  await dialog.getByRole('button', { name: 'Record armed mappings' }).click();
+  await dialog.getByRole('tab', { name: 'Takes' }).click();
+  await dialog.getByRole('button', { name: '● Record new take' }).click();
   await send([0xb0, 126, 0]);
   await page.waitForTimeout(300);
   await send([0xb0, 126, 127]);
   await page.waitForTimeout(180);
-  await dialog.getByRole('button', { name: 'Stop recording take' }).click();
+  await dialog.getByRole('button', { name: 'Stop recording' }).click();
   await expect(dialog.getByText(/Saved take · 2 samples/)).toBeVisible();
   await page.evaluate(() => (window as unknown as { disconnectMidi: () => void }).disconnectMidi());
   await dialog.getByRole('button', { name: 'Replay saved take' }).click();
@@ -365,14 +428,17 @@ test('Hydrasynth runs Zoom and Palette offset mappings simultaneously and releas
   const send = async (data: number[]) => page.evaluate((bytes) => (window as unknown as { sendMidi: (data: number[]) => void }).sendMidi(bytes), data);
   await open(page);
   await page.getByRole('button', { name: 'Perform', exact: true }).click();
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hydrasynth Explorer controls' });
-  await dialog.getByRole('button', { name: 'Connect Hydrasynth Explorer' }).click();
-  await dialog.getByRole('button', { name: 'Assign Macro 1 to zoom' }).click();
+  const dialog = await openController(page);
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await openMappingEditor(dialog);
+  await chooseProfileSource(dialog, 'Macro 1');
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await dialog.getByRole('button', { name: 'Arm zoom', exact: true }).click();
-  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  await dialog.getByRole('button', { name: '+ Add mapping' }).click();
   await send([0xb0, 126, 127]);
-  await dialog.getByRole('button', { name: 'Assign last received CC to Palette offset' }).click();
+  await dialog.getByRole('button', { name: 'Use this source' }).click();
+  await dialog.getByRole('combobox', { name: 'Controller target' }).selectOption('palette.offset');
+  await dialog.getByRole('button', { name: 'Save mapping' }).click();
   await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
   await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 126');
   await dialog.getByRole('button', { name: 'Arm Palette offset', exact: true }).click();
@@ -400,14 +466,15 @@ test('Hydrasynth runs Zoom and Palette offset mappings simultaneously and releas
   const restoredLauncher = page.getByRole('region', { name: 'Hydrasynth Explorer controller' });
   await expect(restoredLauncher).toContainText('Macro 1');
   await expect(restoredLauncher).toContainText('CC 126');
-  await page.getByRole('button', { name: 'Open Hydrasynth controls' }).click();
+  await page.getByRole('button', { name: 'Open controller' }).click();
+  await page.getByRole('tab', { name: 'Mappings' }).click();
   await expect(page.getByTestId('hydrasynth-mapping-zoom')).toContainText('Macro 1');
   await expect(page.getByTestId('hydrasynth-mapping-palette')).toContainText('CC 126');
-  await page.getByText('Saved controller setup', { exact: true }).click();
+  await page.getByText('Manage saved controller setup', { exact: true }).click();
   await expect(page.getByText('Saved locally · 2 mappings')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Arm zoom', exact: true })).toBeDisabled();
   const downloadEvent = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export JSON' }).click();
+  await page.getByRole('button', { name: 'Export setup JSON' }).click();
   const setupDownload = await downloadEvent;
   expect(setupDownload.suggestedFilename()).toBe('fractal-waypoints-controller-setup.json');
   const setupPath = await setupDownload.path();

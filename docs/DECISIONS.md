@@ -1,5 +1,13 @@
 # Architecture Decision Records
 
+## ADR-037: Controller layouts are independent user-owned endpoint interpretations
+
+**Status:** Accepted — Phase 11.7.
+
+Persist reusable named layouts in a separate `ControllerLayoutsDocument` schema 1, with unique address/channel lanes, optional device-profile and hardware-patch metadata, local storage and atomic JSON import/export. A layout is selected only for presentation and convenient assignment; it does not become part of `PerformanceControlSetup` schema 1 or a `PerformanceControlTake`.
+
+Display a selected lane label before a genuine profile label, while always retaining the raw endpoint in mapping detail. The label is an explicit user declaration and never evidence of physical control identity or upstream Mod Matrix provenance. Removing or changing layouts therefore cannot invalidate mappings or alter take replay. See [CONTROLLER_LAYOUTS.md](CONTROLLER_LAYOUTS.md).
+
 ## ADR-036: Recorded takes snapshot logical external input separately from setup and world state
 
 **Status:** Accepted — Phase 11.6.

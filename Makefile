@@ -1,4 +1,4 @@
-.PHONY: dev build check test e2e demo demo-video demo-explore demo-palette demo-waypoint demo-compare demo-journey
+.PHONY: dev build check test e2e demo demo-video demo-explore demo-palette demo-waypoint demo-compare demo-journey demo-controller
 
 dev:
 	npm run dev
@@ -35,3 +35,6 @@ demo-compare:
 
 demo-journey:
 	npm run demo:journey
+
+demo-controller:
+	npm run demo:controller

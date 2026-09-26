@@ -28,7 +28,9 @@ A device profile is adapter/UI knowledge: stable device-local control identity, 
 
 Zoom remains a navigation/control intent: the 11.1 gesture uses the double-single viewport path and must not be forced into the numeric `ModulationTarget` union for visual uniformity. Phase 11.3/11.4 must instead prove both a relative navigation intent and one existing continuous semantic target. Discrete state and events remain separate future semantics.
 
-Live connection/device IDs, armed state, latest values, and adapter handles are session runtime. Device profiles are hardware knowledge; controller assignments belong to versioned performance/control setup; recorded gestures belong to take/Journey input data; graph positions/layout are Patch presentation state. Waypoints remain fractal/world snapshots and never mean a particular Hydrasynth must be connected. Deterministic export must replay recorded or otherwise reproducible input, never sample live hardware opportunistically.
+Live connection/device IDs, armed state, latest values, and adapter handles are session runtime. Device profiles are hardware knowledge; Phase 11.7 controller layouts will be user-owned reusable declarations of named address/channel lanes; controller assignments belong to versioned performance/control setup; recorded gestures belong to take/Journey input data; graph positions/layout are Patch presentation state. Waypoints remain fractal/world snapshots and never mean a particular Hydrasynth must be connected. Deterministic export must replay recorded or otherwise reproducible input, never sample live hardware opportunistically.
+
+The intended ownership chain is `device profile → controller layout → performance setup → performance take → fractal world`. It does not imply execution identity: a layout provides presentation and deliberate user interpretation, while a setup retains raw endpoint identity and a take snapshots relationships for replay. Future import/export must leave mappings inspectable when a referenced layout is absent.
 
 ## Semantic addressing convention
 

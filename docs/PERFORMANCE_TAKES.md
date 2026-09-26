@@ -4,7 +4,7 @@ Phase 11.6 records a short controller performance as a separate, versioned local
 
 ## Capture and replay
 
-While Primary is playing, arm one or both controller mappings and choose **Record armed mappings**. Capture records timestamped absolute samples only from the mappings that were armed at the start of recording. Stop saves the take locally under `fractal-explorer:performance-take:v1`.
+While Primary is playing, arm one or both controller mappings, open **Takes**, and choose **Record new take**. Capture records timestamped absolute samples only from the mappings that were armed at the start of recording. The workspace header and Live view keep recording visible and offer Stop without requiring navigation back to Takes. Stop saves the take locally under `fractal-explorer:performance-take:v1`.
 
 A take stores a snapshot of those external relationships and an ordered logical sequence of `{ atMs, sourceId, value }` samples. It contains no browser input ID, permissions, live connection state, arming state, authored fractal configuration, URL, Waypoint, Journey, or Patch layout.
 

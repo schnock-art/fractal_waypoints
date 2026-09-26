@@ -305,3 +305,5 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   };
   return { inputs, selectedId, connected: access.current !== null, connecting, connect, selectInput, assignments, assign, armedTargets, isArmed: (target: MidiAssignmentTarget) => armedTargets[target], toggleArm, release, releaseTarget, messages, lastInput, traffic, status, diagnostics, setupStatus, clearSetup, importSetup, exportSetup, zoomMode, changeZoomMode, zoomRate, holdZoom, take, takeStatus, isRecordingTake, isReplayingTake, startRecordingTake, stopRecordingTake, replayTake, clearTake };
 }
+
+export type MidiControlsApi = ReturnType<typeof useMidiControls>;

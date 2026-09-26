@@ -25,6 +25,12 @@ Validation checks the setup version, unique binding/target IDs, declared profile
 
 JSON import is all-or-nothing. Invalid JSON or invalid version-1 data does not replace the current setup. A future schema version is reported as unsupported and left untouched in local storage; this build never guesses a downgrade. Export produces a portable JSON document named `fractal-waypoints-controller-setup.json`.
 
+The normal workflow is **Open controller → Mappings → Add mapping → Source → Target → Response**. Existing mappings appear before the editor and lead with human-readable source and target meaning. Setup import/export/clear actions remain available under the secondary **Manage saved controller setup** section.
+
 This is setup persistence, not performance capture. Arming and live samples deliberately restart empty. [PERFORMANCE_TAKES.md](PERFORMANCE_TAKES.md) describes the separate Phase 11.6 capture document.
+
+## Controller layouts
+
+Phase 11.7 supplies [separate reusable controller layouts](CONTROLLER_LAYOUTS.md). The setup schema deliberately has no generic alias fields: a layout can label an endpoint for the active display, but the setup continues to own raw source → transforms → target relationships. Raw address/channel remains the safe fallback when no layout is selected or available.
 
 The [performance recipe catalogue](PERFORMANCE_PRESET_IDEAS.md) records possible future starter setups and pressure tests. It is creative research, not part of this persistence schema.

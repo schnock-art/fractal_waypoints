@@ -107,6 +107,8 @@ Fractal Waypoints can reliably observe `Hydrasynth / channel / CC16`. It cannot 
 
 Future Patch labels may use friendly device-profile names, but must distinguish a documented endpoint label from asserted physical or synth-internal provenance. A graph must never claim an upstream source it cannot observe.
 
+Phase 11.7 may let a user-owned controller layout explicitly name a routed endpoint for a particular patch, for example `Aftertouch · CC26 · Ch1` or `Colour LFO · CC27 · Ch1` in **Fractal Ways 1**. Recipes may use those names as intentional lane labels after selection, but the names are not evidence that MIDI revealed their provenance. A setup maps such a lane to a target; a take keeps its recorded relationship snapshot even if the lane is later renamed.
+
 ## Questions for later actual-use testing
 
 Use these recipes to evaluate:

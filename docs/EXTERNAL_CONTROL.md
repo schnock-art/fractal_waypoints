@@ -12,6 +12,18 @@ The layers are explicit:
 
 The controller editor can assign a MIDI CC endpoint directly by number, without first receiving a sample. This supports Hydrasynth Mod Matrix routes such as PolyTouch or LFO → unused CC. A directly entered CC is represented as a learned endpoint even when its number overlaps a profiled control, because endpoint equality does not establish physical identity or upstream provenance. Raw polyphonic-aftertouch messages are not currently admitted as external sources.
 
+Phase 11.7 adds a separate [controller-layout document](CONTROLLER_LAYOUTS.md): a user-owned named interpretation of an endpoint in one intentional hardware patch/routing configuration. The identity remains explicit:
+
+```text
+physical/device identity
+        ≠ transport endpoint
+        ≠ user-declared lane meaning
+        ≠ upstream provenance
+        ≠ Fractal Waypoints target
+```
+
+A device profile can truthfully say that ASM documents CC20 as Macro 5. A controller layout may let its owner label CC20/channel 1 `Aftertouch` for a patch that routes aftertouch there. The latter is a user declaration, never an inference by Fractal Waypoints. Display priority is the active layout label, genuine profile label, then raw address/channel; diagnostics always retain the address.
+
 Internal modulation and external control share validated stateless transforms: scale, offset, invert, clamp, and signed power curve. Internal explicit-time smoothing remains internal because its deterministic trailing window is not equivalent to live frame history. The controller UI builds Palette range/inversion/curve behaviour from the shared transform list instead of a MIDI-specific range function.
 
 ## Runtime semantics

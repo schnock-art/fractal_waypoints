@@ -11,13 +11,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "demo": "node scripts/capture-readme-demo.mjs",
+    "demo": "node scripts/capture-readme-demo.mjs && node scripts/capture-controller-demo.mjs",
     "demo:video": "node scripts/capture-product-demo.mjs",
     "demo:explore": "node scripts/capture-explore-demo.mjs",
     "demo:palette": "node scripts/capture-palette-demo.mjs",
     "demo:waypoint": "node scripts/capture-waypoint-demo.mjs",
     "demo:compare": "node scripts/capture-compare-demo.mjs",
-    "demo:journey": "node scripts/capture-journey-demo.mjs"
+    "demo:journey": "node scripts/capture-journey-demo.mjs",
+    "demo:controller": "node scripts/capture-controller-demo.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

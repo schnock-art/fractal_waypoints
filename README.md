@@ -21,6 +21,8 @@ and keyframed journeys.
 
 ![Building and previewing a Waypoint-to-Waypoint Journey](docs/demo/journey-workflow.gif)
 
+![Playing a Hydrasynth controller layout in the Live workspace](docs/demo/controller-workspace.png)
+
 ## Highlights
 
 - Explore with drag, scroll, and configurable game-style keyboard controls.
@@ -30,6 +32,7 @@ and keyframed journeys.
 - Compare formulas and configurations using split, wipe, overlay, or difference views.
 - Author deterministic journeys between configurations and export image sequences or WebM.
 - Render through WebGPU with a shared CPU fallback for unsupported environments.
+- Play mapped Hydrasynth Explorer signals through a focused Live controller workspace.
 
 ![Compare fractal formulas through the focused comparison workspace](docs/demo/compare.png)
 
@@ -65,6 +68,7 @@ npm run dev
 | `make demo-waypoint` | Capture Waypoint GIF and WebM demos (requires the local app). |
 | `make demo-compare` | Capture Compare GIF and WebM demos (requires the local app). |
 | `make demo-journey` | Capture Journey GIF and WebM demos (requires the local app). |
+| `make demo-controller` | Capture the Hydrasynth controller-workspace screenshot (requires the local app). |
 | `make check` | Run TypeScript type-checking only. |
 
 The same commands are also available through `npm run ...` where applicable.
@@ -92,7 +96,7 @@ While stopped, inspect the numbered mappings and their source/smoothing settings
 
 WebGPU is the primary renderer and uses a double-single viewport coordinate path for deeper zoom precision. The CPU renderer preserves the same formulas, palettes, colouring, and exploration model when WebGPU cannot start, although it is intentionally slower.
 
-The committed screenshots and clips are generated only by the dedicated capture scripts, while browser regression tests verify the same entry flows without writing documentation assets. All of them begin from the same serialised demo render configuration. Regenerate README screenshots with `make demo`, then review the resulting images before committing. Capture the animated Explore, Julia, Palette, Waypoint, Compare, and Journey flows with `make demo-explore`, `make demo-video`, `make demo-palette`, `make demo-waypoint`, `make demo-compare`, and `make demo-journey` while the app is running; set `FRACTAL_DEMO_URL` if it is not using port 4173.
+The committed screenshots and clips are generated only by the dedicated capture scripts, while browser regression tests verify the same entry flows without writing documentation assets. All of them begin from the same serialised demo render configuration. Regenerate README screenshots with `make demo`, then review the resulting images before committing. Capture the animated Explore, Julia, Palette, Waypoint, Compare, Journey, and controller-workspace flows with `make demo-explore`, `make demo-video`, `make demo-palette`, `make demo-waypoint`, `make demo-compare`, `make demo-journey`, and `make demo-controller` while the app is running; set `FRACTAL_DEMO_URL` if it is not using port 4173.
 
 See [the product brief](docs/PRODUCT_BRIEF.md), [architecture](docs/ARCHITECTURE.md), and [roadmap](docs/ROADMAP.md) for the fuller product and engineering direction.
 
