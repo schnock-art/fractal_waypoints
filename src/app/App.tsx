@@ -1082,27 +1082,32 @@ export function App() {
               {workspace === 'perform' ? <PerformPanel base={mainConfig} effective={effectiveConfig} active={previewActive} running={isPlayingAnimation} journey={previewKind === 'journey'} mappings={preview.mappings ?? []} overrides={{ ...overrides, ...midiOverrides }}
                 onOverride={(id, value) => { if (previewActive) setOverrides((current) => { const next = { ...current }; if (value === undefined) delete next[id]; else next[id] = value; return next; }); }}
                 onMidiZoom={(delta) => { if (previewActive) { const intent = midiCcDeltaToZoom(delta); if (intent) setMidiViewport((current) => applyNavigationFrame(current ?? effectiveConfig.viewport, [intent.action], navigationSettings, intent.deltaSeconds)); } }}
+                onMidiNavigationRate={(target, rate, deltaSeconds) => {
+                  if (!previewActive || rate === 0 || deltaSeconds === 0) return;
+                  const action = target === 'panX' ? rate > 0 ? 'moveRight' : 'moveLeft'
+                    : target === 'panY' ? rate > 0 ? 'moveUp' : 'moveDown'
+                      : rate > 0 ? 'rotateRight' : 'rotateLeft';
+                  setMidiViewport((current) => applyNavigationFrame(current ?? effectiveConfig.viewport, [action], navigationSettings, deltaSeconds * Math.abs(rate)));
+                }}
                 onMidiSemanticValue={(target: SemanticParameterId, value) => {
                   if (!previewActive) return;
-                  if (target === 'palette.offset') setMidiOverrides({ 'palette.offset': value });
-                  else if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') {
+                  if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') {
                     if (mainConfig.fractal.formulaId === 'julia') setMidiOverrides((current) => ({ ...current, [target]: value }));
                     else setMidiJuliaOverrides((current) => ({ ...current, [target]: value }));
-                  }
+                  } else setMidiOverrides((current) => ({ ...current, [target]: value }));
                 }}
                 onMidiRelease={(target) => {
-                  if (!target || target === 'zoom') setMidiViewport(null);
-                  if (!target || target === 'palette.offset') setMidiOverrides({});
-                  if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') setMidiOverrides((current) => {
-                    const next = { ...current }; delete next[target]; return next;
-                  });
+                  if (!target || target === 'zoom' || target === 'panX' || target === 'panY' || target === 'rotation') setMidiViewport(null);
+                  if (!target) setMidiOverrides({});
+                  else if (target !== 'zoom' && target !== 'panX' && target !== 'panY' && target !== 'rotation') setMidiOverrides((current) => { const next = { ...current }; delete next[target]; return next; });
                   if (!target) setMidiJuliaOverrides({});
                   else if (target === 'formula.julia.cReal' || target === 'formula.julia.cImag') setMidiJuliaOverrides((current) => {
                     const next = { ...current }; delete next[target]; return next;
                   });
                 }}
                 isMidiTargetAvailable={(target: MidiAssignmentTarget) => target === 'formula.julia.cReal' || target === 'formula.julia.cImag'
-                  ? mainConfig.fractal.formulaId === 'julia' || juliaSeed !== null : true}
+                  ? mainConfig.fractal.formulaId === 'julia' || juliaSeed !== null
+                  : target === 'formula.phoenix.memory' ? mainConfig.fractal.formulaId === 'phoenix' : true}
                 onChange={(config) => { if (!previewActive) setMainConfig(config); }} onEdit={() => { setWorkspace('explore'); exploreWorkspaceButtonRef.current?.focus(); }} /> : <fieldset disabled={previewActive && activeWorkspaceMode !== 'journey' && activeWorkspaceMode !== 'waypoints'} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {renderActiveWorkspacePanel()}
               </fieldset>}

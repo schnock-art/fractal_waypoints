@@ -27,6 +27,13 @@ describe('external control boundary', () => {
       .toEqual({ kind: 'semantic-value', target: 'formula.julia.cReal', value: 2, timestamp: 7 });
   });
 
+  it('routes the Phoenix-owned Orbit memory ID through the same closed semantic boundary', () => {
+    const relation = relationship({ kind: 'semantic-parameter', id: 'formula.phoenix.memory' }, rangeTransforms(0, 127, -1, 1));
+    expect(isExternalControlRelationship(relation)).toBe(true);
+    expect(routeExternalControl(relation, { sourceId: relation.source.id, value: 0, timestamp: 7 }))
+      .toEqual({ kind: 'semantic-value', target: 'formula.phoenix.memory', value: -1, timestamp: 7 });
+  });
+
   it('keeps navigation intents distinct from semantic parameter writes', () => {
     const continuous = relationship({ kind: 'navigation-intent', id: 'zoom', mode: 'continuous' });
     expect(routeExternalControl(continuous, { sourceId: continuous.source.id, value: 63.5, timestamp: 1 }))
@@ -43,6 +50,16 @@ describe('external control boundary', () => {
       ...turn.mapping, transforms: rangeTransforms(0, 1024, 0, 127),
     } };
     expect((routeExternalControl(highResolutionTurn, { sourceId: turn.source.id, value: 600, timestamp: 5 }) as { value: number }).value).toBe(74);
+  });
+
+  it('admits only continuous pan and rotation intents, never viewport paths', () => {
+    for (const id of ['panX', 'panY', 'rotation'] as const) {
+      const relation = relationship({ kind: 'navigation-intent', id, mode: 'continuous' });
+      expect(isExternalControlRelationship(relation)).toBe(true);
+      expect(routeExternalControl(relation, { sourceId: relation.source.id, value: 127, timestamp: 8 }))
+        .toEqual({ kind: 'navigation-rate', target: id, value: 1, timestamp: 8 });
+    }
+    expect(isExternalControlRelationship(relationship({ kind: 'navigation-intent', id: 'panX', mode: 'turn' }))).toBe(false);
   });
 
   it('coalesces absolute updates once per frame, rejects stale samples and stays bounded', () => {

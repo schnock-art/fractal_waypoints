@@ -4,15 +4,15 @@ import { clearPerformanceControlSetup, createPerformanceControlSetup, exportPerf
   importPerformanceControlSetup, isPerformanceControlSetup, loadPerformanceControlSetup, PERFORMANCE_SETUP_STORAGE_KEY,
   savePerformanceControlSetup, type PerformanceControlBinding } from '../src/connections/performanceSetup';
 
-function relation(target: 'zoom' | 'palette.offset' | 'formula.julia.cReal', learned = false): ExternalControlRelationship {
+function relation(target: 'zoom' | 'panX' | 'palette.offset' | 'formula.julia.cReal' | 'formula.phoenix.memory', learned = false): ExternalControlRelationship {
   const sourceId = learned ? 'learned:cc:126:ch1' : 'hydrasynth:macro.1:cc:16:ch1';
   return {
     source: { schemaVersion: 1, id: sourceId, kind: 'absolute-control', deviceProfileId: learned ? 'learned-midi-control' : 'asm-hydrasynth-explorer-2.2',
       controlId: learned ? 'cc:126' : 'macro.1', address: { protocol: 'midi-cc', controller: learned ? 126 : 16 }, channel: 0, minimum: 0, maximum: 127 },
     mapping: { schemaVersion: 1, id: target, sourceId, enabled: true,
-      target: target === 'zoom' ? { kind: 'navigation-intent', id: 'zoom', mode: 'continuous' }
+      target: target === 'zoom' || target === 'panX' ? { kind: 'navigation-intent', id: target, mode: 'continuous' }
         : { kind: 'semantic-parameter', id: target },
-      transforms: target === 'zoom' ? rangeTransforms(0, 127, -1, 1) : rangeTransforms(0, 127, -2, 3, true, 2) },
+      transforms: target === 'zoom' || target === 'panX' ? rangeTransforms(0, 127, -1, 1) : rangeTransforms(0, 127, -2, 3, true, 2) },
   };
 }
 
@@ -56,6 +56,23 @@ describe('performance control setup', () => {
       settings: { kind: 'range', minimum: -2, maximum: 2, inverted: false, curve: 1 } };
     const setup = createPerformanceControlSetup([...bindings(), julia]);
     expect(importPerformanceControlSetup(exportPerformanceControlSetup(setup))).toEqual({ status: 'loaded', setup });
+  });
+
+  it('preserves a Phoenix Orbit memory relationship in the same independent setup format', () => {
+    const phoenixRelationship = relation('formula.phoenix.memory');
+    phoenixRelationship.mapping.transforms = rangeTransforms(0, 127, -1, 1);
+    const phoenix: PerformanceControlBinding = { id: 'formula.phoenix.memory', target: 'formula.phoenix.memory', relationship: phoenixRelationship,
+      settings: { kind: 'range', minimum: -1, maximum: 1, inverted: false, curve: 1 } };
+    const setup = createPerformanceControlSetup([...bindings(), phoenix]);
+    expect(importPerformanceControlSetup(exportPerformanceControlSetup(setup))).toEqual({ status: 'loaded', setup });
+  });
+
+  it('persists a continuous pan intent without serialising a viewport', () => {
+    const pan: PerformanceControlBinding = { id: 'panX', target: 'panX', relationship: relation('panX'), settings: { kind: 'navigation', mode: 'continuous' } };
+    const setup = createPerformanceControlSetup([...bindings(), pan]);
+    const json = exportPerformanceControlSetup(setup);
+    expect(importPerformanceControlSetup(json)).toEqual({ status: 'loaded', setup });
+    expect(json).not.toContain('viewport');
   });
 
   it('rejects mismatched editor settings, duplicate targets and missing profile references', () => {

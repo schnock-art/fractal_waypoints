@@ -4,7 +4,7 @@ import { isHydrasynthInput } from './controlChange';
 import { addressKey, addressLabel, createControlInputDecoder, inputKey, type ControlInput } from './controlInput';
 import { controlMaximum, findHydrasynthExplorerControl } from './hydrasynthExplorerProfile';
 import { deriveRelativeNavigationIntent, ExternalControlFrameBuffer, rangeTransforms, routeExternalControl,
-  type ExternalControlDiagnostics, type ExternalControlRelationship } from '../../connections/externalControl';
+  type ExternalControlDiagnostics, type ExternalControlRelationship, type NavigationIntentId } from '../../connections/externalControl';
 import { clearPerformanceControlSetup, createPerformanceControlSetup, downloadPerformanceControlSetup,
   importPerformanceControlSetup, loadPerformanceControlSetup, savePerformanceControlSetup,
   type PerformanceControlBinding, type PerformanceSetupRead } from '../../connections/performanceSetup';
@@ -13,7 +13,7 @@ import { clearPerformanceControlTake, createPerformanceControlTake, loadPerforma
 
 interface MidiInput { id: string; name: string | null; state: 'connected' | 'disconnected'; onmidimessage: ((event: { data: Uint8Array; timeStamp: number }) => void) | null }
 interface MidiAccess { inputs: Map<string, MidiInput>; onstatechange: (() => void) | null }
-export type MidiAssignmentTarget = 'zoom' | 'palette.offset' | 'formula.julia.cReal' | 'formula.julia.cImag';
+export type MidiAssignmentTarget = NavigationIntentId | 'palette.offset' | 'formula.julia.cReal' | 'formula.julia.cImag' | 'formula.phoenix.memory';
 export type MidiConnectionState = 'permission-required' | 'choosing-input' | 'connected' | 'disconnected' | 'reconnected';
 type AssignmentInput = Pick<ControlInput, 'address' | 'channel'> & { target: MidiAssignmentTarget; minimum?: number; maximum?: number; inverted?: boolean; curve?: number; learned?: boolean };
 export type MidiAssignment = AssignmentInput & { relationship: ExternalControlRelationship };
@@ -22,16 +22,19 @@ type Assignments = Partial<Record<MidiAssignmentTarget, Assignment>>;
 type ArmedTargets = Record<MidiAssignmentTarget, boolean>;
 interface TakeRecording { startedAt: number; relationships: ExternalControlRelationship[]; events: RecordedExternalControlEvent[] }
 interface TakeReplay { take: PerformanceControlTake; startedAt: number | null; eventIndex: number }
-export const midiAssignmentTargets: MidiAssignmentTarget[] = ['zoom', 'palette.offset', 'formula.julia.cReal', 'formula.julia.cImag'];
+export const midiAssignmentTargets: MidiAssignmentTarget[] = ['zoom', 'panX', 'panY', 'rotation', 'palette.offset', 'formula.julia.cReal', 'formula.julia.cImag', 'formula.phoenix.memory'];
 const targets = midiAssignmentTargets;
-export function midiTargetLabel(target: MidiAssignmentTarget) { return target === 'zoom' ? 'Zoom' : target === 'palette.offset' ? 'Palette offset' : target === 'formula.julia.cReal' ? 'Julia Real' : 'Julia Imaginary'; }
-export function midiTargetRange(target: MidiAssignmentTarget): [number, number] { return target === 'palette.offset' ? [-1, 1] : [-2, 2]; }
-const unarmed = (): ArmedTargets => ({ zoom: false, 'palette.offset': false, 'formula.julia.cReal': false, 'formula.julia.cImag': false });
+export const isNavigationTarget = (target: MidiAssignmentTarget): target is NavigationIntentId => ['zoom', 'panX', 'panY', 'rotation'].includes(target);
+export function midiTargetLabel(target: MidiAssignmentTarget) { return target === 'zoom' ? 'Zoom' : target === 'panX' ? 'Pan horizontal' : target === 'panY' ? 'Pan vertical' : target === 'rotation' ? 'Rotation' : target === 'palette.offset' ? 'Palette offset' : target === 'formula.julia.cReal' ? 'Julia Real' : target === 'formula.julia.cImag' ? 'Julia Imaginary' : 'Orbit memory'; }
+export function midiTargetRange(target: MidiAssignmentTarget): [number, number] { return isNavigationTarget(target) || target === 'palette.offset' || target === 'formula.phoenix.memory' ? [-1, 1] : [-2, 2]; }
+const unarmed = (): ArmedTargets => ({ zoom: false, panX: false, panY: false, rotation: false, 'palette.offset': false, 'formula.julia.cReal': false, 'formula.julia.cImag': false, 'formula.phoenix.memory': false });
 
 function assignmentFromBinding(binding: PerformanceControlBinding): Assignment {
   const source = binding.relationship.source;
   return binding.settings.kind === 'zoom'
     ? { address: source.address, channel: source.channel, target: 'zoom', learned: source.deviceProfileId === 'learned-midi-control', relationship: structuredClone(binding.relationship) }
+    : binding.settings.kind === 'navigation'
+      ? { address: source.address, channel: source.channel, target: binding.target, learned: source.deviceProfileId === 'learned-midi-control', relationship: structuredClone(binding.relationship) }
     : { address: source.address, channel: source.channel, target: binding.target, minimum: binding.settings.minimum,
       maximum: binding.settings.maximum, inverted: binding.settings.inverted, curve: binding.settings.curve,
       learned: source.deviceProfileId === 'learned-midi-control',
@@ -47,11 +50,12 @@ function bindingFromAssignment(assignment: Assignment): PerformanceControlBindin
   return { id: assignment.target, target: assignment.target, relationship: structuredClone(assignment.relationship),
     settings: assignment.target === 'zoom' ? { kind: 'zoom', mode: assignment.relationship.mapping.target.kind === 'navigation-intent'
       ? assignment.relationship.mapping.target.mode : 'continuous' }
+    : isNavigationTarget(assignment.target) ? { kind: 'navigation', mode: 'continuous' }
       : { kind: 'range', minimum: assignment.minimum ?? -1, maximum: assignment.maximum ?? 1,
         inverted: assignment.inverted ?? false, curve: assignment.curve ?? 1 } };
 }
 
-export function useMidiControls(active: boolean, running: boolean, onZoomDelta: (delta: number) => void, onSemanticValue: (target: SemanticParameterId, value: number) => void, onRelease: (target?: MidiAssignmentTarget) => void, isTargetAvailable: (target: MidiAssignmentTarget) => boolean) {
+export function useMidiControls(active: boolean, running: boolean, onZoomDelta: (delta: number) => void, onNavigationRate: (target: Exclude<NavigationIntentId, 'zoom'>, rate: number, deltaSeconds: number) => void, onSemanticValue: (target: SemanticParameterId, value: number) => void, onRelease: (target?: MidiAssignmentTarget) => void, isTargetAvailable: (target: MidiAssignmentTarget) => boolean) {
   const initialSetup = useRef<PerformanceSetupRead | null>(null);
   if (!initialSetup.current) initialSetup.current = loadPerformanceControlSetup();
   const initialAssignments = useRef<Assignments>(assignmentsFromSetup(initialSetup.current));
@@ -65,9 +69,9 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   // included in a controller setup, layout, take, or render document.
   const lastSelectedInput = useRef<{ id: string; name: string | null } | null>(null);
   const userSelectedInput = useRef<{ id: string; name: string | null } | null>(null);
-  const callbacks = useRef({ active, running, onZoomDelta, onSemanticValue, onRelease, isTargetAvailable });
-  callbacks.current = { active, running, onZoomDelta, onSemanticValue, onRelease, isTargetAvailable };
-  const runtime = useRef({ selectedId: '', assignments: initialAssignments.current, armed: unarmed(), previous: null as number | null, mode: initialZoomMode, rate: 0, remainder: 0 });
+  const callbacks = useRef({ active, running, onZoomDelta, onNavigationRate, onSemanticValue, onRelease, isTargetAvailable });
+  callbacks.current = { active, running, onZoomDelta, onNavigationRate, onSemanticValue, onRelease, isTargetAvailable };
+  const runtime = useRef({ selectedId: '', assignments: initialAssignments.current, armed: unarmed(), previous: null as number | null, mode: initialZoomMode, rate: 0, navigationRates: { panX: 0, panY: 0, rotation: 0 }, remainder: 0 });
   const frameBuffer = useRef(new ExternalControlFrameBuffer());
   const frameRequest = useRef<number | null>(null);
   const takeFrameRequest = useRef<number | null>(null);
@@ -100,6 +104,10 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     ? `Saved take · ${initialTake.current.take.events.length} samples · ${(initialTake.current.take.durationMs / 1000).toFixed(2)} s`
     : initialTake.current.message);
   const holdZoom = () => { runtime.current.rate = 0; runtime.current.remainder = 0; runtime.current.previous = null; setZoomRate(0); };
+  const holdNavigation = (target?: Exclude<NavigationIntentId, 'zoom'>) => {
+    if (target) runtime.current.navigationRates[target] = 0;
+    else runtime.current.navigationRates = { panX: 0, panY: 0, rotation: 0 };
+  };
   const applyRelationshipSample = (relationship: ExternalControlRelationship, sample: { sourceId: string; value: number; timestamp: number }) => {
     const output = routeExternalControl(relationship, sample); if (!output) return;
     if (output.kind === 'semantic-value') {
@@ -108,6 +116,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     }
     else if (output.kind === 'navigation-rate') {
       if (!callbacks.current.running || document.hidden) return;
+      if (output.target !== 'zoom') { runtime.current.navigationRates[output.target] = output.value; return; }
       if (Math.sign(output.value) !== Math.sign(runtime.current.rate)) runtime.current.remainder = 0;
       runtime.current.rate = output.value; setZoomRate(output.value);
     } else {
@@ -118,7 +127,7 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   };
   const stopReplay = (message?: string) => {
     if (takeFrameRequest.current !== null) cancelAnimationFrame(takeFrameRequest.current);
-    takeFrameRequest.current = null; replay.current = null; holdZoom(); setIsReplayingTake(false);
+    takeFrameRequest.current = null; replay.current = null; holdZoom(); holdNavigation(); setIsReplayingTake(false);
     if (message) setTakeStatus(message);
   };
   const stopRecordingTake = (reason?: string) => {
@@ -144,11 +153,11 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
       source: { schemaVersion: 1, id: sourceId, kind: 'absolute-control', deviceProfileId: profile ? 'asm-hydrasynth-explorer-2.2' : 'learned-midi-control',
         controlId: profile?.id ?? addressKey(value.address), address: value.address, channel: value.channel, minimum: 0, maximum },
       mapping: { schemaVersion: 1, id: `${value.target}:${sourceId}`, sourceId, enabled: true,
-        target: value.target !== 'zoom' ? { kind: 'semantic-parameter', id: value.target }
-          : { kind: 'navigation-intent', id: 'zoom', mode },
-        transforms: value.target !== 'zoom'
+        target: isNavigationTarget(value.target) ? { kind: 'navigation-intent', id: value.target, mode: value.target === 'zoom' ? mode : 'continuous' }
+          : { kind: 'semantic-parameter', id: value.target },
+        transforms: !isNavigationTarget(value.target)
           ? rangeTransforms(0, maximum, value.minimum ?? midiTargetRange(value.target)[0], value.maximum ?? midiTargetRange(value.target)[1], value.inverted, value.curve ?? 1)
-          : rangeTransforms(0, maximum, mode === 'continuous' ? -1 : 0, mode === 'continuous' ? 1 : 127),
+          : rangeTransforms(0, maximum, value.target === 'zoom' && mode === 'turn' ? 0 : -1, value.target === 'zoom' && mode === 'turn' ? 127 : 1),
       },
     };
   };
@@ -163,11 +172,12 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
   };
   const releaseTarget = (target: MidiAssignmentTarget) => {
     if (target === 'zoom') holdZoom();
+    else if (isNavigationTarget(target)) holdNavigation(target);
     runtime.current.armed[target] = false;
     setArmedTargets({ ...runtime.current.armed });
     callbacks.current.onRelease(target);
   };
-  const release = () => { stopReplay(); stopRecordingTake('Recording stopped because the live controller session ended.'); holdZoom(); runtime.current.armed = unarmed(); frameBuffer.current.reset(); setArmedTargets(unarmed()); callbacks.current.onRelease(); };
+  const release = () => { stopReplay(); stopRecordingTake('Recording stopped because the live controller session ended.'); holdZoom(); holdNavigation(); runtime.current.armed = unarmed(); frameBuffer.current.reset(); setArmedTargets(unarmed()); callbacks.current.onRelease(); };
   const bindInput = (id: string, reconnected = false) => {
     release(); runtime.current.selectedId = id;
     setSelectedId(id); setMessages([]); setLastInput(null); setTraffic('No MIDI received yet.');
@@ -204,6 +214,11 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
         current.remainder += current.rate * elapsed * 100;
         const steps = Math.trunc(current.remainder); current.remainder -= steps;
         if (steps !== 0) callbacks.current.onZoomDelta(steps);
+      }
+      for (const target of ['panX', 'panY', 'rotation'] as const) {
+        if (current.armed[target] && current.assignments[target] && callbacks.current.active && callbacks.current.running && !document.hidden) {
+          callbacks.current.onNavigationRate(target, current.navigationRates[target], elapsed);
+        }
       }
       frame = requestAnimationFrame(tick);
     };
@@ -318,8 +333,9 @@ export function useMidiControls(active: boolean, running: boolean, onZoomDelta: 
     if (runtime.current.armed[target]) { releaseTarget(target); setStatus(`${midiTargetLabel(target)} disarmed and released.`); return; }
     const assignment = runtime.current.assignments[target]; if (!assignment || !runtime.current.selectedId) return;
     if (!callbacks.current.isTargetAvailable(target)) { setStatus(`${midiTargetLabel(target)} is unavailable. Link a Julia view before arming this mapping.`); return; }
-    if (target === 'zoom') holdZoom(); runtime.current.armed[target] = true; setArmedTargets({ ...runtime.current.armed });
-    setStatus(target !== 'zoom' ? `${midiTargetLabel(target)} armed.${callbacks.current.active ? ' Turn the assigned control to set its temporary value.' : ' It will become live when you press Play.'}` : runtime.current.mode === 'continuous' ? `Zoom armed.${callbacks.current.active ? ' Turn above centre to keep zooming in, below centre to zoom out. Centre or Hold zoom stops motion.' : ' It will become live when you press Play.'}` : `Zoom armed.${callbacks.current.active ? ' First value establishes the position; further turns move Primary.' : ' It will become live when you press Play.'}`);
+    if (target === 'zoom') holdZoom(); else if (isNavigationTarget(target)) holdNavigation(target);
+    runtime.current.armed[target] = true; setArmedTargets({ ...runtime.current.armed });
+    setStatus(target === 'zoom' ? runtime.current.mode === 'continuous' ? `Zoom armed.${callbacks.current.active ? ' Turn above centre to keep zooming in, below centre to zoom out. Centre or Hold zoom stops motion.' : ' It will become live when you press Play.'}` : `Zoom armed.${callbacks.current.active ? ' First value establishes the position; further turns move Primary.' : ' It will become live when you press Play.'}` : isNavigationTarget(target) ? `${midiTargetLabel(target)} armed.${callbacks.current.active ? ' Centre holds the view; move away from centre for continuous motion.' : ' It will become live when you press Play.'}` : `${midiTargetLabel(target)} armed.${callbacks.current.active ? ' Turn the assigned control to set its temporary value.' : ' It will become live when you press Play.'}`);
   };
   const startRecordingTake = () => {
     if (!callbacks.current.active || !callbacks.current.running) { setTakeStatus('Press Play, arm at least one mapping, then start recording.'); return false; }

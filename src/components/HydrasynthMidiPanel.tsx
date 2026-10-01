@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { midiAssignmentTargets, useMidiControls, type MidiAssignmentTarget } from '../integrations/midi/useMidiControls';
+import type { NavigationIntentId } from '../connections/externalControl';
 import type { SemanticParameterId } from '../parameters/semantic';
 import { ControllerMappingCard } from './controller/ControllerMappingCard';
 import { ControllerLayoutsView, LiveControllerView, MappingControllerView, MidiDiagnosticsView, PerformanceTakesView } from './controller/ControllerWorkspaceViews';
 import { useControllerLayouts } from './controller/useControllerLayouts';
 
-interface Props { active: boolean; running: boolean; onZoomDelta: (delta: number) => void; onSemanticValue: (target: SemanticParameterId, value: number) => void; onRelease: (target?: MidiAssignmentTarget) => void; isTargetAvailable: (target: MidiAssignmentTarget) => boolean }
+interface Props { active: boolean; running: boolean; onZoomDelta: (delta: number) => void; onNavigationRate: (target: Exclude<NavigationIntentId, 'zoom'>, rate: number, deltaSeconds: number) => void; onSemanticValue: (target: SemanticParameterId, value: number) => void; onRelease: (target?: MidiAssignmentTarget) => void; isTargetAvailable: (target: MidiAssignmentTarget) => boolean }
 type ControllerView = 'live' | 'mappings' | 'layouts' | 'takes' | 'diagnostics';
 const views: { id: ControllerView; label: string }[] = [
   { id: 'live', label: 'Live' }, { id: 'mappings', label: 'Mappings' }, { id: 'layouts', label: 'Layouts' },
@@ -21,8 +22,8 @@ function connectionLabel(midi: ReturnType<typeof useMidiControls>, armedCount: n
   return `● Connected · ${armedCount} armed`;
 }
 
-export function HydrasynthMidiPanel({ active, running, onZoomDelta, onSemanticValue, onRelease, isTargetAvailable }: Props) {
-  const midi = useMidiControls(active, running, onZoomDelta, onSemanticValue, onRelease, isTargetAvailable);
+export function HydrasynthMidiPanel({ active, running, onZoomDelta, onNavigationRate, onSemanticValue, onRelease, isTargetAvailable }: Props) {
+  const midi = useMidiControls(active, running, onZoomDelta, onNavigationRate, onSemanticValue, onRelease, isTargetAvailable);
   const layouts = useControllerLayouts();
   const launcherRef = useRef<HTMLButtonElement>(null); const dialogRef = useRef<HTMLElement>(null); const closeRef = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false); const [view, setView] = useState<ControllerView>('live');

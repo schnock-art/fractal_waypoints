@@ -8,7 +8,7 @@ Phase 11.5 persists useful controller relationships without making fractal docum
 
 - a setup name;
 - referenced device-profile identities;
-- at most one binding for each currently proven target: Zoom, Palette offset, Julia Real and Julia Imaginary;
+- at most one binding for each currently proven target: Zoom, Pan horizontal, Pan vertical, Rotation, Palette offset, Julia Real, Julia Imaginary and Phoenix Orbit memory;
 - each binding's external source identity, transforms, semantic/navigation target, and editor settings.
 
 It does **not** own browser MIDI input IDs, permission/connection state, armed state, live values, transport state, authored `RenderConfig`, URLs, Waypoints, Journey data, recorded takes, or future Patch layout. Clearing a controller setup leaves all fractal/world persistence untouched. Loading or importing a setup never changes an authored or effective fractal value.

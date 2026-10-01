@@ -578,9 +578,10 @@ Status: complete for reusable local layouts. See [CONTROLLER_LAYOUTS.md](CONTROL
 
 Goal: admit expressive, validated semantic targets from several domain owners before Patch, rather than exposing every numeric field in `RenderConfig`.
 
-- [ ] Extend navigation deliberately with pan X/Y and viewport rotation where their behaviour is genuinely an intent rather than an ordinary scalar parameter. Zoom remains the reference navigation target.
+- [x] Extend navigation deliberately with continuous pan X/Y and viewport rotation intents. These are centred-rate controls, never persisted viewport-coordinate writes; Zoom remains the reference navigation target with its optional encoder mode.
 - [x] Admit Julia real/imaginary coordinates as the first formula-specific continuous acceptance case (`Macro 1 → Julia Real`, `Macro 2 → Julia Imaginary`): closed semantic IDs, `-2…2` default response ranges, linked-view availability gating, session-only overrides, and the existing setup/take/replay path.
-- [ ] Prioritise the next formula-specific continuous targets: Phoenix memory and selected expressive Multibrot/Newton/Nova controls only where their owners define clear semantics.
+- [x] Admit Phoenix Orbit memory as the next formula-specific continuous target: its existing closed semantic ID, native `-1…1` range, Phoenix-only availability, session override, setup and take/replay behaviour are reused without adding a formula-specific MIDI path.
+- [ ] Prioritise selected expressive Multibrot/Newton/Nova controls only where their owners define clear semantics.
 - [ ] Evaluate palette scale and a small set of useful palette-domain controls; do not expose individual stop internals merely because they are numeric.
 - [ ] Evaluate Visual Lab candidates individually: orbit emission, trap rotations, useful trap position/scale controls, and exterior/interior mixes. Existing internal `ModulationTarget` membership is evidence, not automatic external-target admission.
 - [ ] Evaluate expressive continuous lenses such as exposure, vignette, selected bloom parameters, grain and chromatic aberration. Lens enable flags remain discrete state, not numeric controls.

@@ -8,6 +8,10 @@ Admit `formula.julia.cReal` and `formula.julia.cImag` as explicit continuous sem
 
 At runtime these targets write only a session override of the Julia Primary render view when that formula is active, otherwise of the linked Julia render view. A mapping may be prepared and persisted while neither exists, but it cannot be armed and samples are ignored until a Julia Primary world or linked Julia seed exists. Release, Stop, workspace exit, device loss and replay completion clear the override without changing authored `RenderConfig`, URL, Waypoint or Journey. This establishes availability/replay behaviour before further formula, palette, material or lens targets are admitted.
 
+**Extension — Phoenix Orbit memory:** `formula.phoenix.memory` is admitted through the same closed relationship and schema-1 binding shape, with its formula-owned `-1…1` range. It is armable only while Phoenix is Primary and writes the existing temporary Primary semantic override. This is a target admission, not a generic formula-parameter mechanism.
+
+**Extension — navigation rates:** `panX`, `panY`, and `rotation` are closed navigation-intent IDs. They map an absolute controller through the established centred `-1…1` transform into a continuous rate, then apply the ordinary double-single navigation frame. They never receive a turn mode or write a viewport coordinate from a controller position. A setup and take retain the logical intent relationship only; release and replay completion clear the temporary navigation frame without changing the authored world.
+
 ## ADR-037: Controller layouts are independent user-owned endpoint interpretations
 
 **Status:** Accepted — Phase 11.7.

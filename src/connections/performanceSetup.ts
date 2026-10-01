@@ -3,9 +3,10 @@ import { isExternalControlRelationship, rangeTransforms, type ExternalControlRel
 export const PERFORMANCE_SETUP_SCHEMA_VERSION = 1 as const;
 export const PERFORMANCE_SETUP_STORAGE_KEY = 'fractal-explorer:performance-setup:v1';
 
-export type PerformanceBindingTarget = 'zoom' | 'palette.offset' | 'formula.julia.cReal' | 'formula.julia.cImag';
+export type PerformanceBindingTarget = 'zoom' | 'panX' | 'panY' | 'rotation' | 'palette.offset' | 'formula.julia.cReal' | 'formula.julia.cImag' | 'formula.phoenix.memory';
 export type PerformanceBindingSettings =
   | { kind: 'zoom'; mode: 'continuous' | 'turn' }
+  | { kind: 'navigation'; mode: 'continuous' }
   | { kind: 'range'; minimum: number; maximum: number; inverted: boolean; curve: number };
 
 export interface PerformanceControlBinding {
@@ -49,7 +50,7 @@ export function isPerformanceControlSetup(value: unknown): value is PerformanceC
   const bindingIds = new Set<string>(); const targets = new Set<string>();
   for (const binding of value.bindings) {
     if (!record(binding) || typeof binding.id !== 'string' || !binding.id || bindingIds.has(binding.id)
-      || !['zoom', 'palette.offset', 'formula.julia.cReal', 'formula.julia.cImag'].includes(String(binding.target)) || targets.has(String(binding.target))
+      || !['zoom', 'panX', 'panY', 'rotation', 'palette.offset', 'formula.julia.cReal', 'formula.julia.cImag', 'formula.phoenix.memory'].includes(String(binding.target)) || targets.has(String(binding.target))
       || !isExternalControlRelationship(binding.relationship) || !record(binding.settings)) return false;
     const relationship = binding.relationship; const target = binding.target as PerformanceBindingTarget;
     if (!profileIds.has(relationship.source.deviceProfileId)) return false;
@@ -59,6 +60,12 @@ export function isPerformanceControlSetup(value: unknown): value is PerformanceC
         || relationship.mapping.target.mode !== binding.settings.mode) return false;
       const expected = rangeTransforms(relationship.source.minimum, relationship.source.maximum,
         binding.settings.mode === 'continuous' ? -1 : 0, binding.settings.mode === 'continuous' ? 1 : 127);
+      if (!sameTransforms(relationship.mapping.transforms, expected)) return false;
+    } else if (target === 'panX' || target === 'panY' || target === 'rotation') {
+      if (binding.settings.kind !== 'navigation' || binding.settings.mode !== 'continuous'
+        || relationship.mapping.target.kind !== 'navigation-intent' || relationship.mapping.target.id !== target
+        || relationship.mapping.target.mode !== 'continuous') return false;
+      const expected = rangeTransforms(relationship.source.minimum, relationship.source.maximum, -1, 1);
       if (!sameTransforms(relationship.mapping.transforms, expected)) return false;
     } else {
       if (binding.settings.kind !== 'range' || !finite(binding.settings.minimum) || !finite(binding.settings.maximum)

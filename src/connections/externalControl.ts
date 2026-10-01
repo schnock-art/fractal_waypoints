@@ -19,7 +19,10 @@ export interface ExternalControlSourceIdentity {
 
 export type ExternalControlTarget =
   | { kind: 'semantic-parameter'; id: SemanticParameterId }
-  | { kind: 'navigation-intent'; id: 'zoom'; mode: 'continuous' | 'turn' };
+  | { kind: 'navigation-intent'; id: NavigationIntentId; mode: 'continuous' | 'turn' };
+
+/** These are rate/intention controls, never paths into a viewport document. */
+export type NavigationIntentId = 'zoom' | 'panX' | 'panY' | 'rotation';
 
 export interface ExternalControlMapping {
   schemaVersion: 1;
@@ -43,8 +46,8 @@ export interface ExternalControlSample {
 
 export type ExternalControlOutput =
   | { kind: 'semantic-value'; target: SemanticParameterId; value: number; timestamp: number }
-  | { kind: 'navigation-position'; target: 'zoom'; value: number; timestamp: number }
-  | { kind: 'navigation-rate'; target: 'zoom'; value: number; timestamp: number };
+  | { kind: 'navigation-position'; target: NavigationIntentId; value: number; timestamp: number }
+  | { kind: 'navigation-rate'; target: NavigationIntentId; value: number; timestamp: number };
 
 export interface ExternalControlDiagnostics {
   received: number;
@@ -78,7 +81,8 @@ export function isExternalControlRelationship(value: unknown): value is External
   if (transforms.some((transform, index) => !isSignalTransform(transform, index, transforms.length)
     || (record(transform) && transform.kind === 'smooth'))) return false;
   return mapping.target.kind === 'semantic-parameter' ? ['palette.offset', 'formula.phoenix.memory', 'formula.julia.cReal', 'formula.julia.cImag'].includes(String(mapping.target.id))
-    : mapping.target.kind === 'navigation-intent' && mapping.target.id === 'zoom' && ['continuous', 'turn'].includes(String(mapping.target.mode));
+    : mapping.target.kind === 'navigation-intent' && ['zoom', 'panX', 'panY', 'rotation'].includes(String(mapping.target.id))
+      && (mapping.target.id === 'zoom' ? ['continuous', 'turn'].includes(String(mapping.target.mode)) : mapping.target.mode === 'continuous');
 }
 
 /** Range conversion is expressed entirely with the same transforms used by internal sources. */
@@ -106,7 +110,7 @@ export function routeExternalControl(relationship: ExternalControlRelationship, 
   return { kind: 'navigation-rate', target: target.id, value: rate, timestamp: sample.timestamp };
 }
 
-export interface RelativeNavigationIntent { kind: 'relative-navigation-intent'; target: 'zoom'; delta: number; timestamp: number }
+export interface RelativeNavigationIntent { kind: 'relative-navigation-intent'; target: NavigationIntentId; delta: number; timestamp: number }
 export function deriveRelativeNavigationIntent(previous: number | null, output: ExternalControlOutput): RelativeNavigationIntent | null {
   if (output.kind !== 'navigation-position' || previous === null || output.value === previous) return null;
   return { kind: 'relative-navigation-intent', target: output.target, delta: output.value - previous, timestamp: output.timestamp };

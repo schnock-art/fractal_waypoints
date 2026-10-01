@@ -7,6 +7,7 @@ import { readModulationTarget, type MappingEvaluation } from '../visuals/modulat
 import { getLensEffect } from '../visuals/lenses/model';
 import { HydrasynthMidiPanel } from './HydrasynthMidiPanel';
 import type { MidiAssignmentTarget } from '../integrations/midi/useMidiControls';
+import type { NavigationIntentId } from '../connections/externalControl';
 
 const labels: Record<ModulationTarget, string> = {
   'palette.offset': 'Palette offset',
@@ -39,6 +40,7 @@ interface Props {
   overrides: PerformanceOverrides;
   onOverride: (id: SemanticParameterId, value?: number) => void;
   onMidiZoom: (delta: number) => void;
+  onMidiNavigationRate: (target: Exclude<NavigationIntentId, 'zoom'>, rate: number, deltaSeconds: number) => void;
   onMidiSemanticValue: (target: SemanticParameterId, value: number) => void;
   onMidiRelease: (target?: MidiAssignmentTarget) => void;
   isMidiTargetAvailable: (target: MidiAssignmentTarget) => boolean;
@@ -46,7 +48,7 @@ interface Props {
   onEdit: () => void;
 }
 
-export function PerformPanel({ base, effective, active, running, journey, mappings, overrides, onOverride, onMidiZoom, onMidiSemanticValue, onMidiRelease, isMidiTargetAvailable, onChange, onEdit }: Props) {
+export function PerformPanel({ base, effective, active, running, journey, mappings, overrides, onOverride, onMidiZoom, onMidiNavigationRate, onMidiSemanticValue, onMidiRelease, isMidiTargetAvailable, onChange, onEdit }: Props) {
   const [error, setError] = useState<string | null>(null);
   const program = base.modulationProgram ?? adaptLegacyModulations(base.modulations);
   const legacy = !base.modulationProgram && base.modulations.length > 0;
@@ -62,7 +64,7 @@ export function PerformPanel({ base, effective, active, running, journey, mappin
       <button type="button" onClick={onEdit}>Edit in Explore</button>
       <small>Primary only · controller take capture and replay are available in Hydrasynth controls.</small>
     </div>
-    <HydrasynthMidiPanel active={active} running={running} onZoomDelta={onMidiZoom} onSemanticValue={onMidiSemanticValue} onRelease={onMidiRelease} isTargetAvailable={isMidiTargetAvailable} />
+    <HydrasynthMidiPanel active={active} running={running} onZoomDelta={onMidiZoom} onNavigationRate={onMidiNavigationRate} onSemanticValue={onMidiSemanticValue} onRelease={onMidiRelease} isTargetAvailable={isMidiTargetAvailable} />
     <section aria-label="Selected controls" className="perform-card">
       <h3>Selected controls</h3>
       <p>{active ? 'Knobs temporarily replace the evaluated value until Return to modulation or Stop.' : 'Press Play to use temporary live controls. Edit authored values in Explore.'}</p>

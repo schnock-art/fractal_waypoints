@@ -20,7 +20,7 @@ interface Props {
 export function ControllerMappingCard({ assignment, target, armed, layout, onToggleArm, onEdit, onRelease, onRemove, compact, canArm = true, unavailableReason }: Props) {
   const targetLabel = midiTargetLabel(target);
   const actionTarget = targetLabel;
-  const testId = target === 'palette.offset' ? 'palette' : target === 'zoom' ? 'zoom' : target === 'formula.julia.cReal' ? 'julia-real' : 'julia-imaginary';
+  const testId = target === 'palette.offset' ? 'palette' : target === 'zoom' ? 'zoom' : target === 'formula.julia.cReal' ? 'julia-real' : target === 'formula.julia.cImag' ? 'julia-imaginary' : 'phoenix-memory';
   return <article className={`controller-mapping-card${armed ? ' is-armed' : ''}${compact ? ' is-compact' : ''}`} {...(!compact ? { 'data-testid': `hydrasynth-mapping-${testId}` } : {})}>
     <div className="controller-mapping-card__heading">
       <div><strong>{assignmentSourceLabel(assignment, layout)}</strong>{assignment ? <small>{addressLabel(assignment.address)} · Channel {assignment.channel + 1}{layout ? ` · ${layout.name}` : ''}</small> : <small>No source selected</small>}</div>
